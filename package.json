@@ -4,7 +4,7 @@
 	"description": "Simple WhatsApp REST API with multiple device support",
 	"main": "dist/index.js",
 	"scripts": {
-		"build": "tsc --project tsconfig.json && tscpaths -p tsconfig.json -s ./src",
+		"build": "prisma generate && tsc --project tsconfig.json && tscpaths -p tsconfig.json -s ./src",
 		"start": "node -r tsconfig-paths/register -r ts-node ./dist/index.js",
 		"dev": "nodemon src/index.ts",
 		"lint": "eslint . --ext .ts",
