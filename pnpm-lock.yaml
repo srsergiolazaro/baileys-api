@@ -1,9 +1,5 @@
 lockfileVersion: '6.0'
 
-settings:
-  autoInstallPeers: true
-  excludeLinksFromLockfile: false
-
 dependencies:
   '@hapi/boom':
     specifier: ^10.0.1
@@ -14,6 +10,9 @@ dependencies:
   '@whiskeysockets/baileys':
     specifier: ^6.6.0
     version: 6.6.0(link-preview-js@3.0.5)(qrcode-terminal@0.12.0)
+  axios:
+    specifier: ^1.7.2
+    version: 1.7.2
   cors:
     specifier: ^2.8.5
     version: 2.8.5
@@ -678,7 +677,7 @@ packages:
       '@adiwajshing/keyed-db': 0.2.4
       '@hapi/boom': 9.1.4
       audio-decode: 2.2.0
-      axios: 1.6.8
+      axios: 1.7.2
       cache-manager: 4.0.1
       futoin-hkdf: 1.5.3
       libphonenumber-js: 1.10.60
@@ -881,8 +880,8 @@ packages:
     engines: {node: '>=14'}
     dev: false
 
-  /axios@1.6.8:
-    resolution: {integrity: sha512-v/ZHtJDU39mDpyBoFVkETcd/uNdxrWRrg3bKpOKzXFA6Bvqopts6ALSMU3y6ijYxbw2B+wPrIv46egTzJXCLGQ==}
+  /axios@1.7.2:
+    resolution: {integrity: sha512-2A8QhOMrbomlDuiLeK9XibIBzuHeRcqqNOHp0Cyp5EoJ1IFDh+XZH3A6BkXtv0K4gFGCI0Y4BM7B1wOEi0Rmgw==}
     dependencies:
       follow-redirects: 1.15.6
       form-data: 4.0.0
@@ -4145,3 +4144,7 @@ packages:
       curve25519-js: 0.0.4
       protobufjs: 6.8.8
     dev: false
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false

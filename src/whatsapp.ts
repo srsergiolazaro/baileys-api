@@ -12,6 +12,7 @@ import type { Boom } from "@hapi/boom";
 import type { Response } from "express";
 import { toDataURL } from "qrcode";
 import { delay } from "./utils";
+import axios from "axios";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -189,11 +190,23 @@ export async function createSession(options: createSessionOptions) {
 		});
 	}
 
-	// Debug events
-	// socket.ev.on("messaging-history.set", (data) => dump("messaging-history.set", data));
-	// socket.ev.on("chats.upsert", (data) => dump("chats.upsert", data));
-	// socket.ev.on("contacts.update", (data) => dump("contacts.update", data));
-	// socket.ev.on("groups.upsert", (data) => dump("groups.upsert", data));
+	// Aquí manejamos el envío del mensaje recibido a múltiples webhooks
+	socket.ev.on("messages.upsert", async (m) => {
+		const message = m.messages[0];
+		if (message.key.fromMe || m.type !== "notify") return;
+
+		try {
+			const webhooks = await prisma.webhook.findMany({ where: { sessionId } });
+			await Promise.all(
+				webhooks.map(async (webhook) => {
+					await axios.post(webhook.url, { message });
+				}),
+			);
+			logger.info({ message }, "Message sent to webhooks");
+		} catch (error) {
+			logger.error(error, "Failed to send message to webhooks");
+		}
+	});
 
 	await prisma.session.upsert({
 		create: {
