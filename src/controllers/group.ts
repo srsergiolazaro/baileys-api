@@ -23,7 +23,7 @@ export const list: RequestHandler = async (req, res) => {
 					: null,
 		});
 	} catch (e) {
-		const message = "An error occured during group list";
+		const message = "An error occurred during group list";
 		logger.error(e, message);
 		res.status(500).json({ error: message });
 	}
@@ -31,12 +31,83 @@ export const list: RequestHandler = async (req, res) => {
 
 export const find: RequestHandler = async (req, res) => {
 	try {
-		const { sessionId, jid } = req.params;
+		const { sessionId } = req.params;
+		const { jid } = req.body;
 		const session = getSession(sessionId)!;
 		const data = await session.groupMetadata(jid);
 		res.status(200).json(data);
 	} catch (e) {
-		const message = "An error occured during group metadata fetch";
+		const message = "An error occurred during group metadata fetch";
+		logger.error(e, message);
+		res.status(500).json({ error: message });
+	}
+};
+
+export const create: RequestHandler = async (req, res) => {
+	try {
+		const { subject, participants } = req.body;
+		const session = getSession(req.params.sessionId)!;
+		const group = await session.groupCreate(subject, participants);
+		res.status(201).json(group);
+	} catch (e) {
+		const message = "An error occurred during group creation";
+		logger.error(e, message);
+		res.status(500).json({ error: message });
+	}
+};
+
+export const update: RequestHandler = async (req, res) => {
+	try {
+		const { jid, subject } = req.body;
+		const session = getSession(req.params.sessionId)!;
+		if (subject) {
+			await session.groupUpdateSubject(jid, subject);
+		}
+		res.status(200).json({ message: "Group updated successfully" });
+	} catch (e) {
+		const message = "An error occurred during group update";
+		logger.error(e, message);
+		res.status(500).json({ error: message });
+	}
+};
+
+export const deleteGroup: RequestHandler = async (req, res) => {
+	try {
+		const { jid } = req.body;
+		const session = getSession(req.params.sessionId)!;
+		await session.groupLeave(jid);
+		await prisma.contact.deleteMany({
+			where: { id: jid },
+		});
+		res.status(200).json({ message: "Group deleted successfully" });
+	} catch (e) {
+		const message = "An error occurred during group deletion";
+		logger.error(e, message);
+		res.status(500).json({ error: message });
+	}
+};
+
+export const updateParticipants: RequestHandler = async (req, res) => {
+	try {
+		const { jid, action, participants } = req.body;
+		const session = getSession(req.params.sessionId)!;
+		const result = await session.groupParticipantsUpdate(jid, participants, action);
+		res.status(200).json(result);
+	} catch (e) {
+		const message = "An error occurred during group participants update";
+		logger.error(e, message);
+		res.status(500).json({ error: message });
+	}
+};
+
+export const updateSettings: RequestHandler = async (req, res) => {
+	try {
+		const { jid, settings } = req.body;
+		const session = getSession(req.params.sessionId)!;
+		const result = await session.groupSettingUpdate(jid, settings);
+		res.status(200).json(result);
+	} catch (e) {
+		const message = "An error occurred during group settings update";
 		logger.error(e, message);
 		res.status(500).json({ error: message });
 	}
