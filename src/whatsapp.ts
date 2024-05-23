@@ -194,7 +194,8 @@ export async function createSession(options: createSessionOptions) {
 	// Aquí manejamos el envío del mensaje recibido a múltiples webhooks
 	socket.ev.on("messages.upsert", async (m) => {
 		const message = m.messages[0];
-		if (!m.messages || message.key.fromMe || !message.message) return;
+		//if (!m.messages || message.key.fromMe || !message.message) return;
+		if (!m.messages || !message.message) return;
 
 		// Tipos de mensajes de texto y documentos
 		const textMessageTypes = [
