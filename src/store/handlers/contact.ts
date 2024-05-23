@@ -65,12 +65,17 @@ export default function contactHandler(sessionId: string, event: BaileysEventEmi
 		for (const update of updates) {
 			try {
 				console.log(update);
-				await prisma.contact.update({
+				await prisma.contact.upsert({
 					select: { pkId: true },
-					data: transformPrisma(update),
 					where: {
 						sessionId_id: { id: update.id!, sessionId },
 					},
+					update: transformPrisma(update),
+					create: transformPrisma({
+						id: update.id!,
+						sessionId,
+						...update,
+					}),
 				});
 			} catch (e) {
 				if (e instanceof PrismaClientKnownRequestError && e.code === "P2025") {
