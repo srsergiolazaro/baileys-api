@@ -1,10 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from "axios";
 import FormData from "form-data";
+import type { proto } from "@whiskeysockets/baileys";
 
 export function callWebHook(url: string, body: any, response?: (data: any) => void) {
-	console.log("callWebHook");
-
 	axios
 		.post(url, body)
 		.then((res) => {
@@ -18,25 +17,29 @@ export function callWebHook(url: string, body: any, response?: (data: any) => vo
 }
 
 export async function callWebHookFile(
-	client: any,
-	event: any,
+	url: string,
+	body: {
+		message: proto.IWebMessageInfo;
+		messageContent: any;
+		session: string;
+		messageType: string;
+	},
 	buffer: any,
 	response?: (data: any) => void,
 ) {
 	try {
-		const webhook = client?.config.url || false;
-		if (!webhook) throw new Error("Webhook URL is not defined");
-
-		const { remoteJid, id, fileFormat } = event.config;
+		const { message, session, messageType, messageContent } = body;
+		const mimeType = messageContent?.mimetype || "audio/wave";
+		const fileFormat = mimeType.split("/")[1];
 
 		const formData = new FormData();
-		formData.append("remoteJid", remoteJid);
-		formData.append("id", id);
-		formData.append("session", client.session);
-		formData.append("messageType", client.messageType);
+		formData.append("message", message);
+		formData.append("messageContent", messageContent);
+		formData.append("session", session);
+		formData.append("messageType", messageType);
 		formData.append("file", buffer, { filename: `file.${fileFormat}` });
 
-		const data = await axios.post(webhook, formData, {
+		const data = await axios.post(url, formData, {
 			headers: formData.getHeaders(),
 		});
 

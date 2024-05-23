@@ -222,8 +222,9 @@ export async function createSession(options: createSessionOptions) {
 				webhooks.map(async (webhook) => {
 					if (textMessageTypes.includes(messageType)) {
 						callWebHook(webhook.url, {
-							...message,
-							message: messageContent,
+							message,
+							messageContent,
+							session: sessionId,
 							type: "text",
 						});
 					} else if (documentMessageTypes.includes(messageType)) {
@@ -237,17 +238,12 @@ export async function createSession(options: createSessionOptions) {
 							},
 						);
 						callWebHookFile(
+							webhook.url,
 							{
-								config: { url: webhook.url },
+								message,
+								messageContent,
 								session: sessionId,
 								messageType: "file",
-							},
-							{
-								config: {
-									remoteJid: message.key.remoteJid,
-									id: message.key.id,
-									fileFormat: messageType,
-								},
 							},
 							buffer,
 						);
