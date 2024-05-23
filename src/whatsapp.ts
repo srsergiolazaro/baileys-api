@@ -69,7 +69,7 @@ export async function createSession(options: createSessionOptions) {
 
 	const destroy = async (logout = true) => {
 		try {
-			await Promise.all([
+			await Promise.allSettled([
 				logout && socket.logout(),
 				prisma.chat.deleteMany({ where: { sessionId } }),
 				prisma.contact.deleteMany({ where: { sessionId } }),

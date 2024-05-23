@@ -26,7 +26,7 @@ export default function groupMetadataHandler(sessionId: string, event: BaileysEv
 		}
 
 		try {
-			await Promise.all(promises);
+			await Promise.allSettled(promises);
 		} catch (e) {
 			logger.error(e, "An error occured during groups upsert");
 		}

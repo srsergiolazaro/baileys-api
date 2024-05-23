@@ -80,7 +80,7 @@ export async function useSession(sessionId: string): Promise<{
 					[id: string]: SignalDataTypeMap[T];
 				}> => {
 					const data: { [key: string]: SignalDataTypeMap[typeof type] } = {};
-					await Promise.all(
+					await Promise.allSettled(
 						ids.map(async (id) => {
 							let value = await read(`${type}-${id}`);
 							if (type === "app-state-sync-key" && value) {
@@ -101,7 +101,7 @@ export async function useSession(sessionId: string): Promise<{
 							tasks.push(value ? write(value, sId) : del(sId));
 						}
 					}
-					await Promise.all(tasks);
+					await Promise.allSettled(tasks);
 				},
 			},
 		},
