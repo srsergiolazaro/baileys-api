@@ -202,7 +202,7 @@ export async function createSession(options: createSessionOptions) {
 					await axios.post(webhook.url, { message });
 				}),
 			);
-			logger.info({ message }, "Message sent to webhooks");
+			logger.info("Message sent to webhooks");
 		} catch (error) {
 			logger.error(error, "Failed to send message to webhooks");
 		}
