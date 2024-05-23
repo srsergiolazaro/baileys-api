@@ -1,5 +1,6 @@
 import makeWASocket, {
 	DisconnectReason,
+	downloadMediaMessage,
 	isJidBroadcast,
 	makeCacheableSignalKeyStore,
 } from "@whiskeysockets/baileys";
@@ -12,8 +13,8 @@ import type { Boom } from "@hapi/boom";
 import type { Response } from "express";
 import { toDataURL } from "qrcode";
 import { delay } from "./utils";
-import axios from "axios";
 import dotenv from "dotenv";
+import { callWebHook, callWebHookFile } from "./fetch";
 
 dotenv.config();
 
@@ -193,17 +194,64 @@ export async function createSession(options: createSessionOptions) {
 	// Aquí manejamos el envío del mensaje recibido a múltiples webhooks
 	socket.ev.on("messages.upsert", async (m) => {
 		const message = m.messages[0];
+		if (!m.messages || message.key.fromMe || !message.message) return;
+
+		// Tipos de mensajes de texto y documentos
+		const textMessageTypes = [
+			"conversation",
+			"extendedTextMessage",
+			"messageContextInfo",
+			"senderKeyDistributionMessage",
+			"buttonsResponseMessage",
+			"listResponseMessage",
+			"contactMessage",
+			"locationMessage",
+			"liveLocationMessage",
+		];
+		const documentMessageTypes = ["imageMessage", "documentMessage", "audioMessage"];
+
+		// Obtener el contenido del mensaje
+		const messageType = Object.keys(message.message)[0];
 		const messageContent = Object.values(message.message || {}).find(
 			(value) => value !== undefined && value !== null,
 		);
-
-		if (!m.messages || message.key.fromMe || !message.message) return;
-
 		try {
 			const webhooks = await prisma.webhook.findMany({ where: { sessionId } });
+
 			await Promise.allSettled(
 				webhooks.map(async (webhook) => {
-					await axios.post(webhook.url, { ...message, message: messageContent, type: m.type });
+					if (textMessageTypes.includes(messageType)) {
+						callWebHook(webhook.url, {
+							...message,
+							message: messageContent,
+							type: "text",
+						});
+					} else if (documentMessageTypes.includes(messageType)) {
+						const buffer = await downloadMediaMessage(
+							message,
+							"buffer",
+							{},
+							{
+								logger,
+								reuploadRequest: socket.updateMediaMessage,
+							},
+						);
+						callWebHookFile(
+							{
+								config: { url: webhook.url },
+								session: sessionId,
+								messageType: "file",
+							},
+							{
+								config: {
+									remoteJid: message.key.remoteJid,
+									id: message.key.id,
+									fileFormat: messageType,
+								},
+							},
+							buffer,
+						);
+					}
 				}),
 			);
 			logger.info("Message sent to webhooks");
