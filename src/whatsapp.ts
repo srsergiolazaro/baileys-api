@@ -197,7 +197,7 @@ export async function createSession(options: createSessionOptions) {
 
 		try {
 			const webhooks = await prisma.webhook.findMany({ where: { sessionId } });
-			await Promise.all(
+			await Promise.allSettled(
 				webhooks.map(async (webhook) => {
 					await axios.post(webhook.url, { message });
 				}),
