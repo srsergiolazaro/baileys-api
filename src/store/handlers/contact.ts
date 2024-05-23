@@ -64,7 +64,6 @@ export default function contactHandler(sessionId: string, event: BaileysEventEmi
 	const update: BaileysEventHandler<"contacts.update"> = async (updates) => {
 		for (const update of updates) {
 			try {
-				console.log(update);
 				await prisma.contact.upsert({
 					select: { pkId: true },
 					where: {
