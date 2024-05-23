@@ -193,13 +193,17 @@ export async function createSession(options: createSessionOptions) {
 	// Aquí manejamos el envío del mensaje recibido a múltiples webhooks
 	socket.ev.on("messages.upsert", async (m) => {
 		const message = m.messages[0];
-		if (message.key.fromMe || m.type !== "notify") return;
+		const messageContent = Object.values(message.message || {}).find(
+			(value) => value !== undefined && value !== null,
+		);
+
+		if (!m.messages || message.key.fromMe || !message.message) return;
 
 		try {
 			const webhooks = await prisma.webhook.findMany({ where: { sessionId } });
 			await Promise.allSettled(
 				webhooks.map(async (webhook) => {
-					await axios.post(webhook.url, { message });
+					await axios.post(webhook.url, { ...message, message: messageContent, type: m.type });
 				}),
 			);
 			logger.info("Message sent to webhooks");
