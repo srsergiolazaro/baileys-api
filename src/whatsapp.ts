@@ -225,6 +225,7 @@ export async function createSession(options: createSessionOptions) {
 						callWebHook(webhook.url, {
 							message,
 							messageContent,
+							messageType,
 							session: sessionId,
 							type: "text",
 						});
@@ -243,8 +244,9 @@ export async function createSession(options: createSessionOptions) {
 							{
 								message,
 								messageContent,
+								messageType,
 								session: sessionId,
-								messageType: "file",
+								type: "file",
 							},
 							buffer,
 						);

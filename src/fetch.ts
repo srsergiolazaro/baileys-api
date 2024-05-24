@@ -21,22 +21,24 @@ export async function callWebHookFile(
 	body: {
 		message: proto.IWebMessageInfo;
 		messageContent: any;
-		session: string;
 		messageType: string;
+		session: string;
+		type: string;
 	},
 	buffer: any,
 	response?: (data: any) => void,
 ) {
 	try {
-		const { message, session, messageType, messageContent } = body;
+		const { message, session, messageType, messageContent, type } = body;
 		const mimeType = messageContent?.mimetype || "audio/wave";
 		const fileFormat = mimeType.split("/")[1];
 
 		const formData = new FormData();
 		formData.append("message", message);
-		formData.append("messageContent", messageContent);
 		formData.append("session", session);
+		formData.append("messageContent", messageContent);
 		formData.append("messageType", messageType);
+		formData.append("type", type);
 		formData.append("file", buffer, { filename: `file.${fileFormat}` });
 
 		const data = await axios.post(url, formData, {
