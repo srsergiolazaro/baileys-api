@@ -200,7 +200,7 @@ export async function createSession(options: createSessionOptions) {
 		const textMessageTypes = [
 			"conversation",
 			"extendedTextMessage",
-			"messageContextInfo",
+			//"messageContextInfo",
 			"buttonsResponseMessage",
 			"listResponseMessage",
 			"contactMessage",
