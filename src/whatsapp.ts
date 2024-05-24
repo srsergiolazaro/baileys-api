@@ -202,7 +202,7 @@ export async function createSession(options: createSessionOptions) {
 			"conversation",
 			"extendedTextMessage",
 			"messageContextInfo",
-			"senderKeyDistributionMessage",
+			//"senderKeyDistributionMessage",
 			"buttonsResponseMessage",
 			"listResponseMessage",
 			"contactMessage",
