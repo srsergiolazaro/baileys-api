@@ -77,10 +77,11 @@ export async function createSession(options: createSessionOptions) {
 				prisma.message.deleteMany({ where: { sessionId } }),
 				prisma.groupMetadata.deleteMany({ where: { sessionId } }),
 				prisma.session.deleteMany({ where: { sessionId } }),
+				prisma.webhook.deleteMany({ where: { sessionId } }),
 			]);
 			logger.info({ session: sessionId }, "Session destroyed");
 		} catch (e) {
-			logger.error(e, "An error occured during session destroy");
+			logger.error(e, "An error occurred during session destroy");
 		} finally {
 			sessions.delete(sessionId);
 		}
@@ -114,7 +115,7 @@ export async function createSession(options: createSessionOptions) {
 					res.status(200).json({ qr });
 					return;
 				} catch (e) {
-					logger.error(e, "An error occured during QR generation");
+					logger.error(e, "An error occurred during QR generation");
 					res.status(500).json({ error: "Unable to generate QR" });
 				}
 			}
@@ -128,7 +129,7 @@ export async function createSession(options: createSessionOptions) {
 			try {
 				qr = await toDataURL(connectionState.qr);
 			} catch (e) {
-				logger.error(e, "An error occured during QR generation");
+				logger.error(e, "An error occurred during QR generation");
 			}
 		}
 
@@ -191,16 +192,14 @@ export async function createSession(options: createSessionOptions) {
 		});
 	}
 
-	// Aquí manejamos el envío del mensaje recibido a múltiples webhooks
+	// Manejo de mensajes y envío a webhooks
 	socket.ev.on("messages.upsert", async (m) => {
 		const message = m.messages[0];
 		if (!m.messages || !message.message) return;
 
-		// Tipos de mensajes de texto y documentos
 		const textMessageTypes = [
 			"conversation",
 			"extendedTextMessage",
-			//"messageContextInfo",
 			"buttonsResponseMessage",
 			"listResponseMessage",
 			"contactMessage",
@@ -209,17 +208,14 @@ export async function createSession(options: createSessionOptions) {
 		];
 		const documentMessageTypes = ["imageMessage", "documentMessage", "audioMessage"];
 
-		// Encontrar el primer tipo de mensaje válido que sea de texto o documento
 		const messageType = Object.keys(message.message).find(
 			(value) =>
 				textMessageTypes.includes(value as keyof typeof message.message) ||
 				documentMessageTypes.includes(value as keyof typeof message.message),
 		) as keyof typeof message.message | undefined;
 
-		// Si no es un mensaje válido, devolver
 		if (!messageType) return;
 
-		// Extraer el contenido del mensaje
 		const messageContent = message.message[messageType];
 
 		try {
