@@ -303,7 +303,7 @@ function formatPhoneNumber(phoneNumber: string) {
 	const defaultCountry = "PE"; // Código de país de Perú
 	const parsedNumber = parsePhoneNumber(phoneNumber, defaultCountry);
 	if (parsedNumber) {
-		return parsedNumber.number; // Devuelve el número en formato E.164
+		return parsedNumber.number.replace("+", "");
 	} else {
 		throw new Error("Número de teléfono no válido");
 	}
@@ -318,6 +318,7 @@ export async function jidExists(
 		if (type === "number") {
 			//si jit no tiene un @
 			if (!jid.includes("@")) {
+				console.log(formatPhoneNumber(jid) + "@s.whatsapp.net");
 				const [result] = await session.onWhatsApp(formatPhoneNumber(jid) + "@s.whatsapp.net");
 				return !!result?.exists;
 			} else {
