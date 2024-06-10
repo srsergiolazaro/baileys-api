@@ -317,12 +317,14 @@ export async function jidExists(
 	try {
 		if (type === "number") {
 			//si jit no tiene un @
-			if (!jid.includes("@")) {
-				console.log(formatPhoneNumber(jid) + "@s.whatsapp.net");
-				const [result] = await session.onWhatsApp(formatPhoneNumber(jid) + "@s.whatsapp.net");
+			if (jid.includes("@")) {
+				const [result] = await session.onWhatsApp(jid);
 				return !!result?.exists;
 			} else {
-				const [result] = await session.onWhatsApp(jid);
+				const formatJid = formatPhoneNumber(jid) + "@s.whatsapp.net";
+				console.log(await session.onWhatsApp(formatJid));
+
+				const [result] = await session.onWhatsApp(formatJid);
 				return !!result?.exists;
 			}
 		}
