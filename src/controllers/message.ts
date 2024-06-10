@@ -40,10 +40,10 @@ export const send: RequestHandler = async (req, res) => {
 		const { jid, type = "number", message, options } = req.body;
 		const session = getSession(req.params.sessionId)!;
 
-		const exists = await jidExists(session, jid, type);
+		const { exists, formatJid } = await jidExists(session, jid, type);
 		if (!exists) return res.status(400).json({ error: "JID does not exists" });
 
-		const result = await session.sendMessage(jid, message, options);
+		const result = await session.sendMessage(formatJid, message, options);
 		res.status(200).json(result);
 	} catch (e) {
 		const message = "An error occured during message send";

@@ -315,22 +315,18 @@ export async function jidExists(
 	type: "group" | "number" = "number",
 ) {
 	try {
-		if (type === "number") {
-			//si jit no tiene un @
-			if (jid.includes("@")) {
-				const [result] = await session.onWhatsApp(jid);
-				return !!result?.exists;
-			} else {
-				const formatJid = formatPhoneNumber(jid) + "@s.whatsapp.net";
-				console.log(await session.onWhatsApp(formatJid));
+		// Helper function to format JID for numbers
+		const formatJid = (jid: string) =>
+			jid.includes("@") ? jid : `${formatPhoneNumber(jid)}@s.whatsapp.net`;
 
-				const [result] = await session.onWhatsApp(formatJid);
-				return !!result?.exists;
-			}
+		if (type === "number") {
+			const formattedJid = formatJid(jid);
+			const [result] = await session.onWhatsApp(formattedJid);
+			return { exists: !!result?.exists, formatJid: formattedJid };
 		}
 
 		const groupMeta = await session.groupMetadata(jid);
-		return !!groupMeta.id;
+		return { exists: !!groupMeta.id, formatJid: jid };
 	} catch (e) {
 		return Promise.reject(e);
 	}
