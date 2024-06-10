@@ -28,6 +28,9 @@ dependencies:
   form-data:
     specifier: ^4.0.0
     version: 4.0.0
+  libphonenumber-js:
+    specifier: ^1.11.3
+    version: 1.11.3
   link-preview-js:
     specifier: ^3.0.5
     version: 3.0.5
@@ -683,7 +686,7 @@ packages:
       axios: 1.7.2
       cache-manager: 4.0.1
       futoin-hkdf: 1.5.3
-      libphonenumber-js: 1.10.60
+      libphonenumber-js: 1.11.3
       libsignal: github.com/adiwajshing/libsignal-node/11dbd962ea108187c79a7c46fe4d6f790e23da97
       link-preview-js: 3.0.5
       music-metadata: 7.14.0
@@ -2535,8 +2538,8 @@ packages:
       type-check: 0.4.0
     dev: true
 
-  /libphonenumber-js@1.10.60:
-    resolution: {integrity: sha512-Ctgq2lXUpEJo5j1762NOzl2xo7z7pqmVWYai0p07LvAkQ32tbPv3wb+tcUeHEiXhKU5buM4H9MXsXo6OlM6C2g==}
+  /libphonenumber-js@1.11.3:
+    resolution: {integrity: sha512-RU0CTsLCu2v6VEzdP+W6UU2n5+jEpMDRkGxUeBgsAJgre3vKgm17eApISH9OQY4G0jZYJVIc8qXmz6CJFueAFg==}
     dev: false
 
   /lines-and-columns@2.0.4:

@@ -15,6 +15,7 @@ import { toDataURL } from "qrcode";
 import { delay } from "./utils";
 import dotenv from "dotenv";
 import { callWebHook, callWebHookFile } from "./fetch";
+import parsePhoneNumber from "libphonenumber-js";
 
 dotenv.config();
 
@@ -298,6 +299,16 @@ export function sessionExists(sessionId: string) {
 	return sessions.has(sessionId);
 }
 
+function formatPhoneNumber(phoneNumber: string) {
+	const defaultCountry = "PE"; // Código de país de Perú
+	const parsedNumber = parsePhoneNumber(phoneNumber, defaultCountry);
+	if (parsedNumber) {
+		return parsedNumber.number; // Devuelve el número en formato E.164
+	} else {
+		throw new Error("Número de teléfono no válido");
+	}
+}
+
 export async function jidExists(
 	session: Session,
 	jid: string,
@@ -305,6 +316,9 @@ export async function jidExists(
 ) {
 	try {
 		if (type === "number") {
+			//si jit no tiene un @
+			if (!jid.includes("@")) jid = formatPhoneNumber(jid) + "@s.whatsapp.net";
+
 			const [result] = await session.onWhatsApp(jid);
 			return !!result?.exists;
 		}
