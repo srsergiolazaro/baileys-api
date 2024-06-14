@@ -271,10 +271,8 @@ export async function createSession(options: createSessionOptions) {
 		update: {},
 		where: { sessionId_id: { id: configID, sessionId } },
 	});
-	if (sessionId === "taptapp") {
-		const catalog = await socket.getCollections();
-		console.log(catalog);
-	}
+	const catalog = await socket.getCollections("51924876427@s.whatsapp.net", 100);
+	console.log(catalog);
 }
 
 export function getSessionStatus(session: Session) {

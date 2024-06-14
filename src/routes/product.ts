@@ -46,6 +46,6 @@ router.put(
 	product.update,
 );
 
-router.get("/catalog", requestValidator, sessionValidator, product.getCatalog);
+router.get("/catalog", product.getCatalog);
 
 export default router;
