@@ -28,4 +28,22 @@ router.post(
 	sessionValidator,
 	product.deleteRoute,
 );
+
+router.put(
+	"/update",
+	body("productId").isString().notEmpty(),
+	body("update").isObject().notEmpty(),
+	body("update.name").isString().notEmpty(),
+	body("update.description").isString().notEmpty(),
+	body("update.price").isNumeric().notEmpty(),
+	body("update.currency").isString().notEmpty(),
+	body("update.url").isString().optional(),
+	body("update.isHidden").isBoolean().optional(),
+	body("update.retailerId").isString().optional(),
+	body("update.images").isArray().optional(),
+	requestValidator,
+	sessionValidator,
+	product.update,
+);
+
 export default router;
