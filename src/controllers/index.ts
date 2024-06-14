@@ -5,3 +5,4 @@ export * as message from "./message";
 export * as misc from "./misc";
 export * as session from "./session";
 export * as webhook from "./webhook";
+export * as product from "./product";
