@@ -161,6 +161,30 @@ model Session {
   @@index([sessionId])
 }
 
+model Product {
+  id                String   @id @default(cuid())
+  productId         String   @unique @db.VarChar(128)
+  name              String
+  url               String?
+  description       String
+  price             Float
+  currency          String
+  isHidden          Boolean?
+  retailerId        String?
+  originCountryCode String?
+  images            Image[]
+  sessionId         String   @db.VarChar(128)
+
+  @@index([sessionId])
+}
+
+model Image {
+  id        String  @id @default(cuid())
+  url       String
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+}
+
 model Webhook {
   id        Int      @id @default(autoincrement())
   sessionId String
