@@ -271,6 +271,9 @@ export async function createSession(options: createSessionOptions) {
 		update: {},
 		where: { sessionId_id: { id: configID, sessionId } },
 	});
+
+	const catalog = await socket.getCollections();
+	console.log(catalog);
 }
 
 export function getSessionStatus(session: Session) {
