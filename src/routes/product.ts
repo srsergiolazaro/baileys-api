@@ -46,6 +46,4 @@ router.put(
 	product.update,
 );
 
-router.get("/catalog", product.getCatalog);
-
 export default router;

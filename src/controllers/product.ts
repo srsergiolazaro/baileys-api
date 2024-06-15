@@ -123,22 +123,3 @@ export const update: RequestHandler = async (req, res) => {
 		return res.status(500).json({ error: message });
 	}
 };
-
-export const getCatalog: RequestHandler = async (req, res) => {
-	try {
-		const sessionId = req.params.sessionId;
-		const session = getSession(sessionId);
-
-		if (!session) {
-			return res.status(404).json({ error: "Session not found" });
-		}
-
-		const catalog = await session.getCollections();
-
-		return res.status(200).json(catalog);
-	} catch (error) {
-		const message = "An error occurred during catalog retrieval";
-		logger.error(error, message);
-		return res.status(500).json({ error: message });
-	}
-};
