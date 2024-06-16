@@ -13,7 +13,13 @@ router.get(
 	message.list,
 );
 
-router.post("/send", requestValidator, sessionValidator, message.sendWithFormData);
+router.post(
+	"/send",
+	body().isObject().notEmpty(),
+	requestValidator,
+	sessionValidator,
+	message.sendWithFormData,
+);
 router.post(
 	"/send/bulk",
 	body().isArray().notEmpty(),
