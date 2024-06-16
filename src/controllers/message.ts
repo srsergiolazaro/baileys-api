@@ -43,14 +43,14 @@ export const send: RequestHandler = async (req, res) => {
 		if (req.is("multipart/form-data")) {
 			jid = req.body.jid;
 			type = req.body.type || "number";
-			message = req.body.message;
-			options = req.body.options;
+			message = JSON.parse(req.body.message);
+			options = JSON.parse(req.body.options) || {};
 
 			// Si se envía un archivo, ajusta el mensaje para que sea compatible con Buffer
 			if (req.file) {
 				const mediaType = req.file.mimetype.split("/")[0]; // 'image' o 'document'
 				message = {
-					...JSON.parse(message), // Concatenar con el mensaje enviado por el usuario
+					...message, // Concatenar con el mensaje enviado por el usuario
 					[mediaType]: req.file.buffer,
 				};
 			}

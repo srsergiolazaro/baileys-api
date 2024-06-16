@@ -17,14 +17,8 @@ router.get(
 	message.list,
 );
 
-router.post(
-	"/send",
-	upload.single("file"),
-	body().isObject().notEmpty(),
-	requestValidator,
-	sessionValidator,
-	message.send,
-);
+router.post("/send", upload.single("file"), requestValidator, sessionValidator, message.send);
+
 router.post(
 	"/send/bulk",
 	body().isArray().notEmpty(),
