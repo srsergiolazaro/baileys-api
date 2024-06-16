@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { prisma } from "@/db";
 import type { ProductBase, ProductUpdate, WAMediaUpload } from "@whiskeysockets/baileys";
 import type { RequestHandler } from "express";
