@@ -23,7 +23,7 @@ router.post(
 	body().isObject().notEmpty(),
 	requestValidator,
 	sessionValidator,
-	message.sendWithFormData,
+	message.send,
 );
 router.post(
 	"/send/bulk",

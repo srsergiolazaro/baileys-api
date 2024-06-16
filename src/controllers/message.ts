@@ -7,9 +7,6 @@ import { delay as delayMs } from "@/utils";
 import { getSession, jidExists } from "@/whatsapp";
 import { prisma } from "@/db";
 import type { Message } from "@prisma/client";
-import multer from "multer";
-
-const upload = multer();
 
 export const list: RequestHandler = async (req, res) => {
 	try {
@@ -72,9 +69,6 @@ export const send: RequestHandler = async (req, res) => {
 		res.status(500).json({ error: errorMessage });
 	}
 };
-
-// Exporta el middleware para manejar form-data
-export const sendWithFormData: RequestHandler[] = [upload.none(), send];
 
 export const sendBulk: RequestHandler = async (req, res) => {
 	const session = getSession(req.params.sessionId)!;
