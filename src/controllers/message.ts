@@ -9,7 +9,7 @@ import { prisma } from "@/db";
 import type { Message } from "@prisma/client";
 import multer from "multer";
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer();
 
 export const list: RequestHandler = async (req, res) => {
 	try {
