@@ -43,8 +43,8 @@ export const send: RequestHandler = async (req, res) => {
 		if (req.is("multipart/form-data")) {
 			jid = req.body.jid;
 			type = req.body.type || "number";
-			message = JSON.parse(req.body.message);
-			options = JSON.parse(req.body.options) || {};
+			message = req.body.message ? JSON.parse(req.body.message) : undefined;
+			options = req.body.options ? JSON.parse(req.body.options) : undefined;
 
 			// Si se envía un archivo, ajusta el mensaje para que sea compatible con Buffer
 			if (req.file) {
