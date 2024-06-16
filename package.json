@@ -29,6 +29,7 @@
 		"libphonenumber-js": "^1.11.3",
 		"link-preview-js": "^3.0.5",
 		"long": "^5.2.3",
+		"multer": "^1.4.5-lts.1",
 		"pino": "^7.11.0",
 		"pino-pretty": "^11.0.0",
 		"prisma": "^4.16.2",
@@ -53,7 +54,8 @@
 		"ts-node": "^10.9.2",
 		"tsconfig-paths": "^4.2.0",
 		"tscpaths": "^0.0.9",
-		"typescript": "^5.3.3"
+		"typescript": "^5.3.3",
+		"@types/multer": "^1.4.11"
 	},
 	"engines": {
 		"node": ">=18.19.0"

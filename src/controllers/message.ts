@@ -7,6 +7,9 @@ import { delay as delayMs } from "@/utils";
 import { getSession, jidExists } from "@/whatsapp";
 import { prisma } from "@/db";
 import type { Message } from "@prisma/client";
+import multer from "multer";
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 export const list: RequestHandler = async (req, res) => {
 	try {
@@ -37,20 +40,41 @@ export const list: RequestHandler = async (req, res) => {
 
 export const send: RequestHandler = async (req, res) => {
 	try {
-		const { jid, type = "number", message, options } = req.body;
+		let { jid, type = "number", message, options } = req.body;
+
+		// Procesa los datos de form-data si existen
+		if (req.is("multipart/form-data")) {
+			jid = req.body.jid;
+			type = req.body.type || "number";
+			message = req.body.message;
+			options = req.body.options;
+
+			// Si se envía un archivo, ajusta el mensaje para que sea compatible con Buffer
+			if (req.file) {
+				const mediaType = req.file.mimetype.split("/")[0]; // 'image' o 'document'
+				message = {
+					...JSON.parse(message), // Concatenar con el mensaje enviado por el usuario
+					[mediaType]: req.file.buffer,
+				};
+			}
+		}
+
 		const session = getSession(req.params.sessionId)!;
 
 		const { exists, formatJid } = await jidExists(session, jid, type);
-		if (!exists) return res.status(400).json({ error: "JID does not exists" });
+		if (!exists) return res.status(400).json({ error: "JID does not exist" });
 
 		const result = await session.sendMessage(formatJid, message, options);
 		res.status(200).json(result);
 	} catch (e) {
-		const message = "An error occured during message send";
-		logger.error(e, message);
-		res.status(500).json({ error: message });
+		const errorMessage = "An error occurred during message send";
+		logger.error(e, errorMessage);
+		res.status(500).json({ error: errorMessage });
 	}
 };
+
+// Exporta el middleware para manejar form-data
+export const sendWithFormData: RequestHandler[] = [upload.single("file"), send];
 
 export const sendBulk: RequestHandler = async (req, res) => {
 	const session = getSession(req.params.sessionId)!;
