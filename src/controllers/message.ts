@@ -74,7 +74,7 @@ export const send: RequestHandler = async (req, res) => {
 };
 
 // Exporta el middleware para manejar form-data
-export const sendWithFormData: RequestHandler[] = [upload.single("file"), send];
+export const sendWithFormData: RequestHandler[] = [upload.none(), send];
 
 export const sendBulk: RequestHandler = async (req, res) => {
 	const session = getSession(req.params.sessionId)!;

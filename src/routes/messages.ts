@@ -3,6 +3,10 @@ import { message } from "@/controllers";
 import requestValidator from "@/middlewares/request-validator";
 import sessionValidator from "@/middlewares/session-validator";
 import { query, body } from "express-validator";
+import multer from "multer";
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 const router = Router({ mergeParams: true });
 router.get(
@@ -15,6 +19,7 @@ router.get(
 
 router.post(
 	"/send",
+	upload.single("file"),
 	body().isObject().notEmpty(),
 	requestValidator,
 	sessionValidator,
