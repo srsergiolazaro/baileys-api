@@ -17,7 +17,7 @@ const host = process.env.HOST || "0.0.0.0";
 const port = Number(process.env.PORT || 3000);
 
 (async () => {
-	await init();
+	//await init();
 	app.listen(port, () => {
 		console.log(`[server]: Server is running at http://${host}:${port}`);
 	});
