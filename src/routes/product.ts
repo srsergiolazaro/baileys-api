@@ -6,6 +6,8 @@ import { body } from "express-validator";
 
 const router = Router({ mergeParams: true });
 
+router.post("/list", body("jid").isString(), requestValidator, sessionValidator, product.list);
+
 router.post(
 	"/create",
 	body("name").isString().notEmpty(),

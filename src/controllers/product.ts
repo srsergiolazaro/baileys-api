@@ -3,7 +3,31 @@ import { prisma } from "@/db";
 import type { ProductBase, ProductUpdate, WAMediaUpload } from "@whiskeysockets/baileys";
 import type { RequestHandler } from "express";
 import { logger } from "@/shared";
-import { getSession } from "@/whatsapp";
+import { getSession, jidExists } from "@/whatsapp";
+
+export const list: RequestHandler = async (req, res) => {
+	try {
+		const sessionId = req.params.sessionId;
+		const { jid } = req.body;
+
+		const session = getSession(sessionId);
+
+		if (!session) {
+			return res.status(404).json({ error: "Session not found" });
+		}
+
+		const { exists, formatJid } = await jidExists(session, jid, "number");
+		if (!exists) return res.status(400).json({ error: "JID does not exist" });
+
+		const products = await session.getCatalog({ jid: formatJid });
+		console.log(products);
+		return res.status(200).json(products);
+	} catch (error) {
+		const message = "An error occurred during product list";
+		logger.error(error, message);
+		return res.status(500).json({ error: message });
+	}
+};
 
 export const create: RequestHandler = async (req, res) => {
 	try {
