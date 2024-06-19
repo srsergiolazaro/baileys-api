@@ -155,7 +155,7 @@ model Session {
   pkId      Int    @id @default(autoincrement())
   sessionId String @db.VarChar(128)
   id        String @db.VarChar(255)
-  data      String @db.Text
+  data      String
 
   @@unique([sessionId, id], map: "unique_session_id_per_session_id")
   @@index([sessionId])
@@ -163,17 +163,17 @@ model Session {
 
 model Product {
   id                String   @id @default(cuid())
-  productId         String   @unique @db.VarChar(128)
   name              String
-  url               String?
   description       String
   price             Float
   currency          String
   isHidden          Boolean?
   retailerId        String?
   originCountryCode String?
-  images            Image[]
   sessionId         String   @db.VarChar(128)
+  url               String?
+  productId         String   @unique @db.VarChar(128)
+  images            Image[]
 
   @@index([sessionId])
 }
