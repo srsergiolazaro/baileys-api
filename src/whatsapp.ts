@@ -271,7 +271,6 @@ export async function createSession(options: createSessionOptions) {
 		update: {},
 		where: { sessionId_id: { id: configID, sessionId } },
 	});
-
 }
 
 export function getSessionStatus(session: Session) {
