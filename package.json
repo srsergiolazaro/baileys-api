@@ -19,7 +19,7 @@
 	"dependencies": {
 		"@hapi/boom": "^10.0.1",
 		"@prisma/client": "^4.16.2",
-		"@whiskeysockets/baileys": "^6.6.0",
+		"@whiskeysockets/baileys": "^6.7.5",
 		"axios": "^1.7.2",
 		"cors": "^2.8.5",
 		"dotenv": "^16.4.5",
@@ -40,6 +40,7 @@
 	"devDependencies": {
 		"@types/cors": "^2.8.17",
 		"@types/express": "^4.17.21",
+		"@types/multer": "^1.4.11",
 		"@types/node": "^20.11.19",
 		"@types/qrcode": "^1.5.5",
 		"@types/ws": "^8.5.10",
@@ -54,8 +55,7 @@
 		"ts-node": "^10.9.2",
 		"tsconfig-paths": "^4.2.0",
 		"tscpaths": "^0.0.9",
-		"typescript": "^5.3.3",
-		"@types/multer": "^1.4.11"
+		"typescript": "^5.3.3"
 	},
 	"engines": {
 		"node": ">=18.19.0"
