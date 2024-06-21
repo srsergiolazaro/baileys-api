@@ -33,5 +33,12 @@ router.post(
 	sessionValidator,
 	message.download,
 );
+router.post(
+	"/downloadcontent",
+	body().isObject().notEmpty(),
+	requestValidator,
+	sessionValidator,
+	message.downloadContent,
+);
 
 export default router;

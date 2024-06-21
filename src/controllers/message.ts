@@ -1,5 +1,5 @@
 import type { proto, WAGenericMediaMessage, WAMessage } from "@whiskeysockets/baileys";
-import { downloadMediaMessage } from "@whiskeysockets/baileys";
+import { downloadMediaMessage, downloadContentFromMessage } from "@whiskeysockets/baileys";
 import { serializePrisma } from "@/store";
 import type { RequestHandler } from "express";
 import { logger } from "@/shared";
@@ -115,6 +115,23 @@ export const download: RequestHandler = async (req, res) => {
 		);
 
 		res.setHeader("Content-Type", content.mimetype!);
+		res.write(buffer);
+		res.end();
+	} catch (e) {
+		const message = "An error occured during message media download";
+		logger.error(e, message);
+		res.status(500).json({ error: message });
+	}
+};
+
+//downloadContentFromMessage
+
+export const downloadContent: RequestHandler = async (req, res) => {
+	try {
+		const body = req.body;
+		const buffer = await downloadContentFromMessage(body, "product");
+
+		//res.setHeader("Content-Type", content.mimetype!);
 		res.write(buffer);
 		res.end();
 	} catch (e) {
