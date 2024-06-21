@@ -87,8 +87,8 @@ export const deleteRoute: RequestHandler = async (req, res) => {
 
 		const { deleted } = await session.productDelete(productIds);
 
-		// Eliminar los productos de la base de datos
-		await prisma.product.deleteMany({
+		// Primero eliminar las imágenes relacionadas
+		await prisma.image.deleteMany({
 			where: {
 				productId: {
 					in: productIds,
@@ -96,7 +96,8 @@ export const deleteRoute: RequestHandler = async (req, res) => {
 			},
 		});
 
-		await prisma.image.deleteMany({
+		// Luego eliminar los productos de la base de datos
+		await prisma.product.deleteMany({
 			where: {
 				productId: {
 					in: productIds,
@@ -111,6 +112,7 @@ export const deleteRoute: RequestHandler = async (req, res) => {
 		return res.status(500).json({ error: message });
 	}
 };
+
 export const update: RequestHandler = async (req, res) => {
 	try {
 		const { productId, update } = req.body as { productId: string; update: ProductUpdate };
