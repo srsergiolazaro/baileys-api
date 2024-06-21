@@ -45,7 +45,6 @@ export const create: RequestHandler = async (req, res) => {
 
 		const productRes = await session.productCreate(product);
 
-		// Guarda el producto en la base de datos
 		const savedProduct = await prisma.product.create({
 			data: {
 				productId: productRes.id,
@@ -78,29 +77,37 @@ export const create: RequestHandler = async (req, res) => {
 
 export const deleteRoute: RequestHandler = async (req, res) => {
 	try {
-		const { productIds } = req.body as { productIds: string[] };
+		const { productIds: whatsappIds } = req.body as { productIds: string[] };
 		const session = getSession(req.params.sessionId);
 
 		if (!session) {
 			return res.status(404).json({ error: "Session not found" });
 		}
 
-		const { deleted } = await session.productDelete(productIds);
+		const { deleted } = await session.productDelete(whatsappIds);
 
-		// Primero eliminar las imágenes relacionadas
-		await prisma.image.deleteMany({
+		const product = await prisma.product.findFirst({
 			where: {
 				productId: {
-					in: productIds,
+					in: whatsappIds,
 				},
 			},
 		});
 
-		// Luego eliminar los productos de la base de datos
+		const productId = product?.id;
+
+		await prisma.image.deleteMany({
+			where: {
+				productId: {
+					in: productId,
+				},
+			},
+		});
+
 		await prisma.product.deleteMany({
 			where: {
 				productId: {
-					in: productIds,
+					in: whatsappIds,
 				},
 			},
 		});
