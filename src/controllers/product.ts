@@ -55,6 +55,7 @@ export const create: RequestHandler = async (req, res) => {
 				isHidden: product.isHidden,
 				retailerId: product.retailerId,
 				originCountryCode: product.originCountryCode,
+				url: product.url,
 				sessionId: sessionId,
 				images: {
 					create: product.images.map((image: any) => ({
@@ -141,6 +142,7 @@ export const update: RequestHandler = async (req, res) => {
 				currency: update.currency,
 				isHidden: update.isHidden,
 				retailerId: update.retailerId,
+				url: update.url,
 				images: {
 					deleteMany: {},
 					create: update.images.map((image: any) => ({
