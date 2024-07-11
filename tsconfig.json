@@ -13,10 +13,9 @@
 		"baseUrl": ".",
 		"paths": {
 			"@/*": ["src/*"]
-		}
+		},
+		"typeRoots": ["./node_modules/@types", "./types"]
 	},
-	"include": ["src/**/*.ts"],
-	"ts-node": {
-		"require": ["tsconfig-paths/register"]
-	}
+	"include": ["src/**/*.ts", "types/**/*.ts"],
+	"exclude": ["dist", "node_modules", ".eslintrc.js", "prettier.config.js"]
 }
