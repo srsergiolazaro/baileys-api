@@ -1,7 +1,9 @@
 import type { JwtPayload } from "jsonwebtoken";
 
-declare module "express-serve-static-core" {
-	interface Request {
-		appData?: JwtPayload | string;
+declare global {
+	namespace Express {
+		interface Request {
+			appData?: JwtPayload | string;
+		}
 	}
 }
