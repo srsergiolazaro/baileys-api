@@ -19,5 +19,5 @@ module.exports = {
 		"@typescript-eslint/no-unused-vars": "error",
 		"@typescript-eslint/no-non-null-assertion": "off",
 	},
-	ignorePatterns: ["dist/", "node_modules/"],
+	ignorePatterns: ["dist/", "node_modules/", ".eslintrc.js", "prettier.config.js"],
 };
