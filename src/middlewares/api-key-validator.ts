@@ -4,10 +4,9 @@ import type { NextFunction, Request, Response } from "express";
 
 dotenv.config();
 
-const apiKey = process.env.API_KEY;
 const jwtSecret = process.env.JWT_SECRET;
 
-if (!apiKey || !jwtSecret) {
+if (!jwtSecret) {
 	throw new Error("API key or JWT secret is not set in the environment variables");
 }
 
@@ -24,10 +23,6 @@ function verifyApiKeyAndJwt(
 	if (Array.isArray(apiKeyValue)) {
 		console.warn("Invalid API key format");
 		return res.status(403).json({ error: "Invalid API key format" });
-	}
-	if (apiKeyValue !== apiKey) {
-		console.warn("Invalid API key provided");
-		return res.status(403).json({ error: "Invalid API key provided" });
 	}
 
 	jwt.verify(apiKeyValue.toString(), jwtSecret!, (err, decoded) => {
