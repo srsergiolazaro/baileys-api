@@ -4,7 +4,7 @@ import { logger } from "@/shared";
 
 export const list: RequestHandler = async (req, res) => {
 	try {
-		const { sessionId } = req.params;
+		const { sessionId } = req.appData;
 		const webhooks = await prisma.webhook.findMany({ where: { sessionId } });
 		res.status(200).json(webhooks);
 	} catch (e) {
@@ -16,7 +16,7 @@ export const list: RequestHandler = async (req, res) => {
 
 export const create: RequestHandler = async (req, res) => {
 	try {
-		const { sessionId } = req.params;
+		const { sessionId } = req.appData;
 		const { url } = req.body;
 		const webhook = await prisma.webhook.create({
 			data: { sessionId, url },
@@ -31,7 +31,7 @@ export const create: RequestHandler = async (req, res) => {
 
 export const update: RequestHandler = async (req, res) => {
 	try {
-		const { id } = req.params;
+		const { id } = req.appData;
 		const { url } = req.body;
 		const webhook = await prisma.webhook.update({
 			where: { id: Number(id) },
@@ -47,7 +47,7 @@ export const update: RequestHandler = async (req, res) => {
 
 export const remove: RequestHandler = async (req, res) => {
 	try {
-		const { id } = req.params;
+		const { id } = req.appData;
 		await prisma.webhook.delete({
 			where: { id: Number(id) },
 		});

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { JwtPayload } from "jsonwebtoken";
 
 interface Payload {
@@ -7,7 +8,7 @@ interface Payload {
 declare global {
 	namespace Express {
 		interface Request {
-			appData?: JwtPayload | Payload;
+			appData?: any;
 		}
 	}
 }

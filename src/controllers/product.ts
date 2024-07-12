@@ -9,7 +9,7 @@ export const list: RequestHandler = async (req, res) => {
 	try {
 		const { jid } = req.body;
 
-		const session = getSession(req.params.sessionId);
+		const session = getSession(req.appData.sessionId);
 
 		if (!session) {
 			return res.status(404).json({ error: "Session not found" });
@@ -35,7 +35,7 @@ export const create: RequestHandler = async (req, res) => {
 			originCountryCode: string | undefined;
 		};
 
-		const session = getSession(req.params.sessionId);
+		const session = getSession(req.appData.sessionId);
 
 		if (!session) {
 			return res.status(404).json({ error: "Session not found" });
@@ -54,7 +54,7 @@ export const create: RequestHandler = async (req, res) => {
 				retailerId: product.retailerId,
 				originCountryCode: product.originCountryCode,
 				url: product.url,
-				sessionId: req.params.sessionId,
+				sessionId: req.appData.sessionId,
 				images: {
 					create: product.images.map((image: any) => ({
 						url: image.url,
@@ -77,7 +77,7 @@ export const create: RequestHandler = async (req, res) => {
 export const deleteRoute: RequestHandler = async (req, res) => {
 	try {
 		const { productIds: whatsappIds } = req.body as { productIds: string[] };
-		const session = getSession(req.params.sessionId);
+		const session = getSession(req.appData.sessionId);
 
 		if (!session) {
 			return res.status(404).json({ error: "Session not found" });
@@ -122,7 +122,7 @@ export const deleteRoute: RequestHandler = async (req, res) => {
 export const update: RequestHandler = async (req, res) => {
 	try {
 		const { productId, update } = req.body as { productId: string; update: ProductUpdate };
-		const session = getSession(req.params.sessionId);
+		const session = getSession(req.appData.sessionId);
 
 		if (!session) {
 			return res.status(404).json({ error: "Session not found" });

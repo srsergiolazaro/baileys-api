@@ -6,7 +6,7 @@ export const makePhotoURLHandler =
 	(type: "number" | "group" = "number"): RequestHandler =>
 	async (req, res) => {
 		try {
-			const { sessionId, jid } = req.params;
+			const { sessionId, jid } = req.appData;
 			const session = getSession(sessionId)!;
 
 			const exists = await jidExists(session, jid, type);

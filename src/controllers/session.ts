@@ -16,7 +16,7 @@ export const find: RequestHandler = (req, res) =>
 	res.status(200).json({ message: "Session found" });
 
 export const status: RequestHandler = (req, res) => {
-	const session = getSession(req.params.sessionId)!;
+	const session = getSession(req.appData.sessionId)!;
 	res.status(200).json({ status: getSessionStatus(session) });
 };
 
@@ -28,7 +28,7 @@ export const add: RequestHandler = async (req, res) => {
 };
 
 export const addSSE: RequestHandler = async (req, res) => {
-	const { sessionId } = req.params;
+	const { sessionId } = req.appData;
 	res.writeHead(200, {
 		"Content-Type": "text/event-stream",
 		"Cache-Control": "no-cache",
@@ -44,6 +44,6 @@ export const addSSE: RequestHandler = async (req, res) => {
 };
 
 export const del: RequestHandler = async (req, res) => {
-	await deleteSession(req.params.sessionId);
+	await deleteSession(req.appData.sessionId);
 	res.status(200).json({ message: "Session deleted" });
 };

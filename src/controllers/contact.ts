@@ -6,7 +6,7 @@ import { prisma } from "@/db";
 
 export const list: RequestHandler = async (req, res) => {
 	try {
-		const { sessionId } = req.params;
+		const { sessionId } = req.appData;
 		const { cursor = undefined, limit = 25 } = req.query;
 		const contacts = await prisma.contact.findMany({
 			cursor: cursor ? { pkId: Number(cursor) } : undefined,
@@ -31,7 +31,7 @@ export const list: RequestHandler = async (req, res) => {
 
 export const listBlocked: RequestHandler = async (req, res) => {
 	try {
-		const session = getSession(req.params.sessionId)!;
+		const session = getSession(req.appData.sessionId)!;
 		const data = await session.fetchBlocklist();
 		res.status(200).json(data);
 	} catch (e) {
@@ -43,7 +43,7 @@ export const listBlocked: RequestHandler = async (req, res) => {
 
 export const updateBlock: RequestHandler = async (req, res) => {
 	try {
-		const session = getSession(req.params.sessionId)!;
+		const session = getSession(req.appData.sessionId)!;
 		const { jid, action = "block" } = req.body;
 
 		const exists = await jidExists(session, jid);
@@ -60,7 +60,7 @@ export const updateBlock: RequestHandler = async (req, res) => {
 
 export const check: RequestHandler = async (req, res) => {
 	try {
-		const { sessionId, jid } = req.params;
+		const { sessionId, jid } = req.appData;
 		const session = getSession(sessionId)!;
 
 		const exists = await jidExists(session, jid);

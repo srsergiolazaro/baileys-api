@@ -6,7 +6,7 @@ import { prisma } from "@/db";
 
 export const list: RequestHandler = async (req, res) => {
 	try {
-		const { sessionId } = req.params;
+		const { sessionId } = req.appData;
 		const { cursor = undefined, limit = 25 } = req.query;
 		const groups = await prisma.contact.findMany({
 			cursor: cursor ? { pkId: Number(cursor) } : undefined,
@@ -31,7 +31,7 @@ export const list: RequestHandler = async (req, res) => {
 
 export const find: RequestHandler = async (req, res) => {
 	try {
-		const { sessionId } = req.params;
+		const { sessionId } = req.appData;
 		const { jid } = req.body;
 		const session = getSession(sessionId)!;
 		const data = await session.groupMetadata(jid);
@@ -46,7 +46,7 @@ export const find: RequestHandler = async (req, res) => {
 export const create: RequestHandler = async (req, res) => {
 	try {
 		const { subject, participants } = req.body;
-		const session = getSession(req.params.sessionId)!;
+		const session = getSession(req.appData.sessionId)!;
 		const group = await session.groupCreate(subject, participants);
 		res.status(201).json(group);
 	} catch (e) {
@@ -59,7 +59,7 @@ export const create: RequestHandler = async (req, res) => {
 export const update: RequestHandler = async (req, res) => {
 	try {
 		const { jid, subject } = req.body;
-		const session = getSession(req.params.sessionId)!;
+		const session = getSession(req.appData.sessionId)!;
 		if (subject) {
 			await session.groupUpdateSubject(jid, subject);
 		}
@@ -74,7 +74,7 @@ export const update: RequestHandler = async (req, res) => {
 export const deleteGroup: RequestHandler = async (req, res) => {
 	try {
 		const { jid } = req.body;
-		const session = getSession(req.params.sessionId)!;
+		const session = getSession(req.appData.sessionId)!;
 		await session.groupLeave(jid);
 		await prisma.contact.deleteMany({
 			where: { id: jid },
@@ -90,7 +90,7 @@ export const deleteGroup: RequestHandler = async (req, res) => {
 export const updateParticipants: RequestHandler = async (req, res) => {
 	try {
 		const { jid, action, participants } = req.body;
-		const session = getSession(req.params.sessionId)!;
+		const session = getSession(req.appData.sessionId)!;
 		const result = await session.groupParticipantsUpdate(jid, participants, action);
 		res.status(200).json(result);
 	} catch (e) {
@@ -103,7 +103,7 @@ export const updateParticipants: RequestHandler = async (req, res) => {
 export const updateSettings: RequestHandler = async (req, res) => {
 	try {
 		const { jid, settings } = req.body;
-		const session = getSession(req.params.sessionId)!;
+		const session = getSession(req.appData.sessionId)!;
 		const result = await session.groupSettingUpdate(jid, settings);
 		res.status(200).json(result);
 	} catch (e) {

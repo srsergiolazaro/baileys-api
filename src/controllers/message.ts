@@ -10,7 +10,7 @@ import type { Message } from "@prisma/client";
 
 export const list: RequestHandler = async (req, res) => {
 	try {
-		const { sessionId } = req.params;
+		const { sessionId } = req.appData;
 		const { cursor = undefined, limit = 25 } = req.query;
 		const messages = (
 			await prisma.message.findMany({
@@ -56,7 +56,7 @@ export const send: RequestHandler = async (req, res) => {
 			}
 		}
 
-		const session = getSession(req.params.sessionId)!;
+		const session = getSession(req.appData.sessionId)!;
 
 		const { exists, formatJid } = await jidExists(session, jid, type);
 		if (!exists) return res.status(400).json({ error: "JID does not exist" });
@@ -71,7 +71,7 @@ export const send: RequestHandler = async (req, res) => {
 };
 
 export const sendBulk: RequestHandler = async (req, res) => {
-	const session = getSession(req.params.sessionId)!;
+	const session = getSession(req.appData.sessionId)!;
 	const results: { index: number; result: proto.WebMessageInfo | undefined }[] = [];
 	const errors: { index: number; error: string }[] = [];
 
@@ -103,7 +103,7 @@ export const sendBulk: RequestHandler = async (req, res) => {
 
 export const download: RequestHandler = async (req, res) => {
 	try {
-		const session = getSession(req.params.sessionId)!;
+		const session = getSession(req.appData.sessionId)!;
 		const message = req.body as WAMessage;
 		const type = Object.keys(message.message!)[0] as keyof proto.IMessage;
 		const content = message.message![type] as WAGenericMediaMessage;
