@@ -7,10 +7,9 @@ import { getSession, jidExists } from "@/whatsapp";
 
 export const list: RequestHandler = async (req, res) => {
 	try {
-		const sessionId = req.params.sessionId;
 		const { jid } = req.body;
 
-		const session = getSession(sessionId);
+		const session = getSession(req.params.sessionId);
 
 		if (!session) {
 			return res.status(404).json({ error: "Session not found" });
@@ -35,9 +34,8 @@ export const create: RequestHandler = async (req, res) => {
 			images: WAMediaUpload[];
 			originCountryCode: string | undefined;
 		};
-		const sessionId = req.params.sessionId;
 
-		const session = getSession(sessionId);
+		const session = getSession(req.params.sessionId);
 
 		if (!session) {
 			return res.status(404).json({ error: "Session not found" });
@@ -56,7 +54,7 @@ export const create: RequestHandler = async (req, res) => {
 				retailerId: product.retailerId,
 				originCountryCode: product.originCountryCode,
 				url: product.url,
-				sessionId: sessionId,
+				sessionId: req.params.sessionId,
 				images: {
 					create: product.images.map((image: any) => ({
 						url: image.url,
