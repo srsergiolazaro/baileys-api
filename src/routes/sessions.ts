@@ -7,10 +7,16 @@ import { apiKeyValidator, apiKeyValidatorParam } from "@/middlewares/api-key-val
 
 const router = Router();
 router.get("/", apiKeyValidator, session.list);
-router.get("/:sessionId", apiKeyValidator, sessionValidator, session.find);
-router.get("/:sessionId/status", apiKeyValidator, sessionValidator, session.status);
-router.post("/add", body("sessionId").isString().notEmpty(), apiKeyValidator, requestValidator, session.add);
-router.get("/:sessionId/add-sse", apiKeyValidatorParam, session.addSSE);
-router.delete("/:sessionId", apiKeyValidator, sessionValidator, session.del);
+router.get("/", apiKeyValidator, sessionValidator, session.find);
+router.get("/status", apiKeyValidator, sessionValidator, session.status);
+router.post(
+	"/add",
+	body("sessionId").isString().notEmpty(),
+	apiKeyValidator,
+	requestValidator,
+	session.add,
+);
+router.get("/add-sse", apiKeyValidatorParam, session.addSSE);
+router.delete("/", apiKeyValidator, sessionValidator, session.del);
 
 export default router;

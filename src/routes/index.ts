@@ -11,12 +11,12 @@ import { apiKeyValidator } from "@/middlewares/api-key-validator";
 
 const router = Router();
 router.use("/sessions", sessionRoutes);
-router.use("/:sessionId/chats", apiKeyValidator, chatRoutes);
-router.use("/:sessionId/contacts", apiKeyValidator, contactRoutes);
-router.use("/:sessionId/groups", apiKeyValidator, groupRoutes);
-router.use("/:sessionId/product", apiKeyValidator, productRoutes);
-router.use("/:sessionId/messages", apiKeyValidator, messageRoutes);
-router.use("/:sessionId/webhooks", webhookRoutes);
+router.use("/chats", apiKeyValidator, chatRoutes);
+router.use("/contacts", apiKeyValidator, contactRoutes);
+router.use("/groups", apiKeyValidator, groupRoutes);
+router.use("/product", apiKeyValidator, productRoutes);
+router.use("/messages", apiKeyValidator, messageRoutes);
+router.use("/webhooks", webhookRoutes);
 router.use("/token", tokenRoutes);
 
 export default router;
