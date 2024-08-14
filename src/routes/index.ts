@@ -16,7 +16,7 @@ router.use("/contacts", apiKeyValidator, contactRoutes);
 router.use("/groups", apiKeyValidator, groupRoutes);
 router.use("/product", apiKeyValidator, productRoutes);
 router.use("/messages", apiKeyValidator, messageRoutes);
-router.use("/webhooks", webhookRoutes);
+router.use("/webhooks", apiKeyValidator, webhookRoutes);
 router.use("/token", tokenRoutes);
 
 export default router;
