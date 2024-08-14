@@ -6,3 +6,5 @@ prisma/migrations/
 *.tgz
 *.log
 .env.example
+lumi
+lumipanel
