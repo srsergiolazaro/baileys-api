@@ -75,27 +75,49 @@ export const sendBulk: RequestHandler = async (req, res) => {
 	const results: { index: number; result: proto.WebMessageInfo | undefined }[] = [];
 	const errors: { index: number; error: string }[] = [];
 
-	for (const [
-		index,
-		{ jid, type = "number", delay = 1000, message, options },
-	] of req.body.entries()) {
+	for (const [index, data] of req.body.entries()) {
 		try {
-			const exists = await jidExists(session, jid, type);
+			let { jid, type = "number", message, options } = data;
+			const delay = data.delay || 1000; // 'delay' es constante porque no se reasigna
+
+			// Procesa los datos de form-data si existen
+			if (req.is("multipart/form-data")) {
+				jid = data.jid;
+				type = data.type || "number";
+				message = data.message ? JSON.parse(data.message) : undefined;
+				options = data.options ? JSON.parse(data.options) : undefined;
+
+				// Si se envía un archivo, ajusta el mensaje para que sea compatible con Buffer
+				if (req.file) {
+					const mediaType = req.file.mimetype.split("/")[0]; // 'image' o 'document'
+					message = {
+						...message, // Concatenar con el mensaje enviado por el usuario
+						[mediaType]: req.file.buffer,
+					};
+				}
+			}
+
+			// Verificar si el JID existe
+			const { exists, formatJid } = await jidExists(session, jid, type);
 			if (!exists) {
-				errors.push({ index, error: "JID does not exists" });
+				errors.push({ index, error: "JID does not exist" });
 				continue;
 			}
 
+			// Aplicar el retraso antes de enviar el siguiente mensaje si no es el primer mensaje
 			if (index > 0) await delayMs(delay);
-			const result = await session.sendMessage(jid, message, options);
+
+			// Enviar el mensaje
+			const result = await session.sendMessage(formatJid, message, options);
 			results.push({ index, result });
 		} catch (e) {
-			const message = "An error occured during message send";
-			logger.error(e, message);
-			errors.push({ index, error: message });
+			const errorMessage = "An error occurred during message send";
+			logger.error(e, errorMessage);
+			errors.push({ index, error: errorMessage });
 		}
 	}
 
+	// Devolver resultados y errores
 	res
 		.status(req.body.length !== 0 && errors.length === req.body.length ? 500 : 200)
 		.json({ results, errors });
