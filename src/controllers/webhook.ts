@@ -31,7 +31,7 @@ export const create: RequestHandler = async (req, res) => {
 
 export const update: RequestHandler = async (req, res) => {
 	try {
-		const { id } = req.appData;
+		const { id } = req.params;
 		const { url } = req.body;
 		const webhook = await prisma.webhook.update({
 			where: { id: Number(id) },
@@ -47,7 +47,7 @@ export const update: RequestHandler = async (req, res) => {
 
 export const remove: RequestHandler = async (req, res) => {
 	try {
-		const { id } = req.appData;
+		const { id } = req.params;
 		await prisma.webhook.delete({
 			where: { id: Number(id) },
 		});
