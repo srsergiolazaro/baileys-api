@@ -219,6 +219,14 @@ export async function createSession(options: createSessionOptions) {
 
 		const messageContent = message.message[messageType];
 
+		let text = "";
+
+		if (typeof messageContent === "string") {
+			text = messageContent;
+		} else if (messageContent && "text" in messageContent) {
+			text = messageContent.text ?? "";
+		}
+
 		try {
 			const webhooks = await prisma.webhook.findMany({ where: { sessionId } });
 
@@ -230,6 +238,7 @@ export async function createSession(options: createSessionOptions) {
 						messageType,
 						session: sessionId,
 						type: "text",
+						text,
 					});
 				} else if (documentMessageTypes.includes(messageType)) {
 					const buffer = await downloadMediaMessage(
@@ -249,6 +258,7 @@ export async function createSession(options: createSessionOptions) {
 							messageType,
 							session: sessionId,
 							type: "file",
+							text,
 						},
 						buffer,
 					);

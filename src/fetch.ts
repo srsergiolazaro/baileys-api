@@ -24,6 +24,7 @@ export async function callWebHookFile(
 		messageType: string;
 		session: string;
 		type: string;
+		text: string;
 	},
 	buffer: any,
 	response?: (data: any) => void,
