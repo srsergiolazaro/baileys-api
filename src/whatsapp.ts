@@ -152,9 +152,9 @@ export async function createSession(options: createSessionOptions) {
 	const handleConnectionUpdate = SSE ? handleSSEConnectionUpdate : handleNormalConnectionUpdate;
 	const { state, saveCreds } = await useSession(sessionId);
 	const socket = makeWASocket({
-		printQRInTerminal: true,
-		browser: [process.env.NAME_BOT_BROWSER || "Whatsapp Bot", "Chrome", "3.0"],
-		generateHighQualityLinkPreview: true,
+		printQRInTerminal: false,
+		//browser: [process.env.NAME_BOT_BROWSER || "Whatsapp Bot", "Chrome", "3.0"],
+		generateHighQualityLinkPreview: false,
 		...socketConfig,
 		auth: {
 			creds: state.creds,

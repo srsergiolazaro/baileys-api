@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { query, body } from "express-validator";
-import { chat } from "@/controllers";
+import { chat } from "../controllers";
 import requestValidator from "@/middlewares/request-validator";
 import sessionValidator from "@/middlewares/session-validator";
 
