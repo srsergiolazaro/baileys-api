@@ -6,8 +6,8 @@ import { body } from "express-validator";
 import { apiKeyValidator, apiKeyValidatorParam } from "@/middlewares/api-key-validator";
 
 const router = Router();
-//router.get("/", apiKeyValidator, session.list);
-router.get("/", apiKeyValidator, sessionValidator, session.find);
+router.get("/", apiKeyValidator, session.list);
+//router.get("/", apiKeyValidator, sessionValidator, session.find);
 router.get("/status", apiKeyValidator, sessionValidator, session.status);
 router.post(
 	"/add",
