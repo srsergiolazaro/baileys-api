@@ -110,7 +110,10 @@ export async function createSession(options: createSessionOptions) {
 
 	const handleNormalConnectionUpdate = async () => {
 		if (connectionState.qr?.length) {
-			if (res && !res.headersSent) {
+			console.log("QR", connectionState.qr);
+			console.log("res.headersSent", !res?.headersSent);
+
+			if (res) {
 				try {
 					const qr = await toDataURL(connectionState.qr);
 					res.status(200).json({ qr });
