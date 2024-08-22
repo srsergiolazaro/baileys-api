@@ -44,6 +44,6 @@ export const addSSE: RequestHandler = async (req, res) => {
 };
 
 export const del: RequestHandler = async (req, res) => {
-	await deleteSession(req.appData.sessionId);
+	await deleteSession(req.body.sessionId);
 	res.status(200).json({ message: "Session deleted" });
 };
