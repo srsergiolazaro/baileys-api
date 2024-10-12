@@ -82,9 +82,24 @@ export const update: RequestHandler = async (req, res) => {
 
 export const deleteGroup: RequestHandler = async (req, res) => {
 	try {
-		const { jid } = req.body;
+		const { jid }: { jid: string } = req.body;
+
 		const session = getSession(req.appData.sessionId)!;
+		const exists = await jidExists(session, jid, "group");
+		if (!exists) {
+			return res.status(404).json({ error: "Group not found" });
+		}
+		const metadata = await session.groupMetadata(jid);
+		const participants = metadata.participants;
+
+		await Promise.allSettled(
+			participants
+				.filter((p) => p.admin !== "superadmin")
+				.map((p) => session.groupParticipantsUpdate(jid, [p.id], "remove")),
+		);
+		await session.groupSettingUpdate(jid, "locked");
 		await session.groupLeave(jid);
+
 		await prisma.contact.deleteMany({
 			where: { id: jid },
 		});
