@@ -98,6 +98,11 @@ export const deleteGroup: RequestHandler = async (req, res) => {
 				.map((p) => session.groupParticipantsUpdate(jid, [p.id], "remove")),
 		);
 		await session.groupSettingUpdate(jid, "locked");
+		try {
+			await session.chatModify({ archive: true, lastMessages: [] }, jid);
+		} catch (e) {
+			logger.error(e);
+		}
 		await session.groupLeave(jid);
 
 		await prisma.contact.deleteMany({
