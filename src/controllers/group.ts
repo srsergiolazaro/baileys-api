@@ -1,8 +1,9 @@
 import type { RequestHandler } from "express";
 import { logger } from "@/shared";
-import { getSession } from "@/whatsapp";
+import { getSession, jidExists } from "@/whatsapp";
 import { makePhotoURLHandler } from "./misc";
 import { prisma } from "@/db";
+import type { ParticipantAction } from "@whiskeysockets/baileys";
 
 export const list: RequestHandler = async (req, res) => {
 	try {
@@ -45,9 +46,17 @@ export const find: RequestHandler = async (req, res) => {
 
 export const create: RequestHandler = async (req, res) => {
 	try {
-		const { subject, participants } = req.body;
+		const { subject, participants }: { subject: string; participants: string[] } = req.body;
 		const session = getSession(req.appData.sessionId)!;
-		const group = await session.groupCreate(subject, participants);
+		const participantResults = await Promise.allSettled(
+			participants.map((participant) => jidExists(session, participant, "number")),
+		);
+
+		const validParticipants = participantResults
+			.filter((result) => result.status === "fulfilled")
+			.map((result) => result.value.formatJid);
+
+		const group = await session.groupCreate(subject, validParticipants);
 		res.status(201).json(group);
 	} catch (e) {
 		const message = "An error occurred during group creation";
@@ -89,9 +98,22 @@ export const deleteGroup: RequestHandler = async (req, res) => {
 
 export const updateParticipants: RequestHandler = async (req, res) => {
 	try {
-		const { jid, action, participants } = req.body;
+		const {
+			jid,
+			action,
+			participants,
+		}: { jid: string; action: ParticipantAction; participants: string[] } = req.body;
+
+		const participantResults = await Promise.allSettled(
+			participants.map((participant) => jidExists(session, participant, "number")),
+		);
+
+		const validParticipants = participantResults
+			.filter((result) => result.status === "fulfilled")
+			.map((result) => result.value.formatJid);
+
 		const session = getSession(req.appData.sessionId)!;
-		const result = await session.groupParticipantsUpdate(jid, participants, action);
+		const result = await session.groupParticipantsUpdate(jid, validParticipants, action);
 		res.status(200).json(result);
 	} catch (e) {
 		const message = "An error occurred during group participants update";

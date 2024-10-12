@@ -317,8 +317,6 @@ function formatPhoneNumber(phoneNumber: string) {
 	const parsedNumber = parsePhoneNumber(phoneNumber, defaultCountry);
 	if (parsedNumber) {
 		return parsedNumber.number.replace("+", "");
-	} else {
-		throw new Error("Número de teléfono no válido");
 	}
 }
 
@@ -326,7 +324,7 @@ export async function jidExists(
 	session: Session,
 	jid: string,
 	type: "group" | "number" = "number",
-) {
+): Promise<{ exists: boolean; formatJid: string }> {
 	try {
 		// Helper function to format JID for numbers
 		const formatJid = (jid: string) =>
