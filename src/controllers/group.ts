@@ -103,6 +103,12 @@ export const updateParticipants: RequestHandler = async (req, res) => {
 			action,
 			participants,
 		}: { jid: string; action: ParticipantAction; participants: string[] } = req.body;
+		const session = getSession(req.appData.sessionId);
+		if (!session) {
+			const message = "Session not found";
+			logger.error(message);
+			return res.status(500).json({ error: message });
+		}
 
 		const participantResults = await Promise.allSettled(
 			participants.map((participant) => jidExists(session, participant, "number")),
@@ -112,7 +118,6 @@ export const updateParticipants: RequestHandler = async (req, res) => {
 			.filter((result) => result.status === "fulfilled")
 			.map((result) => result.value.formatJid);
 
-		const session = getSession(req.appData.sessionId)!;
 		const result = await session.groupParticipantsUpdate(jid, validParticipants, action);
 		res.status(200).json(result);
 	} catch (e) {
