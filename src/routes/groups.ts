@@ -63,7 +63,7 @@ router.post(
 router.post(
 	"/settings",
 	body("jid").isString().notEmpty(),
-	body("settings").isObject().notEmpty(),
+	body("settings").isString().notEmpty(),
 	requestValidator,
 	sessionValidator,
 	group.updateSettings,

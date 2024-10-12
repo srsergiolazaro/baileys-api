@@ -124,7 +124,11 @@ export const updateParticipants: RequestHandler = async (req, res) => {
 
 export const updateSettings: RequestHandler = async (req, res) => {
 	try {
-		const { jid, settings } = req.body;
+		const {
+			jid,
+			settings,
+		}: { jid: string; settings: "announcement" | "locked" | "not_announcement" | "unlocked" } =
+			req.body;
 		const session = getSession(req.appData.sessionId)!;
 		const result = await session.groupSettingUpdate(jid, settings);
 		res.status(200).json(result);
