@@ -16,6 +16,10 @@ const options: swaggerJsdoc.Options = {
       {
         url: 'http://localhost:3000',
         description: 'Servidor de desarrollo'
+      },
+      {
+        url: 'https://whatsapp.taptapp.xyz',
+        description: 'Servidor de producción'
       }
     ],
     components: {
