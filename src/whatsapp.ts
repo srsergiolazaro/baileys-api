@@ -1,8 +1,12 @@
-import makeWASocket, {
+import {
 	DisconnectReason,
 	downloadMediaMessage,
 	isJidBroadcast,
 	makeCacheableSignalKeyStore,
+<<<<<<< HEAD
+=======
+	makeWASocket,
+>>>>>>> e822e16 (chore: Upgrade Baileys library and refactor import paths)
 } from "baileys";
 import type { ConnectionState, SocketConfig, WASocket, proto } from "baileys";
 import { Store, useSession } from "./store";
@@ -157,7 +161,6 @@ export async function createSession(options: createSessionOptions) {
 	const { state, saveCreds } = await useSession(sessionId);
 	const socket = makeWASocket({
 		printQRInTerminal: false,
-		//browser: [process.env.NAME_BOT_BROWSER || "Whatsapp Bot", "Chrome", "3.0"],
 		generateHighQualityLinkPreview: false,
 		...socketConfig,
 		auth: {

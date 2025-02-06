@@ -1,4 +1,13 @@
+<<<<<<< HEAD
 import type { BaileysEventEmitter, MessageUserReceipt, proto, WAMessageKey } from "baileys";
+=======
+import type {
+	BaileysEventEmitter,
+	MessageUserReceipt,
+	proto,
+	WAMessageKey,
+} from "baileys";
+>>>>>>> e822e16 (chore: Upgrade Baileys library and refactor import paths)
 import { jidNormalizedUser, toNumber } from "baileys";
 import type { BaileysEventHandler, MakeTransformedPrisma } from "@/store/types";
 import { transformPrisma } from "@/store/utils";
