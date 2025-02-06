@@ -15,7 +15,7 @@ const router = Router({ mergeParams: true });
  *     summary: Listar productos
  *     description: Obtiene la lista de productos de un negocio
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -45,7 +45,7 @@ router.post("/list", body("jid").isString(), requestValidator, sessionValidator,
  *     summary: Crear producto
  *     description: Crea un nuevo producto en el catálogo
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -118,7 +118,7 @@ router.post(
  *     summary: Eliminar productos
  *     description: Elimina uno o varios productos del catálogo
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -156,7 +156,7 @@ router.post(
  *     summary: Actualizar producto
  *     description: Actualiza la información de un producto existente
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     requestBody:
  *       required: true
  *       content:

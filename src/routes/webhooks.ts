@@ -15,12 +15,14 @@ const router = Router({ mergeParams: true });
  *     summary: Listar webhooks
  *     description: Obtiene la lista de todos los webhooks configurados
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     responses:
  *       200:
  *         description: Lista de webhooks obtenida exitosamente
  *       401:
  *         description: No autorizado
+ *       403:
+ *         description: API key faltante o inválida
  */
 router.get("/", sessionValidator, webhook.list);
 
@@ -33,7 +35,7 @@ router.get("/", sessionValidator, webhook.list);
  *     summary: Crear webhook
  *     description: Crea un nuevo webhook para recibir notificaciones
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -51,6 +53,8 @@ router.get("/", sessionValidator, webhook.list);
  *         description: Webhook creado exitosamente
  *       400:
  *         description: URL inválida
+ *       403:
+ *         description: API key faltante o inválida
  */
 router.post(
 	"/",
@@ -69,7 +73,7 @@ router.post(
  *     summary: Actualizar webhook
  *     description: Actualiza la URL de un webhook existente
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -94,6 +98,8 @@ router.post(
  *         description: Webhook actualizado exitosamente
  *       400:
  *         description: ID o URL inválidos
+ *       403:
+ *         description: API key faltante o inválida
  *       404:
  *         description: Webhook no encontrado
  */
@@ -115,7 +121,7 @@ router.put(
  *     summary: Eliminar webhook
  *     description: Elimina un webhook existente
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -128,6 +134,8 @@ router.put(
  *         description: Webhook eliminado exitosamente
  *       400:
  *         description: ID inválido
+ *       403:
+ *         description: API key faltante o inválida
  *       404:
  *         description: Webhook no encontrado
  */

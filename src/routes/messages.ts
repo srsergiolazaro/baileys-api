@@ -52,7 +52,7 @@ router.get(
  *     summary: Enviar mensaje
  *     description: Envía un mensaje con opción de adjuntar archivo
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -86,7 +86,7 @@ router.post("/send", upload.single("file"), requestValidator, sessionValidator, 
  *     summary: Enviar mensajes en masa
  *     description: Envía múltiples mensajes en una sola petición
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -127,7 +127,7 @@ router.post(
  *     summary: Descargar mensaje
  *     description: Descarga un mensaje específico
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -167,7 +167,7 @@ router.post(
  *     summary: Descargar contenido del mensaje
  *     description: Descarga el contenido multimedia de un mensaje
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     requestBody:
  *       required: true
  *       content:

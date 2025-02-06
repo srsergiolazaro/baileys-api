@@ -48,7 +48,7 @@ router.get(
  *     summary: Buscar grupo
  *     description: Busca un grupo específico por su JID
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -112,7 +112,7 @@ router.get("/:jid/photo", sessionValidator, group.photo);
  *     summary: Crear grupo
  *     description: Crea un nuevo grupo de WhatsApp
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -155,7 +155,7 @@ router.post(
  *     summary: Actualizar grupo
  *     description: Actualiza la información de un grupo existente
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -197,7 +197,7 @@ router.put(
  *     summary: Eliminar grupo
  *     description: Elimina un grupo existente
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -235,7 +235,7 @@ router.delete(
  *     summary: Gestionar participantes
  *     description: Añade, elimina, promueve o degrada participantes del grupo
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -286,7 +286,7 @@ router.post(
  *     summary: Actualizar configuración del grupo
  *     description: Actualiza la configuración de un grupo existente
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     requestBody:
  *       required: true
  *       content:

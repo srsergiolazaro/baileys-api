@@ -87,7 +87,7 @@ router.get(
  *     summary: Silenciar chat
  *     description: Silencia las notificaciones de un chat por una duración específica
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -128,7 +128,7 @@ router.post(
  *     summary: Marcar mensajes como leídos
  *     description: Marca uno o varios mensajes como leídos en un chat
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -171,7 +171,7 @@ router.post(
  *     summary: Configurar mensajes temporales
  *     description: Configura la duración de los mensajes temporales en un chat
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     requestBody:
  *       required: true
  *       content:

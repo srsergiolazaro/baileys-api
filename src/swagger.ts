@@ -24,15 +24,16 @@ const options: swaggerJsdoc.Options = {
     ],
     components: {
       securitySchemes: {
-        BearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT'
+        ApiKeyAuth: {
+          type: 'apiKey',
+          in: 'header',
+          name: 'x-api-key',
+          description: 'API Key para autenticación'
         }
       }
     },
     security: [{
-      BearerAuth: []
+      ApiKeyAuth: []
     }]
   },
   apis: ['./src/routes/*.ts'] // archivos que contienen la documentación

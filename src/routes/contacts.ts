@@ -48,7 +48,7 @@ router.get(
  *     summary: Obtener lista de bloqueados
  *     description: Obtiene la lista de contactos bloqueados
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     responses:
  *       200:
  *         description: Lista de contactos bloqueados obtenida exitosamente
@@ -66,7 +66,7 @@ router.get("/blocklist", sessionValidator, contact.listBlocked);
  *     summary: Actualizar estado de bloqueo
  *     description: Bloquea o desbloquea un contacto
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -107,7 +107,7 @@ router.post(
  *     summary: Verificar contacto
  *     description: Verifica si un número está registrado en WhatsApp
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     parameters:
  *       - in: path
  *         name: jid
@@ -132,7 +132,7 @@ router.get("/:jid", sessionValidator, contact.check);
  *     summary: Obtener foto de perfil
  *     description: Obtiene la foto de perfil de un contacto
  *     security:
- *       - BearerAuth: []
+ *       - ApiKeyAuth: []
  *     parameters:
  *       - in: path
  *         name: jid
