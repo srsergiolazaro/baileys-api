@@ -21,7 +21,7 @@
 		"@prisma/client": "^4.16.2",
 		"@types/swagger-jsdoc": "^6.0.4",
 		"@types/swagger-ui-express": "^4.1.7",
-		"@whiskeysockets/baileys": "^6.7.6",
+		"@whiskeysockets/baileys": "^6.7.12",
 		"axios": "^1.7.2",
 		"cors": "^2.8.5",
 		"dotenv": "^16.4.5",
