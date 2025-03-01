@@ -288,7 +288,7 @@ export async function createSession(options: createSessionOptions) {
 
 export function getSessionStatus(session: Session) {
 	const state = ["CONNECTING", "CONNECTED", "DISCONNECTING", "DISCONNECTED"];
-	let status = state[(session.ws as WebSocket).readyState];
+	let status = state[(session.ws as unknown as WebSocket).readyState];
 	status = session.user ? "AUTHENTICATED" : status;
 	return status;
 }
@@ -326,13 +326,13 @@ export async function jidExists(
 	type: "group" | "number" = "number",
 ): Promise<{ exists: boolean; formatJid: string }> {
 	try {
-		// Helper function to format JID for numbers
 		const formatJid = (jid: string) =>
 			jid.includes("@") ? jid : `${formatPhoneNumber(jid)}@s.whatsapp.net`;
 
 		if (type === "number") {
 			const formattedJid = formatJid(jid);
-			const [result] = await session.onWhatsApp(formattedJid);
+			const results = await session.onWhatsApp(formattedJid);
+			const result = results?.[0];
 			return { exists: !!result?.exists, formatJid: formattedJid };
 		}
 
