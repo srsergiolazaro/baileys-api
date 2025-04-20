@@ -10,7 +10,7 @@ export const logger: Logger = pino({
 				options: {
 					colorize: true,
 				},
-			}
+			},
 		],
 	},
 	mixin(mergeObject, level) {

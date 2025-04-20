@@ -95,7 +95,9 @@ export async function createSession(options: createSessionOptions) {
 
 		if (code === DisconnectReason.loggedOut || doNotReconnect) {
 			if (res) {
-				!SSE && !res.headersSent && res.status(500).json({ error: "Unable to create session" });
+				if (!SSE && !res.headersSent) {
+					res.status(500).json({ error: "Unable to create session" });
+				}
 				res.end();
 			}
 			destroy(doNotReconnect);
@@ -139,7 +141,9 @@ export async function createSession(options: createSessionOptions) {
 
 		const currentGenerations = SSEQRGenerations.get(sessionId) ?? 0;
 		if (!res || res.writableEnded || (qr && currentGenerations >= SSE_MAX_QR_GENERATION)) {
-			res && !res.writableEnded && res.end();
+			if (res && !res.writableEnded) {
+				res.end();
+			}
 			destroy();
 			return;
 		}

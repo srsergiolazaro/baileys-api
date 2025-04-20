@@ -98,7 +98,7 @@ export const deleteRoute: RequestHandler = async (req, res) => {
 		await prisma.image.deleteMany({
 			where: {
 				productId: {
-					in: productId,
+					in: productId ? [productId] : [],
 				},
 			},
 		});

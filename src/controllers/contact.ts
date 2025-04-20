@@ -61,6 +61,11 @@ export const updateBlock: RequestHandler = async (req, res) => {
 export const check: RequestHandler = async (req, res) => {
 	try {
 		const { sessionId, jid } = req.appData;
+
+		if (!jid) {
+			return res.status(400).json({ error: "JID is required" });
+		}
+
 		const session = getSession(sessionId)!;
 
 		const exists = await jidExists(session, jid);

@@ -30,7 +30,17 @@ function verifyApiKeyAndJwt(
 			console.error("Unauthorized: Invalid or expired API key", err);
 			return res.status(401).json({ error: "Unauthorized: Invalid or expired API key" });
 		}
-		req.appData = decoded as jwt.JwtPayload;
+
+		// Verificar que el payload tenga la estructura esperada
+		const payload = decoded as jwt.JwtPayload;
+		if (!payload || typeof payload !== "object" || !payload.sessionId) {
+			return res.status(401).json({ error: "Invalid token payload" });
+		}
+
+		req.appData = {
+			sessionId: payload.sessionId as string,
+			jid: payload.jid as string | undefined
+		};
 		next();
 	});
 }
