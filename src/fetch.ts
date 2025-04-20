@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from "axios";
 import FormData from "form-data";
-import type { proto } from "@whiskeysockets/baileys";
+import type { proto } from "baileys";
 
 export function callWebHook(url: string, body: any, response?: (data: any) => void) {
 	axios

@@ -1,4 +1,4 @@
-import { type BaileysEventEmitter } from "@whiskeysockets/baileys";
+import { type BaileysEventEmitter } from "baileys";
 import type { BaileysEventHandler, MakeTransformedPrisma } from "@/store/types";
 import { transformPrisma } from "@/store/utils";
 import { prisma } from "@/db";
@@ -25,7 +25,7 @@ export default function chatHandler(sessionId: string, event: BaileysEventEmitte
 						data: chats
 							.filter((c) => !existingIds.includes(c.id))
 							.map((c) => ({
-								...transformPrisma(c) as MakeTransformedPrisma<Chat>,
+								...(transformPrisma(c) as MakeTransformedPrisma<Chat>),
 								sessionId,
 							})),
 					})

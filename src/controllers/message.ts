@@ -1,5 +1,5 @@
-import type { proto, WAGenericMediaMessage, WAMessage } from "@whiskeysockets/baileys";
-import { downloadMediaMessage, downloadContentFromMessage } from "@whiskeysockets/baileys";
+import type { proto, WAGenericMediaMessage, WAMessage } from "baileys";
+import { downloadMediaMessage, downloadContentFromMessage } from "baileys";
 import { serializePrisma } from "@/store";
 import type { RequestHandler } from "express";
 import { logger } from "@/shared";

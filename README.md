@@ -2,7 +2,7 @@
 
 Baileys is a simple, fast and easy to use WhatsApp Web API written in TypeScript. It is designed to be simple to use and is optimized for usage in Node.js.
 
-An implementation of [@WhiskeySockets/Baileys](https://github.com/WhiskeySockets/Baileys) as a simple REST API with multiple device support
+An implementation of [baileys](https://github.com/WhiskeySockets/Baileys) as a simple REST API with multiple device support
 
 Project continued from [@ookamiiixd/baileys-api](https://github.com/ookamiiixd/baileys-api/)
 

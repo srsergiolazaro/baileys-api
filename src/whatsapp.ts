@@ -3,8 +3,8 @@ import makeWASocket, {
 	downloadMediaMessage,
 	isJidBroadcast,
 	makeCacheableSignalKeyStore,
-} from "@whiskeysockets/baileys";
-import type { ConnectionState, SocketConfig, WASocket, proto } from "@whiskeysockets/baileys";
+} from "baileys";
+import type { ConnectionState, SocketConfig, WASocket, proto } from "baileys";
 import { Store, useSession } from "./store";
 import { prisma } from "./db";
 import type { WebSocket } from "ws";

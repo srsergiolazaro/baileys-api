@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { toNumber } from "@whiskeysockets/baileys";
+import { toNumber } from "baileys";
 import Long from "long";
 import type { MakeTransformedPrisma, MakeSerializedPrisma } from "./types";
 
