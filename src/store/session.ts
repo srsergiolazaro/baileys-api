@@ -1,13 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-<<<<<<< HEAD
 import type { AuthenticationCreds, AuthenticationState, SignalDataTypeMap } from "baileys";
-=======
-import type {
-	AuthenticationCreds,
-	AuthenticationState,
-	SignalDataTypeMap,
-} from "baileys";
->>>>>>> e822e16 (chore: Upgrade Baileys library and refactor import paths)
 import { proto } from "baileys";
 import { BufferJSON, initAuthCreds } from "baileys";
 import { prisma } from "@/db";

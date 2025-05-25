@@ -1,12 +1,8 @@
-import {
+import makeWASocket, {
 	DisconnectReason,
 	downloadMediaMessage,
 	isJidBroadcast,
 	makeCacheableSignalKeyStore,
-<<<<<<< HEAD
-=======
-	makeWASocket,
->>>>>>> e822e16 (chore: Upgrade Baileys library and refactor import paths)
 } from "baileys";
 import type { ConnectionState, SocketConfig, WASocket, proto } from "baileys";
 import { Store, useSession } from "./store";
