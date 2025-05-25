@@ -1,7 +1,8 @@
 import { Router } from 'express'
 import { prisma } from '@/db'
 import { logger } from '@/shared'
-import { deleteSession } from '@/whatsapp'
+import { deleteSession, getSession, createSession } from '@/whatsapp'
+import { jidDecode } from 'baileys'
 
 const router = Router()
 
@@ -9,13 +10,23 @@ const router = Router()
 router.post('/', async (req, res) => {
     try {
         logger.info('Recibida petición POST /user-sessions', { body: req.body })
-        const { userId, sessionId, phoneNumber, deviceName } = req.body
+        const { userId, sessionId, deviceName } = req.body
 
         if (!userId || !sessionId) {
             logger.warn('Faltan parámetros requeridos', { userId, sessionId })
             return res.status(400).json({
                 error: 'userId y sessionId son requeridos'
             })
+        }
+
+        // Obtener el número de teléfono de la sesión activa
+        const session = getSession(sessionId)
+        let phoneNumber = null;
+        if (session && session.authState.creds.me?.id) {
+            const decodedJid = jidDecode(session.authState.creds.me.id);
+            if (decodedJid && decodedJid.user) {
+                phoneNumber = decodedJid.user;
+            }
         }
 
         // Verificar si ya existe una sesión para este sessionId
@@ -82,12 +93,25 @@ router.get('/user/:userId', async (req, res) => {
             where: whereClause,
             orderBy: { lastActive: 'desc' }
         })
+        // Recorrer las sesiones y eliminar las que no tienen conexión activa
+        const activeSessions = []; // Nueva lista para sesiones activas
+        for (const userSession of sessions) {
+            const sessionConnection = getSession(userSession.sessionId);
+            if (!sessionConnection) {
+                logger.info('Eliminando sesión sin conexión', { sessionId: userSession.sessionId });
+                await prisma.userSession.delete({
+                    where: { sessionId: userSession.sessionId }
+                });
+            } else {
+                activeSessions.push(userSession); // Añadir sesión activa a la nueva lista
+            }
+        }
 
-        logger.info('Sesiones encontradas', { count: sessions.length, userId })
+        logger.info('Sesiones encontradas', { count: activeSessions.length, userId }) // Modificado para contar sesiones activas
 
         res.json({
             success: true,
-            data: sessions
+            data: activeSessions // Devolver solo las sesiones activas
         })
     } catch (error) {
         logger.error('Error al obtener sesiones del usuario:', error)
@@ -144,6 +168,27 @@ router.patch('/:sessionId/status', async (req, res) => {
                 updatedAt: new Date()
             }
         })
+
+        // Añadir lógica para gestionar la sesión de WhatsApp
+        if (status === 'inactive') {
+            // Si el estado cambia a inactivo, detener la conexión de WhatsApp sin borrar datos
+            const session = getSession(sessionId);
+            if (session) {
+                session.end(undefined); // Usar destroy() para desconectar sin borrar
+                logger.info('Sesión de WhatsApp desconectada debido al cambio de estado a inactivo', { sessionId });
+            }
+        } else if (status === 'active') {
+            // Si el estado cambia a activo, intentar iniciar/restaurar la sesión si no está activa
+            const session = getSession(sessionId);
+            if (!session) {
+                // Si no hay una sesión en memoria, intentar crearla/restaurarla
+                // La función createSession debería cargar los datos de la DB y conectar
+                createSession({ sessionId });
+                logger.info('Intentando iniciar/restaurar sesión de WhatsApp debido al cambio de estado a activo', { sessionId });
+            } else {
+                logger.info('Sesión de WhatsApp ya activa en memoria', { sessionId });
+            }
+        }
 
         logger.info('Estado de sesión actualizado', { sessionId, status })
 
