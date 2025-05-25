@@ -88,15 +88,20 @@ router.post(
  *       - Sesiones
  *     summary: Agregar sesión con SSE
  *     description: Crea una nueva sesión utilizando Server-Sent Events
- *     security:
- *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID único de la sesión
  *     responses:
  *       200:
  *         description: Conexión SSE establecida exitosamente
- *       401:
- *         description: No autorizado
+ *       400:
+ *         description: SessionId requerido
  */
-router.get("/add-sse", apiKeyValidatorParam, session.addSSE);
+router.get("/add-sse", session.addSSE);
 
 /**
  * @swagger

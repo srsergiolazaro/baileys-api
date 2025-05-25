@@ -192,3 +192,18 @@ model Webhook {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model UserSession {
+  id          String   @id @default(cuid())
+  userId      String   @db.VarChar(128) // Clerk user ID
+  sessionId   String   @unique @db.VarChar(128) // WhatsApp session ID
+  status      String   @default("active") @db.VarChar(50) // active, inactive, expired
+  phoneNumber String?  @db.VarChar(50) // Número de teléfono asociado
+  deviceName  String?  @db.VarChar(128) // Nombre del dispositivo
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastActive  DateTime @default(now())
+
+  @@index([userId])
+  @@index([sessionId])
+}

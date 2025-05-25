@@ -308,7 +308,25 @@ export function getSession(sessionId: string) {
 }
 
 export async function deleteSession(sessionId: string) {
-	sessions.get(sessionId)?.destroy();
+	const session = sessions.get(sessionId);
+	if (session) {
+		await session.destroy();
+	} else {
+		// Si la sesión no está activa en memoria, eliminar datos de la base de datos
+		try {
+			await Promise.allSettled([
+				prisma.chat.deleteMany({ where: { sessionId } }),
+				prisma.contact.deleteMany({ where: { sessionId } }),
+				prisma.message.deleteMany({ where: { sessionId } }),
+				prisma.groupMetadata.deleteMany({ where: { sessionId } }),
+				prisma.session.deleteMany({ where: { sessionId } }),
+				prisma.webhook.deleteMany({ where: { sessionId } }),
+			]);
+			logger.info({ sessionId }, "Session data deleted from database");
+		} catch (e) {
+			logger.error(e, "An error occurred during session data cleanup");
+		}
+	}
 }
 
 export function sessionExists(sessionId: string) {

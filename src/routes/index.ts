@@ -7,6 +7,7 @@ import contactRoutes from "./contacts";
 import webhookRoutes from "./webhooks";
 import productRoutes from "./product";
 import tokenRoutes from "./token";
+import userSessionsRoute from "./user-sessions";
 import { apiKeyValidator } from "@/middlewares/api-key-validator";
 
 const router = Router();
@@ -18,5 +19,6 @@ router.use("/product", apiKeyValidator, productRoutes);
 router.use("/messages", apiKeyValidator, messageRoutes);
 router.use("/webhooks", apiKeyValidator, webhookRoutes);
 router.use("/token", tokenRoutes);
+router.use("/user-sessions", userSessionsRoute);
 
 export default router;

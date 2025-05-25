@@ -28,7 +28,13 @@ export const add: RequestHandler = async (req, res) => {
 };
 
 export const addSSE: RequestHandler = async (req, res) => {
-	const { sessionId } = req.appData;
+	const { sessionId } = req.query;
+
+	if (!sessionId || typeof sessionId !== 'string') {
+		res.status(400).json({ error: "SessionId is required" });
+		return;
+	}
+
 	res.writeHead(200, {
 		"Content-Type": "text/event-stream",
 		"Cache-Control": "no-cache",
