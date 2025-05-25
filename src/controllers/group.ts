@@ -3,7 +3,7 @@ import { logger } from "@/shared";
 import { getSession, jidExists } from "@/whatsapp";
 import { makePhotoURLHandler } from "./misc";
 import { prisma } from "@/db";
-import type { ParticipantAction } from "@whiskeysockets/baileys";
+import type { ParticipantAction } from "baileys";
 
 export const list: RequestHandler = async (req, res) => {
 	try {

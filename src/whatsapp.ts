@@ -1,10 +1,14 @@
-import makeWASocket, {
+import {
 	DisconnectReason,
 	downloadMediaMessage,
 	isJidBroadcast,
 	makeCacheableSignalKeyStore,
-} from "@whiskeysockets/baileys";
-import type { ConnectionState, SocketConfig, WASocket, proto } from "@whiskeysockets/baileys";
+<<<<<<< HEAD
+=======
+	makeWASocket,
+>>>>>>> e822e16 (chore: Upgrade Baileys library and refactor import paths)
+} from "baileys";
+import type { ConnectionState, SocketConfig, WASocket, proto } from "baileys";
 import { Store, useSession } from "./store";
 import { prisma } from "./db";
 import type { WebSocket } from "ws";
@@ -95,7 +99,9 @@ export async function createSession(options: createSessionOptions) {
 
 		if (code === DisconnectReason.loggedOut || doNotReconnect) {
 			if (res) {
-				!SSE && !res.headersSent && res.status(500).json({ error: "Unable to create session" });
+				if (!SSE && !res.headersSent) {
+					res.status(500).json({ error: "Unable to create session" });
+				}
 				res.end();
 			}
 			destroy(doNotReconnect);
@@ -139,7 +145,9 @@ export async function createSession(options: createSessionOptions) {
 
 		const currentGenerations = SSEQRGenerations.get(sessionId) ?? 0;
 		if (!res || res.writableEnded || (qr && currentGenerations >= SSE_MAX_QR_GENERATION)) {
-			res && !res.writableEnded && res.end();
+			if (res && !res.writableEnded) {
+				res.end();
+			}
 			destroy();
 			return;
 		}
@@ -153,7 +161,6 @@ export async function createSession(options: createSessionOptions) {
 	const { state, saveCreds } = await useSession(sessionId);
 	const socket = makeWASocket({
 		printQRInTerminal: false,
-		//browser: [process.env.NAME_BOT_BROWSER || "Whatsapp Bot", "Chrome", "3.0"],
 		generateHighQualityLinkPreview: false,
 		...socketConfig,
 		auth: {
@@ -288,7 +295,7 @@ export async function createSession(options: createSessionOptions) {
 
 export function getSessionStatus(session: Session) {
 	const state = ["CONNECTING", "CONNECTED", "DISCONNECTING", "DISCONNECTED"];
-	let status = state[(session.ws as WebSocket).readyState];
+	let status = state[(session.ws as unknown as WebSocket).readyState];
 	status = session.user ? "AUTHENTICATED" : status;
 	return status;
 }
@@ -326,13 +333,13 @@ export async function jidExists(
 	type: "group" | "number" = "number",
 ): Promise<{ exists: boolean; formatJid: string }> {
 	try {
-		// Helper function to format JID for numbers
 		const formatJid = (jid: string) =>
 			jid.includes("@") ? jid : `${formatPhoneNumber(jid)}@s.whatsapp.net`;
 
 		if (type === "number") {
 			const formattedJid = formatJid(jid);
-			const [result] = await session.onWhatsApp(formattedJid);
+			const results = await session.onWhatsApp(formattedJid);
+			const result = results?.[0];
 			return { exists: !!result?.exists, formatJid: formattedJid };
 		}
 

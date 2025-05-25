@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { BaileysEventMap } from "@whiskeysockets/baileys";
+import type { BaileysEventMap } from "baileys";
 import type Long from "long";
 
 export type BaileysEventHandler<T extends keyof BaileysEventMap> = (

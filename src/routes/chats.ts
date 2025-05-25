@@ -75,6 +75,7 @@ router.get(
 	query("cursor").isNumeric().optional(),
 	query("limit").isNumeric().optional(),
 	requestValidator,
+	sessionValidator,
 	chat.find,
 );
 

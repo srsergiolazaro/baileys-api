@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { prisma } from "@/db";
-import type { ProductBase, ProductUpdate, WAMediaUpload } from "@whiskeysockets/baileys";
+import type { ProductBase, ProductUpdate, WAMediaUpload } from "baileys";
 import type { RequestHandler } from "express";
 import { logger } from "@/shared";
 import { getSession, jidExists } from "@/whatsapp";
@@ -98,7 +98,7 @@ export const deleteRoute: RequestHandler = async (req, res) => {
 		await prisma.image.deleteMany({
 			where: {
 				productId: {
-					in: productId,
+					in: productId ? [productId] : [],
 				},
 			},
 		});
