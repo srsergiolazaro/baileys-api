@@ -31,5 +31,9 @@
 		"node_modules",
 		".eslintrc.js",
 		"prettier.config.js"
-	]
+	],
+	"ts-node": {
+		"files": true,
+		"transpileOnly": false
+	}
 }
