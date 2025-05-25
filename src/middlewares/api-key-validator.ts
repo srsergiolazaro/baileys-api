@@ -45,11 +45,6 @@ function verifyApiKeyAndJwt(
 	});
 }
 
-export function apiKeyValidator(req: Request, res: Response, next: NextFunction) {
-	const headerApiKey = req.headers["x-api-key"];
-	verifyApiKeyAndJwt(headerApiKey as string | undefined, req, res, next);
-}
-
 export function apiKeyValidatorParam(req: Request, res: Response, next: NextFunction) {
 	const paramApiKey = req.query["api_key"] || req.query["API_KEY"];
 	verifyApiKeyAndJwt(paramApiKey as string | undefined, req, res, next);

@@ -14,23 +14,50 @@ export const list = async (req: Request, res: Response) => {
 		}
 
 		const { sessionId } = appData;
-		const { cursor = undefined, limit = 25 } = req.query;
+		const { cursor, limit = "25" } = req.query;
+
+		// Validar y convertir limit    
+		const parsedLimit = parseInt(limit as string, 10);
+		if (isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > 100) {
+			return res.status(400).json({ error: "Invalid limit parameter" });
+		}
+
+		// Validar y convertir cursor    
+		let parsedCursor: number | undefined;
+		if (cursor) {
+			parsedCursor = parseInt(cursor as string, 10);
+			if (isNaN(parsedCursor)) {
+				return res.status(400).json({ error: "Invalid cursor parameter" });
+			}
+		}
+
+		// Definir serializePrisma ANTES de usarla  
+		const serializePrisma = (obj: any) => {
+			return JSON.parse(JSON.stringify(obj, (key, value) => {
+				if (typeof value === 'bigint') {
+					return value.toString();
+				}
+				return value;
+			}));
+		};
+
 		const chats = (
 			await prisma.chat.findMany({
-				cursor: cursor ? { pkId: Number(cursor) } : undefined,
-				take: Number(limit),
-				skip: cursor ? 1 : 0,
+				cursor: parsedCursor ? { pkId: parsedCursor } : undefined,
+				take: parsedLimit,
+				skip: parsedCursor ? 1 : 0,
 				where: { sessionId },
 			})
 		).map((c: Chat) => serializePrisma(c));
 
 		res.status(200).json({
 			data: chats,
-			cursor:
-				chats.length !== 0 && chats.length === Number(limit) ? chats[chats.length - 1].pkId : null,
+			cursor: chats.length !== 0 && chats.length === parsedLimit
+				? chats[chats.length - 1].pkId.toString() // También convierte el cursor  
+				: null,
 		});
 	} catch (e) {
-		const message = "An error occured during chat list";
+		const message = "An error occurred during chat list";
 		logger.error(e, message);
 		res.status(500).json({ error: message });
 	}
@@ -45,15 +72,27 @@ export const find = async (req: Request, res: Response) => {
 
 		const { sessionId, jid } = appData;
 		const { cursor = undefined, limit = 25 } = req.query;
-		const messages = (
-			await prisma.message.findMany({
-				cursor: cursor ? { pkId: Number(cursor) } : undefined,
-				take: Number(limit),
-				skip: cursor ? 1 : 0,
-				where: { sessionId, remoteJid: jid },
-				orderBy: { messageTimestamp: "desc" },
-			})
-		).map((m: Message) => serializePrisma(m));
+		const messagesFromDb = await prisma.message.findMany({
+			cursor: cursor ? { pkId: Number(cursor) } : undefined,
+			take: Number(limit),
+			skip: cursor ? 1 : 0,
+			where: { sessionId, remoteJid: jid },
+			orderBy: { messageTimestamp: "desc" },
+		});
+
+		const messages = messagesFromDb.map((m: Message) => {
+			const serializedMessage = serializePrisma(m) as any; // Cast to any to handle pkId potentially being bigint
+			// Convert BigInt fields to string for JSON serialization
+			let messageToReturn = { ...serializedMessage };
+			if (serializedMessage.pkId && typeof serializedMessage.pkId === 'bigint') {
+				messageToReturn.pkId = serializedMessage.pkId.toString();
+			}
+			// Si messageTimestamp también fuera BigInt y causara problemas, se convertiría similarmente:
+			// if (serializedMessage.messageTimestamp && typeof serializedMessage.messageTimestamp === 'bigint') {
+			//   messageToReturn.messageTimestamp = serializedMessage.messageTimestamp.toString();
+			// }
+			return messageToReturn;
+		});
 
 		res.status(200).json({
 			data: messages,

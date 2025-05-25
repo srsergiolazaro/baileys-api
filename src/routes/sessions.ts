@@ -3,7 +3,7 @@ import { session } from "@/controllers";
 import sessionValidator from "@/middlewares/session-validator";
 // import requestValidator from "@/middlewares/request-validator";
 import { body } from "express-validator";
-import { apiKeyValidator, apiKeyValidatorParam } from "@/middlewares/api-key-validator";
+import { apiKeyValidatorParam } from "@/middlewares/api-key-validator";
 
 const router = Router();
 
@@ -23,8 +23,8 @@ const router = Router();
  *       401:
  *         description: No autorizado - API key inválida
  */
-router.get("/", apiKeyValidator, session.list);
-//router.get("/", apiKeyValidator, sessionValidator, session.find);
+router.get("/", apiKeyValidatorParam, session.list);
+//router.get("/", apiKeyValidatorParam, sessionValidator, session.find);
 
 /**
  * @swagger
@@ -44,7 +44,7 @@ router.get("/", apiKeyValidator, session.list);
  *       404:
  *         description: Sesión no encontrada
  */
-router.get("/status", apiKeyValidator, sessionValidator, session.status);
+router.get("/status", apiKeyValidatorParam, sessionValidator, session.status);
 
 /**
  * @swagger
@@ -75,7 +75,7 @@ router.get("/status", apiKeyValidator, sessionValidator, session.status);
 router.post(
 	"/add",
 	body("sessionId").isString().notEmpty(),
-	//apiKeyValidator,
+	//apiKeyValidatorParam,
 	//requestValidator,
 	session.add,
 );
@@ -121,6 +121,6 @@ router.get("/add-sse", session.addSSE);
  *       404:
  *         description: Sesión no encontrada
  */
-router.delete("/", apiKeyValidator, sessionValidator, session.del);
+router.delete("/", apiKeyValidatorParam, sessionValidator, session.del);
 
 export default router;

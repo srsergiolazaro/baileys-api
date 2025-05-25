@@ -4,6 +4,11 @@ declare global {
             appData: {
                 sessionId: string;
                 jid?: string;
+                userId?: string;
+            };
+            tokenData?: {
+                sessionId: string;
+                userId?: string;
             };
         }
     }
