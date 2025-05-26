@@ -85,6 +85,7 @@ model GroupMetadata {
   desc              String?  @db.VarChar(255)
   descOwner         String?  @db.VarChar(128)
   descId            String?  @db.VarChar(128)
+  addressingMode    String?  @db.VarChar(10)
   restrict          Boolean?
   announce          Boolean?
   size              Int?

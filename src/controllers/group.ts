@@ -8,20 +8,12 @@ import type { ParticipantAction } from "baileys";
 export const list: RequestHandler = async (req, res) => {
 	try {
 		const { sessionId } = req.appData;
-		const { cursor = undefined, limit = 25 } = req.query;
-		const groups = await prisma.contact.findMany({
-			cursor: cursor ? { pkId: Number(cursor) } : undefined,
-			take: Number(limit),
-			skip: cursor ? 1 : 0,
-			where: { id: { endsWith: "g.us" }, sessionId },
-		});
+		const session = getSession(sessionId)!;
+		const groups = await session.groupFetchAllParticipating();
 
 		res.status(200).json({
 			data: groups,
-			cursor:
-				groups.length !== 0 && groups.length === Number(limit)
-					? groups[groups.length - 1].pkId
-					: null,
+
 		});
 	} catch (e) {
 		const message = "An error occurred during group list";
