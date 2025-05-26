@@ -39,7 +39,7 @@ function verifyApiKeyAndJwt(
 
 		req.appData = {
 			sessionId: payload.sessionId as string,
-			jid: payload.jid as string | undefined
+			jid: payload.jid as string | undefined,
 		};
 		next();
 	});

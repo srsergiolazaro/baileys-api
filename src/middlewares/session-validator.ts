@@ -12,7 +12,9 @@ export default function sessionValidator(req: Request, res: Response, next: Next
 	const sessionId = sessionIdFromToken || sessionIdFromAppData;
 
 	if (!sessionId) {
-		return res.status(400).json({ error: "Session ID is required and not found in token or appData" });
+		return res
+			.status(400)
+			.json({ error: "Session ID is required and not found in token or appData" });
 	}
 
 	if (!sessionExists(sessionId)) {

@@ -5,7 +5,6 @@ import type { Chat, Message } from "@prisma/client";
 import { getSession } from "@/whatsapp";
 import type { Request, Response } from "express";
 
-
 export const list = async (req: Request, res: Response) => {
 	try {
 		const appData = req.appData;
@@ -16,13 +15,13 @@ export const list = async (req: Request, res: Response) => {
 		const { sessionId } = appData;
 		const { cursor, limit = "25" } = req.query;
 
-		// Validar y convertir limit    
+		// Validar y convertir limit
 		const parsedLimit = parseInt(limit as string, 10);
 		if (isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > 100) {
 			return res.status(400).json({ error: "Invalid limit parameter" });
 		}
 
-		// Validar y convertir cursor    
+		// Validar y convertir cursor
 		let parsedCursor: number | undefined;
 		if (cursor) {
 			parsedCursor = parseInt(cursor as string, 10);
@@ -31,14 +30,16 @@ export const list = async (req: Request, res: Response) => {
 			}
 		}
 
-		// Definir serializePrisma ANTES de usarla  
+		// Definir serializePrisma ANTES de usarla
 		const serializePrisma = (obj: any) => {
-			return JSON.parse(JSON.stringify(obj, (key, value) => {
-				if (typeof value === 'bigint') {
-					return value.toString();
-				}
-				return value;
-			}));
+			return JSON.parse(
+				JSON.stringify(obj, (key, value) => {
+					if (typeof value === "bigint") {
+						return value.toString();
+					}
+					return value;
+				}),
+			);
 		};
 
 		const chats = (
@@ -52,9 +53,10 @@ export const list = async (req: Request, res: Response) => {
 
 		res.status(200).json({
 			data: chats,
-			cursor: chats.length !== 0 && chats.length === parsedLimit
-				? chats[chats.length - 1].pkId.toString() // También convierte el cursor  
-				: null,
+			cursor:
+				chats.length !== 0 && chats.length === parsedLimit
+					? chats[chats.length - 1].pkId.toString() // También convierte el cursor
+					: null,
 		});
 	} catch (e) {
 		const message = "An error occurred during chat list";
@@ -83,8 +85,8 @@ export const find = async (req: Request, res: Response) => {
 		const messages = messagesFromDb.map((m: Message) => {
 			const serializedMessage = serializePrisma(m) as any; // Cast to any to handle pkId potentially being bigint
 			// Convert BigInt fields to string for JSON serialization
-			let messageToReturn = { ...serializedMessage };
-			if (serializedMessage.pkId && typeof serializedMessage.pkId === 'bigint') {
+			const messageToReturn = { ...serializedMessage };
+			if (serializedMessage.pkId && typeof serializedMessage.pkId === "bigint") {
 				messageToReturn.pkId = serializedMessage.pkId.toString();
 			}
 			// Si messageTimestamp también fuera BigInt y causara problemas, se convertiría similarmente:

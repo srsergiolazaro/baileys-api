@@ -13,7 +13,6 @@ export const list: RequestHandler = async (req, res) => {
 
 		res.status(200).json({
 			data: groups,
-
 		});
 	} catch (e) {
 		const message = "An error occurred during group list";

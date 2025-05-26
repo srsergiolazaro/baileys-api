@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 import type { BaileysEventMap } from "baileys";
 import type Long from "long";
 

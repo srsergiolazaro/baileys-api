@@ -30,7 +30,7 @@ export const add: RequestHandler = async (req, res) => {
 export const addSSE: RequestHandler = async (req, res) => {
 	const { sessionId } = req.query;
 
-	if (!sessionId || typeof sessionId !== 'string') {
+	if (!sessionId || typeof sessionId !== "string") {
 		res.status(400).json({ error: "SessionId is required" });
 		return;
 	}

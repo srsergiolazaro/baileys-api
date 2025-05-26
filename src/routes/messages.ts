@@ -194,7 +194,14 @@ router.get(
  *               url: "https://ejemplo.com/video.mp4"
  *             ptv: true
  */
-router.post("/send", upload.single("file"), requestValidator, jwtValidator, sessionValidator, message.send);
+router.post(
+	"/send",
+	upload.single("file"),
+	requestValidator,
+	jwtValidator,
+	sessionValidator,
+	message.send,
+);
 
 /**
  * @swagger

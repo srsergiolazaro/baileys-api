@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 import type { AuthenticationCreds, AuthenticationState, SignalDataTypeMap } from "baileys";
 import { proto } from "baileys";
 import { BufferJSON, initAuthCreds } from "baileys";

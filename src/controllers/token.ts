@@ -6,7 +6,7 @@ import dotenv from "dotenv";
 dotenv.config();
 const generateJwtToken = (appData: object) => {
 	const secretOrPrivateKey: jwt.Secret = process.env.JWT_SECRET || "some-default-secret";
-	return jwt.sign(appData, secretOrPrivateKey, { expiresIn: '1h' });
+	return jwt.sign(appData, secretOrPrivateKey, { expiresIn: "1h" });
 };
 export const create: RequestHandler = async (req: Request & { user?: { id?: string } }, res) => {
 	try {
