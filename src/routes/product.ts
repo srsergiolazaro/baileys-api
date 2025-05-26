@@ -229,4 +229,166 @@ router.put(
 	product.update,
 );
 
+/**
+ * @swagger
+ * /products/collections:
+ *   post:
+ *     tags:
+ *       - Productos
+ *     summary: Obtener colecciones
+ *     description: Obtiene las colecciones de productos de un negocio
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               jid:
+ *                 type: string
+ *                 description: ID del negocio (JID)
+ *               limit:
+ *                 type: number
+ *                 description: Límite de productos por colección
+ *     responses:
+ *       200:
+ *         description: Colecciones obtenidas exitosamente
+ *       400:
+ *         description: Datos de entrada inválidos
+ */
+router.post(
+	"/collections",
+	body("jid").isString().optional(),
+	body("limit").isNumeric().optional(),
+	requestValidator,
+	sessionValidator,
+	product.getCollections,
+);
+
+/**
+ * @swagger
+ * /products/order-details:
+ *   post:
+ *     tags:
+ *       - Productos
+ *     summary: Obtener detalles de orden
+ *     description: Obtiene los detalles de una orden específica
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - orderId
+ *               - token
+ *             properties:
+ *               orderId:
+ *                 type: string
+ *                 description: ID de la orden
+ *               token:
+ *                 type: string
+ *                 description: Token de autenticación
+ *     responses:
+ *       200:
+ *         description: Detalles de la orden obtenidos exitosamente
+ *       400:
+ *         description: Datos de entrada inválidos
+ */
+router.post(
+	"/order-details",
+	body("orderId").isString().notEmpty(),
+	body("token").isString().notEmpty(),
+	requestValidator,
+	sessionValidator,
+	product.getOrderDetails,
+);
+
+/**
+ * @swagger
+ * /products/send-message:
+ *   post:
+ *     tags:
+ *       - Productos
+ *     summary: Enviar mensaje con producto
+ *     description: Envía un mensaje que incluye información de un producto
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - jid
+ *               - product
+ *             properties:
+ *               jid:
+ *                 type: string
+ *                 description: ID del destinatario (JID)
+ *               product:
+ *                 type: object
+ *                 required:
+ *                   - productImage
+ *                   - title
+ *                   - description
+ *                   - currencyCode
+ *                   - priceAmount1000
+ *                 properties:
+ *                   productImage:
+ *                     type: object
+ *                     properties:
+ *                       url:
+ *                         type: string
+ *                         description: URL de la imagen del producto
+ *                   title:
+ *                     type: string
+ *                     description: Título del producto
+ *                   description:
+ *                     type: string
+ *                     description: Descripción del producto
+ *                   currencyCode:
+ *                     type: string
+ *                     description: Código de la moneda
+ *                   priceAmount1000:
+ *                     type: number
+ *                     description: Precio en la unidad más pequeña (centavos)
+ *                   retailerId:
+ *                     type: string
+ *                     description: ID del vendedor
+ *                   url:
+ *                     type: string
+ *                     description: URL del producto
+ *               options:
+ *                 type: object
+ *                 description: Opciones adicionales para el mensaje
+ *     responses:
+ *       200:
+ *         description: Mensaje enviado exitosamente
+ *       400:
+ *         description: Datos de entrada inválidos
+ */
+router.post(
+	"/send-message",
+	body("jid").isString().notEmpty(),
+	body("product").isObject().notEmpty(),
+	body("product.productImage").isObject().notEmpty(),
+	body("product.productImage.url").isString().notEmpty(),
+	body("product.title").isString().notEmpty(),
+	body("product.description").isString().notEmpty(),
+	body("product.currencyCode").isString().notEmpty(),
+	body("product.priceAmount1000").isNumeric().notEmpty(),
+	body("product.retailerId").isString().optional(),
+	body("product.url").isString().optional(),
+	body("options").isObject().optional(),
+	requestValidator,
+	sessionValidator,
+	product.sendProductMessage,
+);
+
 export default router;
