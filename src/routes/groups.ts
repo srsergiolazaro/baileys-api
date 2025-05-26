@@ -41,6 +41,34 @@ router.get(
 
 /**
  * @swagger
+ * /groups/search:
+ *   get:
+ *     tags:
+ *       - Grupos
+ *     summary: Buscar grupos por nombre
+ *     description: Busca grupos por nombre utilizando Fuse.js
+ *     parameters:
+ *       - in: query
+ *         name: name
+ *         schema:
+ *           type: string
+ *         description: Nombre del grupo a buscar
+ *     responses:
+ *       200:
+ *         description: Búsqueda de grupos exitosa
+ *       400:
+ *         description: Parámetros de consulta inválidos
+ */
+router.get(
+	"/search",
+	query("name").isString().optional(),
+	requestValidator,
+	sessionValidator,
+	group.search,
+);
+
+/**
+ * @swagger
  * /groups/find:
  *   post:
  *     tags:

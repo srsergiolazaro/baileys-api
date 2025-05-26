@@ -4,6 +4,7 @@ import { getSession, jidExists } from "@/whatsapp";
 import { makePhotoURLHandler } from "./misc";
 import { prisma } from "@/db";
 import type { ParticipantAction } from "baileys";
+import Fuse from "fuse.js";
 
 export const list: RequestHandler = async (req, res) => {
 	try {
@@ -156,3 +157,33 @@ export const updateSettings: RequestHandler = async (req, res) => {
 };
 
 export const photo = makePhotoURLHandler("group");
+
+export const search: RequestHandler = async (req, res) => {
+	try {
+		const { sessionId } = req.appData;
+		const { name } = req.query;
+		const session = getSession(sessionId)!;
+		const groups = await session.groupFetchAllParticipating();
+		const groupValues = Object.values(groups);
+
+		if (!name || typeof name !== "string") {
+			return res.status(200).json({
+				data: groupValues,
+			});
+		}
+
+		const fuse = new Fuse(groupValues, {
+			keys: ["subject"],
+			threshold: 0.3,
+		});
+
+		const result = fuse.search(name as string);
+		res.status(200).json({
+			data: result.map((r) => r.item),
+		});
+	} catch (e) {
+		const message = "An error occurred during group search";
+		logger.error(e, message);
+		res.status(500).json({ error: message });
+	}
+};
