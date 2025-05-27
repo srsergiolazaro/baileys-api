@@ -161,7 +161,7 @@ export const photo = makePhotoURLHandler("group");
 export const search: RequestHandler = async (req, res) => {
 	try {
 		const { sessionId } = req.appData;
-		const { name } = req.query;
+		const { name } = req.body;
 		const session = getSession(sessionId)!;
 		const groups = await session.groupFetchAllParticipating();
 		const groupValues = Object.values(groups);
