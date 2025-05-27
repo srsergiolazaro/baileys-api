@@ -59,9 +59,9 @@ router.get(
  *       400:
  *         description: Parámetros de consulta inválidos
  */
-router.get(
+router.post(
 	"/search",
-	query("name").isString().optional(),
+	body("name").isString().optional(),
 	requestValidator,
 	sessionValidator,
 	group.search,
