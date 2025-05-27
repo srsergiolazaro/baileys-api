@@ -1,15 +1,13 @@
 import type { Request, Response, NextFunction } from "express";
 import { sessionExists } from "@/whatsapp";
 
-// La interfaz local RequestWithTokenData fue eliminada.
 // Ahora confiamos en la definición global en src/@types/express.d.ts
 
 // Middleware para validar la sesión
 export default function sessionValidator(req: Request, res: Response, next: NextFunction) {
-	const sessionIdFromToken = req.tokenData?.sessionId;
 	const sessionIdFromAppData = req.appData?.sessionId;
 
-	const sessionId = sessionIdFromToken || sessionIdFromAppData;
+	const sessionId = sessionIdFromAppData;
 
 	if (!sessionId) {
 		return res

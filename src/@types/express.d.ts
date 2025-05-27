@@ -6,10 +6,6 @@ declare global {
 				jid?: string;
 				userId?: string;
 			};
-			tokenData?: {
-				sessionId: string;
-				userId?: string;
-			};
 		}
 	}
 }

@@ -5,17 +5,6 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// Ya no necesitamos AppData ni DecodedTokenData aquí si tokenData está en global
-// interface DecodedTokenData {
-// sessionId: string;
-// userId?: string;
-// }
-
-// Ya no necesitamos AuthenticatedRequest aquí si tokenData está en global
-// interface AuthenticatedRequest extends Request {
-// tokenData?: DecodedTokenData;
-// }
-
 export default function jwtValidator(req: Request, res: Response, next: NextFunction) {
 	// Usamos Request directamente
 	const authHeader = req.headers.authorization;
@@ -35,12 +24,6 @@ export default function jwtValidator(req: Request, res: Response, next: NextFunc
 			return res.status(400).json({ error: "Token is valid but missing mandatory sessionId" });
 		}
 
-		// Asignamos directamente a req.tokenData, que ahora es parte de la Request global
-		req.tokenData = {
-			sessionId: decoded.sessionId,
-			userId: decoded.userId,
-		};
-
 		// También poblamos req.appData.userId si existe en el token, para consistencia
 		// y porque appData.sessionId ya es manejado por la definición global.
 		// La definición global espera que appData exista.
@@ -48,7 +31,6 @@ export default function jwtValidator(req: Request, res: Response, next: NextFunc
 			// Esto no debería ocurrir si otros middlewares o la inicialización de express lo hacen.
 			// La definicion global actual implica que appData siempre existe y tiene sessionId: string
 			// Por seguridad, si llegamos aquí y appData no existe, podría ser un problema de configuración
-			// pero para este middleware, nos enfocaremos en poblar tokenData y opcionalmente appData.userId
 			req.appData = { sessionId: decoded.sessionId }; // Cumple con el mínimo de la definicion global
 		}
 		if (decoded.userId) {
