@@ -5,7 +5,7 @@
 	"main": "dist/index.js",
 	"scripts": {
 		"build": "prisma generate && tsc --project tsconfig.json && tscpaths -p tsconfig.json -s ./src",
-		"start": "node -r -r ts-node ./dist/index.js",
+		"start": "node ./dist/index.js",
 		"dev": "prisma generate && nodemon --exec \"ts-node -r tsconfig-paths/register\" src/index.ts",
 		"lint": "eslint . --ext .ts --fix",
 		"format": "prettier . --write",
