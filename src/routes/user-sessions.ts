@@ -3,11 +3,12 @@ import { prisma } from "@/db";
 import { logger } from "@/shared";
 import { deleteSession, getSession, createSession } from "@/whatsapp";
 import { jidDecode } from "baileys";
+import { apiKeyValidator } from "@/middlewares/api-key-validator";
 
 const router = Router();
 
 // Crear o actualizar una sesión de usuario
-router.post("/", async (req, res) => {
+router.post("/", apiKeyValidator, async (req, res) => {
 	try {
 		logger.info("Recibida petición POST /user-sessions", { body: req.body });
 		const { userId, sessionId, deviceName } = req.body;
@@ -78,7 +79,7 @@ router.post("/", async (req, res) => {
 });
 
 // Obtener sesiones de un usuario
-router.get("/user/:userId", async (req, res) => {
+router.get("/user/:userId", apiKeyValidator, async (req, res) => {
 	try {
 		logger.info("Recibida petición GET /user-sessions/user/:userId", { userId: req.params.userId });
 		const { userId } = req.params;
@@ -122,7 +123,7 @@ router.get("/user/:userId", async (req, res) => {
 });
 
 // Obtener información de una sesión específica
-router.get("/:sessionId", async (req, res) => {
+router.get("/:sessionId", apiKeyValidator, async (req, res) => {
 	try {
 		const { sessionId } = req.params;
 
@@ -149,7 +150,7 @@ router.get("/:sessionId", async (req, res) => {
 });
 
 // Actualizar estado de una sesión
-router.patch("/:sessionId/status", async (req, res) => {
+router.patch("/:sessionId/status", apiKeyValidator, async (req, res) => {
 	try {
 		const { sessionId } = req.params;
 		const { status } = req.body;
@@ -210,7 +211,7 @@ router.patch("/:sessionId/status", async (req, res) => {
 });
 
 // Eliminar una sesión
-router.delete("/:sessionId", async (req, res) => {
+router.delete("/:sessionId", apiKeyValidator, async (req, res) => {
 	try {
 		const { sessionId } = req.params;
 
@@ -239,7 +240,7 @@ router.delete("/:sessionId", async (req, res) => {
 });
 
 // Actualizar última actividad de una sesión
-router.patch("/:sessionId/heartbeat", async (req, res) => {
+router.patch("/:sessionId/heartbeat", apiKeyValidator, async (req, res) => {
 	try {
 		const { sessionId } = req.params;
 

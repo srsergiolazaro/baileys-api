@@ -3,6 +3,7 @@ import { query, body } from "express-validator";
 import { chat } from "../controllers";
 import requestValidator from "@/middlewares/request-validator";
 import sessionValidator from "@/middlewares/session-validator";
+import { apiKeyValidator } from "@/middlewares/api-key-validator";
 
 const router = Router({ mergeParams: true });
 
@@ -33,6 +34,7 @@ const router = Router({ mergeParams: true });
  */
 router.get(
 	"/",
+	apiKeyValidator,
 	query("cursor").isNumeric().optional(),
 	query("limit").isNumeric().optional(),
 	requestValidator,
@@ -72,6 +74,7 @@ router.get(
  */
 router.get(
 	"/:jid",
+	apiKeyValidator,
 	query("cursor").isNumeric().optional(),
 	query("limit").isNumeric().optional(),
 	requestValidator,
@@ -113,6 +116,7 @@ router.get(
  */
 router.post(
 	"/mute",
+	apiKeyValidator,
 	body("jid").isString().notEmpty(),
 	body("duration").isNumeric().notEmpty(),
 	requestValidator,
@@ -156,6 +160,7 @@ router.post(
  */
 router.post(
 	"/read",
+	apiKeyValidator,
 	body("jid").isString().notEmpty(),
 	body("messageIds").isArray().notEmpty(),
 	requestValidator,
@@ -196,6 +201,7 @@ router.post(
  */
 router.post(
 	"/disappearing",
+	apiKeyValidator,
 	body("jid").isString().notEmpty(),
 	body("duration").isNumeric().optional(),
 	requestValidator,

@@ -114,6 +114,7 @@ router.get("/status", apiKeyValidator, sessionValidator, session.status);
  */
 router.post(
 	"/add",
+	apiKeyValidator,
 	body("sessionId").isString().notEmpty(),
 	//apiKeyValidatorParam,
 	//requestValidator,
@@ -141,7 +142,7 @@ router.post(
  *       400:
  *         description: SessionId requerido
  */
-router.get("/add-sse", session.addSSE);
+router.get("/add-sse", apiKeyValidator, session.addSSE);
 
 /**
  * @swagger

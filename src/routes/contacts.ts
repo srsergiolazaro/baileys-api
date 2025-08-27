@@ -4,6 +4,7 @@ import { contact } from "@/controllers";
 import requestValidator from "@/middlewares/request-validator";
 import sessionValidator from "@/middlewares/session-validator";
 import jidValidator from "@/middlewares/jid-validator";
+import { apiKeyValidator } from "@/middlewares/api-key-validator";
 
 const router = Router({ mergeParams: true });
 
@@ -34,6 +35,7 @@ const router = Router({ mergeParams: true });
  */
 router.get(
 	"/",
+	apiKeyValidator,
 	query("cursor").isNumeric().optional(),
 	query("limit").isNumeric().optional(),
 	requestValidator,
@@ -56,7 +58,7 @@ router.get(
  *       401:
  *         description: No autorizado
  */
-router.get("/blocklist", sessionValidator, contact.listBlocked);
+router.get("/blocklist", apiKeyValidator, sessionValidator, contact.listBlocked);
 
 /**
  * @swagger
@@ -92,6 +94,7 @@ router.get("/blocklist", sessionValidator, contact.listBlocked);
  */
 router.post(
 	"/blocklist/update",
+	apiKeyValidator,
 	body("jid").isString().notEmpty(),
 	body("action").isString().isIn(["block", "unblock"]).optional(),
 	requestValidator,
@@ -122,7 +125,7 @@ router.post(
  *       404:
  *         description: Contacto no encontrado
  */
-router.get("/:jid", jidValidator, sessionValidator, contact.check);
+router.get("/:jid", apiKeyValidator, jidValidator, sessionValidator, contact.check);
 
 /**
  * @swagger
@@ -152,6 +155,6 @@ router.get("/:jid", jidValidator, sessionValidator, contact.check);
  *       404:
  *         description: Foto de perfil no encontrada
  */
-router.get("/:jid/photo", sessionValidator, contact.photo);
+router.get("/:jid/photo", apiKeyValidator, sessionValidator, contact.photo);
 
 export default router;

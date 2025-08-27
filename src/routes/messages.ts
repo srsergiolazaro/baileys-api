@@ -4,6 +4,7 @@ import requestValidator from "@/middlewares/request-validator";
 import sessionValidator from "@/middlewares/session-validator";
 import { query, body } from "express-validator";
 import multer from "multer";
+import { apiKeyValidator } from "@/middlewares/api-key-validator";
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
@@ -37,6 +38,7 @@ const router = Router({ mergeParams: true });
  */
 router.get(
 	"/",
+	apiKeyValidator,
 	query("cursor").isNumeric().optional(),
 	query("limit").isNumeric().optional(),
 	requestValidator,
@@ -195,6 +197,7 @@ router.get(
  */
 router.post(
 	"/send",
+	apiKeyValidator,
 	upload.single("file"),
 	requestValidator,
 	sessionValidator,
@@ -272,6 +275,7 @@ router.post(
  */
 router.post(
 	"/send/bulk",
+	apiKeyValidator,
 	body().isArray().notEmpty(),
 	requestValidator,
 	sessionValidator,
@@ -312,6 +316,7 @@ router.post(
  */
 router.post(
 	"/download",
+	apiKeyValidator,
 	body().isObject().notEmpty(),
 	requestValidator,
 	sessionValidator,
@@ -352,6 +357,7 @@ router.post(
  */
 router.post(
 	"/downloadcontent",
+	apiKeyValidator,
 	body().isObject().notEmpty(),
 	requestValidator,
 	sessionValidator,

@@ -3,6 +3,7 @@ import { body, param } from "express-validator";
 import { webhook } from "@/controllers";
 import requestValidator from "@/middlewares/request-validator";
 import sessionValidator from "@/middlewares/session-validator";
+import { apiKeyValidator } from "@/middlewares/api-key-validator";
 
 const router = Router({ mergeParams: true });
 
@@ -24,7 +25,7 @@ const router = Router({ mergeParams: true });
  *       403:
  *         description: API key faltante o inválida
  */
-router.get("/", sessionValidator, webhook.list);
+router.get("/", apiKeyValidator, sessionValidator, webhook.list);
 
 /**
  * @swagger
@@ -58,6 +59,7 @@ router.get("/", sessionValidator, webhook.list);
  */
 router.post(
 	"/",
+	apiKeyValidator,
 	body("url").isString().notEmpty(),
 	requestValidator,
 	sessionValidator,
@@ -105,6 +107,7 @@ router.post(
  */
 router.put(
 	"/:id",
+	apiKeyValidator,
 	param("id").isNumeric().notEmpty(),
 	body("url").isString().notEmpty(),
 	requestValidator,
@@ -141,6 +144,7 @@ router.put(
  */
 router.delete(
 	"/:id",
+	apiKeyValidator,
 	param("id").isNumeric().notEmpty(),
 	requestValidator,
 	sessionValidator,

@@ -16,10 +16,6 @@ export const create: RequestHandler = async (req, res) => {
   try {
     const { userId } = req.body; // Assuming userId is passed in the body for now
 
-    if (!userId) {
-      return res.status(400).json({ error: 'userId is required to create an API key' });
-    }
-
     const plainKey = generateApiKey();
     const hashedKey = await bcrypt.hash(plainKey, saltRounds);
 

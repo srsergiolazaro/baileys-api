@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { key } from '@/controllers';
+import { userSessionValidator } from '@/middlewares/user-session-validator';
 
 const router = Router();
 
@@ -90,7 +91,7 @@ const router = Router();
  *       500:
  *         description: Internal server error
  */
-router.post('/', key.create);
+router.post('/', userSessionValidator, key.create);
 
 /**
  * @swagger
@@ -118,7 +119,7 @@ router.post('/', key.create);
  *       500:
  *         description: Internal server error
  */
-router.get('/', key.findAll);
+router.get('/', userSessionValidator, key.findAll);
 
 /**
  * @swagger
