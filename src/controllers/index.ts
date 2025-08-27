@@ -6,4 +6,5 @@ export * as misc from "./misc";
 export * as session from "./session";
 export * as webhook from "./webhook";
 export * as product from "./product";
-export * as token from "./token";
+export * as key from "./key";
+

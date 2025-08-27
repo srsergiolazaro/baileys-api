@@ -6,20 +6,23 @@ import sessionRoutes from "./sessions";
 import contactRoutes from "./contacts";
 import webhookRoutes from "./webhooks";
 import productRoutes from "./product";
-import tokenRoutes from "./token";
-import userSessionsRoute from "./user-sessions";
 
-import jwtValidator from "@/middlewares/jwt-validator";
+import userSessionsRoute from "./user-sessions";
+import keysRoutes from "./keys";
+import { apiKeyValidator } from "@/middlewares/api-key-validator";
+
+
 
 const router = Router();
 router.use("/sessions", sessionRoutes);
-router.use("/chats", jwtValidator, chatRoutes);
-router.use("/contacts", jwtValidator, contactRoutes);
-router.use("/groups", jwtValidator, groupRoutes);
-router.use("/product", jwtValidator, productRoutes);
-router.use("/messages", jwtValidator, messageRoutes);
-router.use("/webhooks", jwtValidator, webhookRoutes);
-router.use("/token", tokenRoutes);
+router.use("/chats", apiKeyValidator, chatRoutes);
+router.use("/contacts", apiKeyValidator, contactRoutes);
+router.use("/groups", apiKeyValidator, groupRoutes);
+router.use("/product", apiKeyValidator, productRoutes);
+router.use("/messages", apiKeyValidator, messageRoutes);
+router.use("/webhooks", apiKeyValidator, webhookRoutes);
+
 router.use("/user-sessions", userSessionsRoute);
+router.use("/keys", keysRoutes);
 
 export default router;

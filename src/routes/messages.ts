@@ -2,7 +2,6 @@ import { Router } from "express";
 import { message } from "@/controllers";
 import requestValidator from "@/middlewares/request-validator";
 import sessionValidator from "@/middlewares/session-validator";
-import jwtValidator from "@/middlewares/jwt-validator";
 import { query, body } from "express-validator";
 import multer from "multer";
 
@@ -198,7 +197,6 @@ router.post(
 	"/send",
 	upload.single("file"),
 	requestValidator,
-	jwtValidator,
 	sessionValidator,
 	message.send,
 );
@@ -276,7 +274,6 @@ router.post(
 	"/send/bulk",
 	body().isArray().notEmpty(),
 	requestValidator,
-	jwtValidator,
 	sessionValidator,
 	message.sendBulk,
 );
@@ -317,7 +314,6 @@ router.post(
 	"/download",
 	body().isObject().notEmpty(),
 	requestValidator,
-	jwtValidator,
 	sessionValidator,
 	message.download,
 );
@@ -358,7 +354,6 @@ router.post(
 	"/downloadcontent",
 	body().isObject().notEmpty(),
 	requestValidator,
-	jwtValidator,
 	sessionValidator,
 	message.downloadContent,
 );

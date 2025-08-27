@@ -1,51 +1,52 @@
-import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
-import type { NextFunction, Request, Response } from "express";
+import { RequestHandler } from 'express';
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
+import { logger } from '@/shared';
 
-dotenv.config();
+const prisma = new PrismaClient();
 
-const jwtSecret = process.env.JWT_SECRET;
+export const apiKeyValidator: RequestHandler = async (req, res, next) => {
+  try {
+    const apiKeyHeader = req.headers['x-api-key'];
 
-if (!jwtSecret) {
-	throw new Error("API key or JWT secret is not set in the environment variables");
-}
+    if (!apiKeyHeader) {
+      return res.status(401).json({ error: 'Unauthorized: API Key missing' });
+    }
 
-function verifyApiKeyAndJwt(
-	apiKeyValue: string | string[] | undefined,
-	req: Request,
-	res: Response,
-	next: NextFunction,
-) {
-	if (!apiKeyValue) {
-		console.warn("API key is missing");
-		return res.status(403).json({ error: "API key is missing" });
-	}
-	if (Array.isArray(apiKeyValue)) {
-		console.warn("Invalid API key format");
-		return res.status(403).json({ error: "Invalid API key format" });
-	}
+    const plainApiKey = Array.isArray(apiKeyHeader) ? apiKeyHeader[0] : apiKeyHeader;
 
-	jwt.verify(apiKeyValue.toString(), jwtSecret!, (err, decoded) => {
-		if (err) {
-			console.error("Unauthorized: Invalid or expired API key", err);
-			return res.status(401).json({ error: "Unauthorized: Invalid or expired API key" });
-		}
+    // Find all enabled API keys to compare
+    const enabledApiKeys = await prisma.apiKey.findMany({
+      where: {
+        enabled: true,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date() } },
+        ],
+      },
+    });
 
-		// Verificar que el payload tenga la estructura esperada
-		const payload = decoded as jwt.JwtPayload;
-		if (!payload || typeof payload !== "object" || !payload.sessionId) {
-			return res.status(401).json({ error: "Invalid token payload" });
-		}
+    let isValid = false;
+    let userId: string | undefined;
 
-		req.appData = {
-			sessionId: payload.sessionId as string,
-			jid: payload.jid as string | undefined,
-		};
-		next();
-	});
-}
+    for (const dbApiKey of enabledApiKeys) {
+      const match = await bcrypt.compare(plainApiKey, dbApiKey.key);
+      if (match) {
+        isValid = true;
+        userId = dbApiKey.userId;
+        break;
+      }
+    }
 
-export function apiKeyValidatorParam(req: Request, res: Response, next: NextFunction) {
-	const paramApiKey = req.query["api_key"] || req.query["API_KEY"];
-	verifyApiKeyAndJwt(paramApiKey as string | undefined, req, res, next);
-}
+    if (!isValid) {
+      return res.status(401).json({ error: 'Unauthorized: Invalid or expired API Key' });
+    }
+
+    // Attach userId to the request for further use
+    (req as any).user = { id: userId };
+    next();
+  } catch (e) {
+    logger.error(e, 'Error in API Key validation middleware');
+    res.status(500).json({ error: 'Internal server error during API Key validation' });
+  }
+};

@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { session } from "@/controllers";
+import { getUserSessions } from "@/controllers/session";
 import sessionValidator from "@/middlewares/session-validator";
-// import requestValidator from "@/middlewares/request-validator";
 import { body } from "express-validator";
-import { apiKeyValidatorParam } from "@/middlewares/api-key-validator";
+import { apiKeyValidator } from "@/middlewares/api-key-validator";
 
 const router = Router();
 
@@ -13,18 +13,58 @@ const router = Router();
  *   get:
  *     tags:
  *       - Sesiones
- *     summary: Obtener lista de sesiones
- *     description: Retorna la lista de todas las sesiones activas
+ *     summary: Obtener lista de sesiones del usuario
+ *     description: Retorna la lista de todas las sesiones del usuario autenticado desde la tabla UserSession
  *     security:
  *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: header
+ *         name: x-api-key
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: API Key para autenticación
  *     responses:
  *       200:
  *         description: Lista de sesiones obtenida exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                     description: ID único de la sesión
+ *                   sessionId:
+ *                     type: string
+ *                     description: ID de la sesión de WhatsApp
+ *                   status:
+ *                     type: string
+ *                     description: Estado de la sesión (active/inactive/expired)
+ *                   phoneNumber:
+ *                     type: string
+ *                     description: Número de teléfono asociado a la sesión
+ *                   deviceName:
+ *                     type: string
+ *                     description: Nombre del dispositivo
+ *                   lastActive:
+ *                     type: string
+ *                     format: date-time
+ *                     description: Última vez que la sesión estuvo activa
+ *                   isConnected:
+ *                     type: boolean
+ *                     description: Indica si la sesión está actualmente conectada
+ *                   connectionStatus:
+ *                     type: string
+ *                     description: Estado de conexión detallado (CONNECTING, CONNECTED, etc.)
  *       401:
- *         description: No autorizado - API key inválida
+ *         description: No autorizado - API Key inválida o faltante
+ *       500:
+ *         description: Error interno del servidor
  */
-router.get("/", apiKeyValidatorParam, session.list);
-//router.get("/", apiKeyValidatorParam, sessionValidator, session.find);
+router.get("/", apiKeyValidator, getUserSessions);
 
 /**
  * @swagger
@@ -44,7 +84,7 @@ router.get("/", apiKeyValidatorParam, session.list);
  *       404:
  *         description: Sesión no encontrada
  */
-router.get("/status", apiKeyValidatorParam, sessionValidator, session.status);
+router.get("/status", apiKeyValidator, sessionValidator, session.status);
 
 /**
  * @swagger
@@ -121,6 +161,6 @@ router.get("/add-sse", session.addSSE);
  *       404:
  *         description: Sesión no encontrada
  */
-router.delete("/", apiKeyValidatorParam, sessionValidator, session.del);
+router.delete("/", apiKeyValidator, sessionValidator, session.del);
 
 export default router;

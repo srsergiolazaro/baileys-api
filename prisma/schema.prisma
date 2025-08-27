@@ -8,38 +8,39 @@ datasource db {
 }
 
 model Chat {
-  pkId                      Int      @id @default(autoincrement())
-  sessionId                 String   @db.VarChar(128)
+  pkId                      Int         @id @default(autoincrement())
+  sessionId                 String      @db.VarChar(128)
+  userSession               UserSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
   archived                  Boolean?
   contactPrimaryIdentityKey Bytes?
   conversationTimestamp     BigInt?
   createdAt                 BigInt?
-  createdBy                 String?  @db.VarChar(128)
-  description               String?  @db.VarChar(255)
+  createdBy                 String?     @db.VarChar(128)
+  description               String?     @db.VarChar(255)
   disappearingMode          Json?
-  displayName               String?  @db.VarChar(128)
+  displayName               String?     @db.VarChar(128)
   endOfHistoryTransfer      Boolean?
   endOfHistoryTransferType  Int?
-  ephemeralExpiration       Int?
+  ephemeralExpiration       BigInt?
   ephemeralSettingTimestamp BigInt?
-  id                        String   @db.VarChar(128)
+  id                        String      @db.VarChar(128)
   isDefaultSubgroup         Boolean?
   isParentGroup             Boolean?
   lastMsgTimestamp          BigInt?
-  lidJid                    String?  @db.VarChar(128)
+  lidJid                    String?     @db.VarChar(128)
   markedAsUnread            Boolean?
-  mediaVisibility           Int?
+  mediaVisibility           BigInt?
   messages                  Json?
   muteEndTime               BigInt?
-  name                      String?  @db.VarChar(128)
-  newJid                    String?  @db.VarChar(128)
+  name                      String?     @db.VarChar(128)
+  newJid                    String?     @db.VarChar(128)
   notSpam                   Boolean?
-  oldJid                    String?  @db.VarChar(128)
-  pHash                     String?  @db.VarChar(128)
-  parentGroupId             String?  @db.VarChar(128)
+  oldJid                    String?     @db.VarChar(128)
+  pHash                     String?     @db.VarChar(128)
+  parentGroupId             String?     @db.VarChar(128)
   participant               Json?
   pinned                    Int?
-  pnJid                     String?  @db.VarChar(128)
+  pnJid                     String?     @db.VarChar(128)
   pnhDuplicateLidThread     Boolean?
   readOnly                  Boolean?
   shareOwnPn                Boolean?
@@ -49,10 +50,10 @@ model Chat {
   tcTokenSenderTimestamp    BigInt?
   tcTokenTimestamp          BigInt?
   terminated                Boolean?
-  unreadCount               Int?
-  unreadMentionCount        Int?
+  unreadCount               BigInt?
+  unreadMentionCount        BigInt?
   wallpaper                 Json?
-  lastMessageRecvTimestamp  Int?
+  lastMessageRecvTimestamp  BigInt?
   commentsCount             Int?
 
   @@unique([sessionId, id], map: "unique_chat_id_per_session_id")
@@ -60,49 +61,52 @@ model Chat {
 }
 
 model Contact {
-  pkId         Int     @id @default(autoincrement())
-  sessionId    String  @db.VarChar(128)
-  id           String  @db.VarChar(128)
-  name         String? @db.VarChar(128)
-  notify       String? @db.VarChar(128)
-  verifiedName String? @db.VarChar(128)
-  imgUrl       String? @db.VarChar(255)
-  status       String? @db.VarChar(128)
+  pkId         Int         @id @default(autoincrement())
+  sessionId    String      @db.VarChar(128)
+  userSession  UserSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+  id           String      @db.VarChar(128)
+  name         String?     @db.VarChar(128)
+  notify       String?     @db.VarChar(128)
+  verifiedName String?     @db.VarChar(128)
+  imgUrl       String?     @db.VarChar(255)
+  status       String?     @db.VarChar(128)
 
   @@unique([sessionId, id], map: "unique_contact_id_per_session_id")
   @@index([sessionId])
 }
 
 model GroupMetadata {
-  pkId              Int      @id @default(autoincrement())
-  sessionId         String   @db.VarChar(128)
-  id                String   @db.VarChar(128)
-  owner             String?  @db.VarChar(128)
-  subject           String   @db.VarChar(128)
-  subjectOwner      String?  @db.VarChar(128)
+  pkId              Int         @id @default(autoincrement())
+  sessionId         String      @db.VarChar(128)
+  userSession       UserSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+  id                String      @db.VarChar(128)
+  owner             String?     @db.VarChar(128)
+  subject           String      @db.VarChar(128)
+  subjectOwner      String?     @db.VarChar(128)
   subjectTime       Int?
   creation          Int?
-  desc              String?  @db.VarChar(255)
-  descOwner         String?  @db.VarChar(128)
-  descId            String?  @db.VarChar(128)
-  addressingMode    String?  @db.VarChar(10)
+  desc              String?     @db.VarChar(255)
+  descOwner         String?     @db.VarChar(128)
+  descId            String?     @db.VarChar(128)
   restrict          Boolean?
   announce          Boolean?
   size              Int?
   participants      Json
   ephemeralDuration Int?
-  inviteCode        String?  @db.VarChar(255)
+  inviteCode        String?     @db.VarChar(255)
+  addressingMode    String?     @db.VarChar(10)
 
   @@unique([sessionId, id], map: "unique_groupmetadata_id_per_session_id")
   @@index([sessionId])
 }
 
 model Message {
-  pkId                            Int      @id @default(autoincrement())
-  sessionId                       String   @db.VarChar(128)
-  remoteJid                       String   @db.VarChar(128)
-  id                              String   @db.VarChar(128)
-  agentId                         String?  @db.VarChar(128)
+  pkId                            Int         @id @default(autoincrement())
+  sessionId                       String      @db.VarChar(128)
+  userSession                     UserSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+  remoteJid                       String      @db.VarChar(128)
+  id                              String      @db.VarChar(128)
+  agentId                         String?     @db.VarChar(128)
   bizPrivacyStatus                Int?
   broadcast                       Boolean?
   clearMedia                      Boolean?
@@ -126,44 +130,45 @@ model Message {
   messageStubType                 Int?
   messageTimestamp                BigInt?
   multicast                       Boolean?
-  originalSelfAuthorUserJidString String?  @db.VarChar(128)
-  participant                     String?  @db.VarChar(128)
+  originalSelfAuthorUserJidString String?     @db.VarChar(128)
+  participant                     String?     @db.VarChar(128)
   paymentInfo                     Json?
   photoChange                     Json?
   pollAdditionalMetadata          Json?
   pollUpdates                     Json?
-  pushName                        String?  @db.VarChar(128)
+  pushName                        String?     @db.VarChar(128)
   quotedPaymentInfo               Json?
   quotedStickerData               Json?
   reactions                       Json?
   revokeMessageTimestamp          BigInt?
   starred                         Boolean?
   status                          Int?
-  statusAlreadyViewed             Boolean?
   statusPsa                       Json?
   urlNumber                       Boolean?
   urlText                         Boolean?
   userReceipt                     Json?
-  verifiedBizName                 String?  @db.VarChar(128)
+  verifiedBizName                 String?     @db.VarChar(128)
   eventResponses                  Json?
   pinInChat                       Json?
+  statusAlreadyViewd              Boolean?
 
   @@unique([sessionId, remoteJid, id], map: "unique_message_id_per_session_id")
   @@index([sessionId])
 }
 
 model Session {
-  pkId      Int    @id @default(autoincrement())
-  sessionId String @db.VarChar(128)
-  id        String @db.VarChar(255)
-  data      String
+  pkId        Int         @id @default(autoincrement())
+  sessionId   String      @db.VarChar(128)
+  id          String      @db.VarChar(255)
+  data        String
+  userSession UserSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
 
   @@unique([sessionId, id], map: "unique_session_id_per_session_id")
   @@index([sessionId])
 }
 
 model Product {
-  id                String   @id @default(cuid())
+  id                String      @id @default(cuid())
   name              String
   description       String
   price             Float
@@ -171,9 +176,10 @@ model Product {
   isHidden          Boolean?
   retailerId        String?
   originCountryCode String?
-  sessionId         String   @db.VarChar(128)
+  sessionId         String      @db.VarChar(128)
+  userSession       UserSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
   url               String?
-  productId         String   @unique @db.VarChar(128)
+  productId         String      @unique @db.VarChar(128)
   images            Image[]
 
   @@index([sessionId])
@@ -187,24 +193,49 @@ model Image {
 }
 
 model Webhook {
-  id        Int      @id @default(autoincrement())
-  sessionId String
-  url       String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          Int         @id @default(autoincrement())
+  sessionId   String      @db.VarChar(128)
+  url         String
+  userSession UserSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([sessionId])
 }
 
+// Modify UserSession to link to Clerk user
 model UserSession {
-  id          String   @id @default(cuid())
-  userId      String   @db.VarChar(128) // Clerk user ID
-  sessionId   String   @unique @db.VarChar(128) // WhatsApp session ID
-  status      String   @default("active") @db.VarChar(50) // active, inactive, expired
-  phoneNumber String?  @db.VarChar(50) // Número de teléfono asociado
-  deviceName  String?  @db.VarChar(128) // Nombre del dispositivo
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  lastActive  DateTime @default(now())
+  id            String          @id @default(cuid())
+  userId        String          @unique @db.VarChar(128) // Unique field to link to Clerk user
+  sessionId     String          @unique @db.VarChar(128)
+  status        String          @default("active") @db.VarChar(50)
+  phoneNumber   String?         @db.VarChar(50)
+  deviceName    String?         @db.VarChar(128)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  lastActive    DateTime        @default(now())
+  sessions      Session[]
+  apiKeys       ApiKey[]
+  webhooks      Webhook[]
+  products      Product[]
+  messages      Message[]
+  chats         Chat[]
+  contacts      Contact[]
+  groupMetadata GroupMetadata[]
 
   @@index([userId])
   @@index([sessionId])
+}
+
+// Modify ApiKey to link to Clerk user
+model ApiKey {
+  id        String      @id @default(cuid())
+  key       String      @unique
+  userId    String      @db.VarChar(128)
+  user      UserSession @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+  expiresAt DateTime?
+  enabled   Boolean     @default(true)
+
+  @@index([userId])
 }

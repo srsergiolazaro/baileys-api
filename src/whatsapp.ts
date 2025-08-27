@@ -66,6 +66,18 @@ type createSessionOptions = {
 
 export async function createSession(options: createSessionOptions) {
 	const { sessionId, res, SSE = false, readIncomingMessages = false, socketConfig } = options;
+	
+	await prisma.userSession.upsert({
+		where: { sessionId },
+		create: {
+			sessionId,
+			userId: "unknown_user_id", // Placeholder for userId
+			status: "active", // Default status
+		},
+		update: {
+			lastActive: new Date(), // Update last active timestamp
+		},
+	});
 	const configID = `${SESSION_CONFIG_ID}-${sessionId}`;
 	let connectionState: Partial<ConnectionState> = { connection: "close" };
 
@@ -77,7 +89,7 @@ export async function createSession(options: createSessionOptions) {
 				prisma.contact.deleteMany({ where: { sessionId } }),
 				prisma.message.deleteMany({ where: { sessionId } }),
 				prisma.groupMetadata.deleteMany({ where: { sessionId } }),
-				prisma.session.deleteMany({ where: { sessionId } }),
+				prisma.userSession.delete({ where: { sessionId } }),
 				prisma.webhook.deleteMany({ where: { sessionId } }),
 			]);
 			logger.info({ session: sessionId }, "Session destroyed");
@@ -130,10 +142,23 @@ export async function createSession(options: createSessionOptions) {
 	};
 
 	const handleSSEConnectionUpdate = async () => {
+		logger.info('SSE Connection Update', { 
+			sessionId, 
+			connectionState,
+			hasResponse: !!res,
+			responseEnded: res?.writableEnded,
+			currentGenerations: SSEQRGenerations.get(sessionId) ?? 0
+		});
+
 		let qr: string | undefined = undefined;
 		if (connectionState.qr?.length) {
 			try {
 				qr = await toDataURL(connectionState.qr);
+				logger.info('QR code generated', { 
+					sessionId,
+					qrLength: connectionState.qr.length,
+					qrGenerated: !!qr
+				});
 			} catch (e) {
 				logger.error(e, "An error occurred during QR generation");
 			}
@@ -141,6 +166,15 @@ export async function createSession(options: createSessionOptions) {
 
 		const currentGenerations = SSEQRGenerations.get(sessionId) ?? 0;
 		if (!res || res.writableEnded || (qr && currentGenerations >= SSE_MAX_QR_GENERATION)) {
+			logger.info('SSE connection ending', {
+				sessionId,
+				hasResponse: !!res,
+				responseEnded: res?.writableEnded,
+				qrGenerated: !!qr,
+				currentGenerations,
+				maxGenerations: SSE_MAX_QR_GENERATION
+			});
+			
 			if (res && !res.writableEnded) {
 				res.end();
 			}
@@ -149,8 +183,25 @@ export async function createSession(options: createSessionOptions) {
 		}
 
 		const data = { ...connectionState, qr };
-		if (qr) SSEQRGenerations.set(sessionId, currentGenerations + 1);
-		res.write(`data: ${JSON.stringify(data)}\n\n`);
+		if (qr) {
+			SSEQRGenerations.set(sessionId, currentGenerations + 1);
+		}
+		
+		try {
+			const message = `data: ${JSON.stringify(data)}\n\n`;
+			res.write(message);
+			logger.info('SSE message sent', { 
+				sessionId,
+				messageLength: message.length,
+				hasQr: !!qr
+			});
+		} catch (e) {
+			logger.error(e, 'Error writing SSE message');
+			if (res && !res.writableEnded) {
+				res.end();
+			}
+			destroy();
+		}
 	};
 
 	const handleConnectionUpdate = SSE ? handleSSEConnectionUpdate : handleNormalConnectionUpdate;
@@ -280,12 +331,19 @@ export async function createSession(options: createSessionOptions) {
 
 	await prisma.session.upsert({
 		create: {
-			id: configID,
 			sessionId,
+			id: configID,
 			data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
 		},
-		update: {},
-		where: { sessionId_id: { id: configID, sessionId } },
+		update: {
+			data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
+		},
+		where: {
+			sessionId_id: {
+				sessionId,
+				id: configID
+			}
+		}
 	});
 }
 
@@ -319,7 +377,7 @@ export async function deleteSession(sessionId: string) {
 				prisma.contact.deleteMany({ where: { sessionId } }),
 				prisma.message.deleteMany({ where: { sessionId } }),
 				prisma.groupMetadata.deleteMany({ where: { sessionId } }),
-				prisma.session.deleteMany({ where: { sessionId } }),
+				prisma.userSession.delete({ where: { sessionId } }),
 				prisma.webhook.deleteMany({ where: { sessionId } }),
 			]);
 			logger.info({ sessionId }, "Session data deleted from database");

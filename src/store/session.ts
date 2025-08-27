@@ -59,7 +59,12 @@ export async function useSession(sessionId: string): Promise<{
 				where: { sessionId_id: { id: fixId(id), sessionId } },
 			});
 		} catch (e) {
-			logger.error(e, "An error occured during session delete");
+			if (e instanceof PrismaClientKnownRequestError && e.code === 'P2025') {
+				// Session doesn't exist, which is fine for a delete operation
+				logger.info({ id }, "Tried to delete non-existent session");
+			} else {
+				logger.error(e, "An error occurred during session delete");
+			}
 		}
 	};
 
