@@ -77,7 +77,7 @@ export const deleteGroup: RequestHandler = async (req, res) => {
 		const { jid }: { jid: string } = req.body;
 
 		const session = getSession(req.appData.sessionId)!;
-		const exists = await jidExists(session, jid, "group");
+		const { exists } = await jidExists(session, jid, "group");
 		if (!exists) {
 			return res.status(404).json({ error: "Group not found" });
 		}

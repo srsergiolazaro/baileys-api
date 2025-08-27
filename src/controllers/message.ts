@@ -1,6 +1,6 @@
 import type { proto, WAGenericMediaMessage, WAMessage } from "baileys";
 import { downloadMediaMessage, downloadContentFromMessage } from "baileys";
-import { serializePrisma } from "@/store";
+import { serializePrisma } from "@/utils";
 import type { RequestHandler } from "express";
 import { logger } from "@/shared";
 import { delay as delayMs } from "@/utils";

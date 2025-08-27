@@ -1,9 +1,9 @@
-import { serializePrisma } from "../store";
 import { logger } from "@/shared";
 import { prisma } from "@/db";
 import type { Chat, Message } from "@prisma/client";
 import { getSession } from "@/whatsapp";
 import type { Request, Response } from "express";
+import { serializePrisma } from "@/utils";
 
 export const list = async (req: Request, res: Response) => {
 	try {
@@ -30,17 +30,6 @@ export const list = async (req: Request, res: Response) => {
 			}
 		}
 
-		// Definir serializePrisma ANTES de usarla
-		const serializePrisma = (obj: any) => {
-			return JSON.parse(
-				JSON.stringify(obj, (key, value) => {
-					if (typeof value === "bigint") {
-						return value.toString();
-					}
-					return value;
-				}),
-			);
-		};
 
 		const chats = (
 			await prisma.chat.findMany({

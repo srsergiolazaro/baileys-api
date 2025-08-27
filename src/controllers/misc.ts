@@ -14,10 +14,10 @@ export const makePhotoURLHandler =
 
 			const session = getSession(sessionId)!;
 
-			const exists = await jidExists(session, jid, type);
-			if (!exists) return res.status(400).json({ error: "Jid does not exists" });
+			const { exists, formatJid } = await jidExists(session, jid, type);
+			if (!exists) return res.status(400).json({ error: "Jid does not exist" });
 
-			const url = await session.profilePictureUrl(jid, "image");
+			const url = await session.profilePictureUrl(formatJid, "image");
 			res.status(200).json({ url });
 		} catch (e) {
 			const message = "An error occured during photo fetch";

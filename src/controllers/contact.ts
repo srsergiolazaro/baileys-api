@@ -46,10 +46,10 @@ export const updateBlock: RequestHandler = async (req, res) => {
 		const session = getSession(req.appData.sessionId)!;
 		const { jid, action = "block" } = req.body;
 
-		const exists = await jidExists(session, jid);
-		if (!exists) return res.status(400).json({ error: "Jid does not exists" });
+		const { exists, formatJid } = await jidExists(session, jid);
+		if (!exists) return res.status(400).json({ error: "Jid does not exist" });
 
-		await session.updateBlockStatus(jid, action);
+		await session.updateBlockStatus(formatJid, action);
 		res.status(200).json({ message: `Contact ${action}ed` });
 	} catch (e) {
 		const message = "An error occured during blocklist update";
@@ -68,7 +68,7 @@ export const check: RequestHandler = async (req, res) => {
 
 		const session = getSession(sessionId)!;
 
-		const exists = await jidExists(session, jid);
+		const { exists } = await jidExists(session, jid);
 		res.status(200).json({ exists });
 	} catch (e) {
 		const message = "An error occured during jid check";

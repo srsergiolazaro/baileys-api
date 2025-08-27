@@ -103,14 +103,12 @@ export const add: RequestHandler = async (req, res) => {
 		}
 
 		// Create the WhatsApp session
-		createSession({ 
+		await createSession({ 
 			sessionId, 
 			res, 
 			readIncomingMessages, 
 			socketConfig,
 		});
-
-		res.status(200).json({ success: true, message: "Session creation initiated" });
 	} catch (error) {
 		logger.error('Error creating session:', error);
 		res.status(500).json({ 
