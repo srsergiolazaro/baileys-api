@@ -12,20 +12,23 @@ app.use(cors());
 app.use(express.json());
 
 // Configuración de Swagger UI
+const swaggerUiOptions = {
+	customCss: ".swagger-ui .topbar { display: none }",
+	customSiteTitle: "API WhatsChat - Documentación",
+	customfavIcon: "/favicon.ico",
+	swaggerOptions: {
+		persistAuthorization: true,
+		docExpansion: "none" as const,
+		filter: true,
+		defaultModelsExpandDepth: -1,
+	},
+} as const;
+
+// Serve Swagger UI
 app.use(
-	"/api-docs",
-	swaggerUi.serve,
-	swaggerUi.setup(swaggerSpec, {
-		customCss: ".swagger-ui .topbar { display: none }",
-		customSiteTitle: "API WhatsChat - Documentación",
-		customfavIcon: "/favicon.ico",
-		swaggerOptions: {
-			persistAuthorization: true,
-			docExpansion: "none",
-			filter: true,
-			defaultModelsExpandDepth: -1,
-		},
-	}),
+    "/api-docs",
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerSpec, swaggerUiOptions)
 );
 
 // Endpoint para obtener la especificación de Swagger en formato JSON

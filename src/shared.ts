@@ -1,6 +1,14 @@
 import pino, { type Logger } from "pino";
 
-export const logger: Logger = pino({
+// Custom log method type that accepts metadata objects
+type CustomLogger = Logger & {
+  info: (msg: string, obj?: any) => void;
+  error: (msg: string, obj?: any) => void;
+  warn: (msg: string, obj?: any) => void;
+  debug: (msg: string, obj?: any) => void;
+};
+
+export const logger: CustomLogger = pino({
 	timestamp: () => `,"time":"${new Date().toJSON()}"`,
 	transport: {
 		targets: [
@@ -9,6 +17,8 @@ export const logger: Logger = pino({
 				target: "pino-pretty",
 				options: {
 					colorize: true,
+					translateTime: "SYS:yyyy-mm-dd HH:MM:ss.l",
+					ignore: "pid,hostname",
 				},
 			},
 		],
@@ -19,4 +29,4 @@ export const logger: Logger = pino({
 			level: level,
 		};
 	},
-});
+}) as CustomLogger;
