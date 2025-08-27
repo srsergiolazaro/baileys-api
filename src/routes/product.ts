@@ -3,7 +3,6 @@ import { product } from "@/controllers";
 import requestValidator from "@/middlewares/request-validator";
 import sessionValidator from "@/middlewares/session-validator";
 import { body } from "express-validator";
-import { apiKeyValidator } from "@/middlewares/api-key-validator";
 
 const router = Router({ mergeParams: true });
 
@@ -35,7 +34,7 @@ const router = Router({ mergeParams: true });
  *       400:
  *         description: Datos de entrada inválidos
  */
-router.post("/list", apiKeyValidator, body("jid").isString(), requestValidator, sessionValidator, product.list);
+router.post("/list", body("jid").isString(), requestValidator, sessionValidator, product.list);
 
 /**
  * @swagger
@@ -96,7 +95,6 @@ router.post("/list", apiKeyValidator, body("jid").isString(), requestValidator, 
  */
 router.post(
 	"/create",
-	apiKeyValidator,
 	body("name").isString().notEmpty(),
 	body("currency").isString().notEmpty(),
 	body("description").isString().notEmpty(),
@@ -143,7 +141,6 @@ router.post(
  */
 router.post(
 	"/delete",
-	apiKeyValidator,
 	body("productIds").isArray().notEmpty(),
 	requestValidator,
 	sessionValidator,
@@ -217,7 +214,6 @@ router.post(
  */
 router.put(
 	"/update",
-	apiKeyValidator,
 	body("productId").isString().notEmpty(),
 	body("update").isObject().notEmpty(),
 	body("update.name").isString().notEmpty(),
@@ -264,7 +260,6 @@ router.put(
  */
 router.post(
 	"/collections",
-	apiKeyValidator,
 	body("jid").isString().optional(),
 	body("limit").isNumeric().optional(),
 	requestValidator,
@@ -306,7 +301,6 @@ router.post(
  */
 router.post(
 	"/order-details",
-	apiKeyValidator,
 	body("orderId").isString().notEmpty(),
 	body("token").isString().notEmpty(),
 	requestValidator,
@@ -381,7 +375,6 @@ router.post(
  */
 router.post(
 	"/send-message",
-	apiKeyValidator,
 	body("jid").isString().notEmpty(),
 	body("product").isObject().notEmpty(),
 	body("product.productImage").isObject().notEmpty(),

@@ -3,7 +3,6 @@ import { query, body } from "express-validator";
 import { group } from "@/controllers";
 import requestValidator from "@/middlewares/request-validator";
 import sessionValidator from "@/middlewares/session-validator";
-import { apiKeyValidator } from "@/middlewares/api-key-validator";
 
 const router = Router({ mergeParams: true });
 
@@ -34,7 +33,6 @@ const router = Router({ mergeParams: true });
  */
 router.get(
 	"/",
-	apiKeyValidator,
 	query("cursor").isNumeric().optional(),
 	query("limit").isNumeric().optional(),
 	requestValidator,
@@ -63,7 +61,6 @@ router.get(
  */
 router.post(
 	"/search",
-	apiKeyValidator,
 	body("name").isString().optional(),
 	requestValidator,
 	sessionValidator,
@@ -100,7 +97,6 @@ router.post(
  */
 router.post(
 	"/find",
-	apiKeyValidator,
 	body("jid").isString().notEmpty(),
 	requestValidator,
 	sessionValidator,
@@ -133,7 +129,7 @@ router.post(
  *       404:
  *         description: Foto no encontrada
  */
-router.get("/:jid/photo", apiKeyValidator, sessionValidator, group.photo);
+router.get("/:jid/photo", sessionValidator, group.photo);
 
 /**
  * @swagger
@@ -171,7 +167,6 @@ router.get("/:jid/photo", apiKeyValidator, sessionValidator, group.photo);
  */
 router.post(
 	"/",
-	apiKeyValidator,
 	body("subject").isString().notEmpty(),
 	body("participants").isArray().notEmpty(),
 	requestValidator,
@@ -214,7 +209,6 @@ router.post(
  */
 router.put(
 	"/update",
-	apiKeyValidator,
 	body("jid").isString().notEmpty(),
 	body("subject").isString().optional(),
 	requestValidator,
@@ -254,7 +248,6 @@ router.put(
  */
 router.delete(
 	"/delete",
-	apiKeyValidator,
 	body("jid").isString().notEmpty(),
 	requestValidator,
 	sessionValidator,
@@ -304,7 +297,6 @@ router.delete(
  */
 router.post(
 	"/participants",
-	apiKeyValidator,
 	body("jid").isString().notEmpty(),
 	body("action").isString().isIn(["add", "remove", "promote", "demote"]).notEmpty(),
 	body("participants").isArray().notEmpty(),
@@ -349,7 +341,6 @@ router.post(
  */
 router.post(
 	"/settings",
-	apiKeyValidator,
 	body("jid").isString().notEmpty(),
 	body("settings").isString().notEmpty(),
 	requestValidator,

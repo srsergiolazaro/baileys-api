@@ -30,11 +30,20 @@ const options: swaggerJsdoc.Options = {
 					name: "x-api-key",
 					description: "API Key para autenticación",
 				},
+				SessionId: {
+					type: "apiKey",
+					in: "header",
+					name: "x-session-id",
+					description: "ID de sesión de WhatsApp",
+				},
 			},
 		},
 		security: [
 			{
 				ApiKeyAuth: [],
+			},
+			{
+				SessionId: [],
 			},
 		],
 	},

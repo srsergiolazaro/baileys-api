@@ -2,8 +2,8 @@ import { Router } from "express";
 import { session } from "@/controllers";
 import { getUserSessions } from "@/controllers/session";
 import sessionValidator from "@/middlewares/session-validator";
-import { body } from "express-validator";
 import { apiKeyValidator } from "@/middlewares/api-key-validator";
+import { body } from "express-validator";
 
 const router = Router();
 
@@ -14,7 +14,7 @@ const router = Router();
  *     tags:
  *       - Sesiones
  *     summary: Obtener lista de sesiones del usuario
- *     description: Retorna la lista de todas las sesiones del usuario autenticado desde la tabla UserSession
+ *     description: Retorna la lista de todas las sesiones del usuario autenticado
  *     security:
  *       - ApiKeyAuth: []
  *     parameters:
@@ -24,6 +24,12 @@ const router = Router();
  *         schema:
  *           type: string
  *         description: API Key para autenticación
+ *       - in: header
+ *         name: x-session-id
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: ID de sesión (opcional, solo necesario para operaciones específicas de sesión)
  *     responses:
  *       200:
  *         description: Lista de sesiones obtenida exitosamente
@@ -76,11 +82,19 @@ router.get("/", apiKeyValidator, getUserSessions);
  *     description: Retorna el estado actual de una sesión específica
  *     security:
  *       - ApiKeyAuth: []
+ *       - SessionId: []
+ *     parameters:
+ *       - in: header
+ *         name: x-session-id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de la sesión a consultar
  *     responses:
  *       200:
  *         description: Estado de la sesión obtenido exitosamente
  *       401:
- *         description: No autorizado
+ *         description: No autorizado - API Key o Session ID inválidos
  *       404:
  *         description: Sesión no encontrada
  */
@@ -93,7 +107,9 @@ router.get("/status", apiKeyValidator, sessionValidator, session.status);
  *     tags:
  *       - Sesiones
  *     summary: Agregar nueva sesión
- *     description: Crea una nueva sesión de WhatsApp
+ *     description: Crea una nueva sesión de WhatsApp para el usuario autenticado
+ *     security:
+ *       - ApiKeyAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -105,20 +121,20 @@ router.get("/status", apiKeyValidator, sessionValidator, session.status);
  *             properties:
  *               sessionId:
  *                 type: string
- *                 description: Identificador único de la sesión
+ *                 description: ID único para la nueva sesión
  *     responses:
  *       200:
  *         description: Sesión creada exitosamente
  *       400:
  *         description: Datos de entrada inválidos
+ *       401:
+ *         description: No autorizado - API Key inválida
  */
 router.post(
 	"/add",
 	apiKeyValidator,
 	body("sessionId").isString().notEmpty(),
-	//apiKeyValidatorParam,
-	//requestValidator,
-	session.add,
+	session.add
 );
 
 /**
@@ -127,20 +143,24 @@ router.post(
  *   get:
  *     tags:
  *       - Sesiones
- *     summary: Agregar sesión con SSE
- *     description: Crea una nueva sesión utilizando Server-Sent Events
+ *     summary: Añadir una nueva sesión con Server-Sent Events
+ *     description: Inicia el proceso de autenticación para una nueva sesión usando SSE
+ *     security:
+ *       - ApiKeyAuth: []
  *     parameters:
  *       - in: query
  *         name: sessionId
  *         required: true
  *         schema:
  *           type: string
- *         description: ID único de la sesión
+ *         description: ID único para la nueva sesión
  *     responses:
  *       200:
- *         description: Conexión SSE establecida exitosamente
+ *         description: Eventos SSE para la autenticación
  *       400:
  *         description: SessionId requerido
+ *       401:
+ *         description: No autorizado - API Key inválida
  */
 router.get("/add-sse", apiKeyValidator, session.addSSE);
 
@@ -151,14 +171,22 @@ router.get("/add-sse", apiKeyValidator, session.addSSE);
  *     tags:
  *       - Sesiones
  *     summary: Eliminar sesión
- *     description: Elimina una sesión existente
+ *     description: Elimina la sesión actual del usuario
  *     security:
  *       - ApiKeyAuth: []
+ *       - SessionId: []
+ *     parameters:
+ *       - in: header
+ *         name: x-session-id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de la sesión a eliminar
  *     responses:
  *       200:
  *         description: Sesión eliminada exitosamente
  *       401:
- *         description: No autorizado
+ *         description: No autorizado - API Key o Session ID inválidos
  *       404:
  *         description: Sesión no encontrada
  */

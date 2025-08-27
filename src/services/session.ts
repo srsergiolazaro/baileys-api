@@ -11,18 +11,18 @@ export function getSessionStatus(session: Session) {
 	return status;
 }
 
-export function listSessions() {
+export function listSessions(): { id: string; status: string }[] {
 	return Array.from(sessions.entries()).map(([id, session]) => ({
 		id,
 		status: getSessionStatus(session),
 	}));
 }
 
-export function getSession(sessionId: string) {
+export function getSession(sessionId: string): Session | undefined {
 	return sessions.get(sessionId);
 }
 
-export async function deleteSession(sessionId: string) {
+export async function deleteSession(sessionId: string): Promise<void> {
 	const session = sessions.get(sessionId);
 	if (session) {
 		await session.destroy();
@@ -44,7 +44,7 @@ export async function deleteSession(sessionId: string) {
 	}
 }
 
-export function sessionExists(sessionId: string) {
+export function sessionExists(sessionId: string): boolean {
 	return sessions.has(sessionId);
 }
 

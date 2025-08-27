@@ -1,52 +1,71 @@
-import { RequestHandler } from 'express';
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcrypt';
-import { logger } from '@/shared';
+import { RequestHandler } from "express";
+import { PrismaClient } from "@prisma/client";
+import { logger } from "@/shared";
+import { sessionExists } from "@/whatsapp";
 
 const prisma = new PrismaClient();
 
 export const apiKeyValidator: RequestHandler = async (req, res, next) => {
-  try {
-    const apiKeyHeader = req.headers['x-api-key'];
+	try {
+		const apiKeyHeader = req.headers["x-api-key"];
+		const sessionId = req.headers["x-session-id"] as string | undefined;
 
-    if (!apiKeyHeader) {
-      return res.status(401).json({ error: 'Unauthorized: API Key missing' });
-    }
+		if (!apiKeyHeader) {
+			return res.status(401).json({ error: "Unauthorized: API Key missing" });
+		}
 
-    const plainApiKey = Array.isArray(apiKeyHeader) ? apiKeyHeader[0] : apiKeyHeader;
+		if (!sessionId) {
+			return res.status(400).json({ error: "Session ID is required" });
+		}
 
-    // Find all enabled API keys to compare
-    const enabledApiKeys = await prisma.apiKey.findMany({
-      where: {
-        enabled: true,
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { gt: new Date() } },
-        ],
-      },
-    });
+		// Initialize appData if it doesn't exist
+		if (!req.appData) {
+			req.appData = { sessionId: "" };
+		}
 
-    let isValid = false;
-    let userId: string | undefined;
+		// Set sessionId in appData for use in other middlewares
+		req.appData.sessionId = sessionId;
 
-    for (const dbApiKey of enabledApiKeys) {
-      const match = await bcrypt.compare(plainApiKey, dbApiKey.key);
-      if (match) {
-        isValid = true;
-        userId = dbApiKey.userId;
-        break;
-      }
-    }
+		// Check if session exists
+		if (!sessionExists(sessionId)) {
+			return res.status(404).json({ error: `Session not found: ${sessionId}` });
+		}
 
-    if (!isValid) {
-      return res.status(401).json({ error: 'Unauthorized: Invalid or expired API Key' });
-    }
+		const plainApiKey = Array.isArray(apiKeyHeader) ? apiKeyHeader[0] : apiKeyHeader;
 
-    // Attach userId to the request for further use
-    (req as any).user = { id: userId };
-    next();
-  } catch (e) {
-    logger.error(e, 'Error in API Key validation middleware');
-    res.status(500).json({ error: 'Internal server error during API Key validation' });
-  }
+		// Find the API key with session access
+		const apiKey = await prisma.apiKey.findFirst({
+			where: {
+				key: plainApiKey,
+				enabled: true,
+				OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+				user: {
+					sessions: {
+						some: {
+							sessionId: sessionId,
+						},
+					},
+				},
+			},
+			include: {
+				user: true,
+			},
+		});
+
+		if (!apiKey) {
+			return res
+				.status(403)
+				.json({ error: "Unauthorized: Invalid API key or no access to this session" });
+		}
+
+		// Store user ID in appData for use in subsequent handlers
+		if (apiKey.user) {
+			req.appData.userId = apiKey.user.userId;
+		}
+
+		next();
+	} catch (error) {
+		logger.error("API key validation error:", error);
+		return res.status(500).json({ error: "Internal server error during API key validation" });
+	}
 };

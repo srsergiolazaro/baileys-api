@@ -21,12 +21,6 @@ export async function handleMessagesUpsert(
 
 	if (!m.messages || !message.message) return;
 
-	if (message.key.fromMe) {
-		console.log("Mensaje enviado:", message.message);
-	} else {
-		console.log("Mensaje recibido:", message.message);
-	}
-
 	const textMessageTypes = [
 		"conversation",
 		"extendedTextMessage",
@@ -54,6 +48,12 @@ export async function handleMessagesUpsert(
 		text = messageContent;
 	} else if (messageContent && "text" in messageContent) {
 		text = messageContent.text ?? "";
+	}
+
+	if (message.key.fromMe) {
+		console.log("Mensaje enviado:", text);
+	} else {
+		console.log("Mensaje recibido:", text);
 	}
 
 	try {

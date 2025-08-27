@@ -4,7 +4,6 @@ import requestValidator from "@/middlewares/request-validator";
 import sessionValidator from "@/middlewares/session-validator";
 import { query, body } from "express-validator";
 import multer from "multer";
-import { apiKeyValidator } from "@/middlewares/api-key-validator";
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
@@ -38,7 +37,6 @@ const router = Router({ mergeParams: true });
  */
 router.get(
 	"/",
-	apiKeyValidator,
 	query("cursor").isNumeric().optional(),
 	query("limit").isNumeric().optional(),
 	requestValidator,
@@ -55,6 +53,7 @@ router.get(
  *     description: Envía diferentes tipos de mensajes (texto, imagen, audio, video, contactos, etc.)
  *     security:
  *       - ApiKeyAuth: []
+ *       - SessionId : []
  *     requestBody:
  *       required: true
  *       content:
@@ -195,14 +194,7 @@ router.get(
  *               url: "https://ejemplo.com/video.mp4"
  *             ptv: true
  */
-router.post(
-	"/send",
-	apiKeyValidator,
-	upload.single("file"),
-	requestValidator,
-	sessionValidator,
-	message.send,
-);
+router.post("/send", upload.single("file"), requestValidator, sessionValidator, message.send);
 
 /**
  * @swagger
@@ -275,7 +267,6 @@ router.post(
  */
 router.post(
 	"/send/bulk",
-	apiKeyValidator,
 	body().isArray().notEmpty(),
 	requestValidator,
 	sessionValidator,
@@ -316,7 +307,6 @@ router.post(
  */
 router.post(
 	"/download",
-	apiKeyValidator,
 	body().isObject().notEmpty(),
 	requestValidator,
 	sessionValidator,
@@ -357,7 +347,6 @@ router.post(
  */
 router.post(
 	"/downloadcontent",
-	apiKeyValidator,
 	body().isObject().notEmpty(),
 	requestValidator,
 	sessionValidator,
