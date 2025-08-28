@@ -45,6 +45,30 @@ export const update: RequestHandler = async (req, res) => {
 	}
 };
 
+export const checkByUrl: RequestHandler = async (req, res) => {
+	try {
+		const { sessionId } = req.appData;
+		const { url } = req.query as { url: string };
+
+		const webhook = await prisma.webhook.findFirst({
+			where: { 
+				sessionId,
+				url: url as string
+			},
+		});
+
+		if (!webhook) {
+			return res.status(404).json({ error: 'Webhook not found' });
+		}
+
+		res.status(200).json(webhook);
+	} catch (e) {
+		const message = 'An error occurred while checking the webhook';
+		logger.error(e, message);
+		res.status(500).json({ error: message });
+	}
+};
+
 export const remove: RequestHandler = async (req, res) => {
 	try {
 		const { id } = req.params;

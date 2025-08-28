@@ -6,6 +6,7 @@ import { sessionExists } from "@/whatsapp";
 const prisma = new PrismaClient();
 
 export const apiKeyValidator: RequestHandler = async (req, res, next) => {
+	console.log("API Key Validator");
 	try {
 		const apiKeyHeader = req.headers["x-api-key"];
 		const sessionId = req.headers["x-session-id"] as string | undefined;

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { body, param } from "express-validator";
+import { body, param, query } from "express-validator";
 import { webhook } from "@/controllers";
 import requestValidator from "@/middlewares/request-validator";
 import sessionValidator from "@/middlewares/session-validator";
@@ -25,6 +25,45 @@ const router = Router({ mergeParams: true });
  *         description: API key faltante o inválida
  */
 router.get("/", sessionValidator, webhook.list);
+
+/**
+ * @swagger
+ * /webhooks/check:
+ *   get:
+ *     tags:
+ *       - Webhooks
+ *     summary: Check if webhook exists by URL
+ *     description: Verifies if a webhook with the given URL exists for the current session
+ *     security:
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: url
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: URL of the webhook to check
+ *     responses:
+ *       200:
+ *         description: Returns the webhook if it exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Webhook'
+ *       404:
+ *         description: Webhook not found
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Invalid API key
+ */
+router.get(
+  "/check",
+  query("url").isString().notEmpty(),
+  requestValidator,
+  sessionValidator,
+  webhook.checkByUrl
+);
 
 /**
  * @swagger

@@ -1,11 +1,55 @@
-import { Router } from 'express';
-import { key } from '@/controllers';
-import { userSessionValidator } from '@/middlewares/user-session-validator';
+import { Router } from "express";
+import { key } from "@/controllers";
+import { userSessionValidator } from "@/middlewares/user-session-validator";
+import { apiKeyValidator } from "@/middlewares/api-key-validator";
+import sessionValidator from "@/middlewares/session-validator";
 
 const router = Router();
 
 /**
- * 
+ * @swagger
+ * /keys/test:
+ *   get:
+ *     summary: Test API key authentication
+ *     tags: [API Keys]
+ *     security:
+ *       - ApiKeyAuth: []
+ *       - SessionId : []
+ *     responses:
+ *       200:
+ *         description: API key is valid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "API key is valid"
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       400:
+ *         description: Bad Request - Session ID is required
+ *       401:
+ *         description: Unauthorized - Invalid or missing API key
+ *       500:
+ *         description: Internal server error
+ */
+router.get("/test", apiKeyValidator, sessionValidator, (req, res) => {
+	console.log("Test");
+	res.status(200).json({
+		success: true,
+		message: "API key is valid",
+		timestamp: new Date().toISOString(),
+	});
+});
+
+/**
+ *
  * @swagger
  * tags:
  *   name: API Keys
@@ -91,7 +135,7 @@ const router = Router();
  *       500:
  *         description: Internal server error
  */
-router.post('/', userSessionValidator, key.create);
+router.post("/", userSessionValidator, key.create);
 
 /**
  * @swagger
@@ -119,7 +163,7 @@ router.post('/', userSessionValidator, key.create);
  *       500:
  *         description: Internal server error
  */
-router.get('/', userSessionValidator, key.findAll);
+router.get("/", userSessionValidator, key.findAll);
 
 /**
  * @swagger
@@ -148,7 +192,7 @@ router.get('/', userSessionValidator, key.findAll);
  *       500:
  *         description: Internal server error
  */
-router.get('/:id', key.findOne);
+router.get("/:id", key.findOne);
 
 /**
  * @swagger
@@ -191,7 +235,7 @@ router.get('/:id', key.findOne);
  *       500:
  *         description: Internal server error
  */
-router.put('/:id', key.update);
+router.put("/:id", key.update);
 
 /**
  * @swagger
@@ -216,6 +260,6 @@ router.put('/:id', key.update);
  *       500:
  *         description: Internal server error
  */
-router.delete('/:id', key.remove);
+router.delete("/:id", key.remove);
 
 export default router;
