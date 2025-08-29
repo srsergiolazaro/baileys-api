@@ -6,6 +6,7 @@ import sessionRoutes from "./sessions";
 import contactRoutes from "./contacts";
 import webhookRoutes from "./webhooks";
 import productRoutes from "./product";
+import userRoutes from "./user";
 
 import userSessionsRoute from "./user-sessions";
 import keysRoutes from "./keys";
@@ -19,6 +20,7 @@ router.use("/groups", apiKeyValidator, groupRoutes);
 router.use("/product", apiKeyValidator, productRoutes);
 router.use("/messages", apiKeyValidator, messageRoutes);
 router.use("/webhooks", apiKeyValidator, webhookRoutes);
+router.use("/user", apiKeyValidator, userRoutes);
 
 router.use("/user-sessions", userSessionsRoute);
 router.use("/keys", keysRoutes);
