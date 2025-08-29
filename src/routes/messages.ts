@@ -315,46 +315,6 @@ router.post(
 
 /**
  * @swagger
- * /messages/downloadcontent:
- *   post:
- *     tags:
- *       - Mensajes
- *     summary: Descargar contenido del mensaje
- *     description: Descarga el contenido multimedia de un mensaje
- *     security:
- *       - ApiKeyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - messageId
- *             properties:
- *               messageId:
- *                 type: string
- *                 description: ID del mensaje cuyo contenido se desea descargar
- *     responses:
- *       200:
- *         description: Contenido descargado exitosamente
- *       400:
- *         description: Datos de entrada inválidos
- *       401:
- *         description: No autorizado
- *       404:
- *         description: Contenido no encontrado
- */
-router.post(
-	"/downloadcontent",
-	body().isObject().notEmpty(),
-	requestValidator,
-	sessionValidator,
-	message.downloadContent,
-);
-
-/**
- * @swagger
  * /messages/delete:
  *   delete:
  *     tags:
