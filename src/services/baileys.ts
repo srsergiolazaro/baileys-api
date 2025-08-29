@@ -81,6 +81,15 @@ export async function createSession(options: createSessionOptions) {
 		const restartRequired = code === DisconnectReason.restartRequired;
 		const doNotReconnect = !shouldReconnect(sessionId);
 
+		if (code === DisconnectReason.connectionReplaced) {
+			logger.warn(
+				{ sessionId },
+				"Connection replaced. You have been logged out because another session has been started elsewhere.",
+			);
+		} else if (code === DisconnectReason.loggedOut) {
+			logger.warn({ sessionId }, "Connection logged out. You have been logged out.");
+		}
+
 		if (code === DisconnectReason.loggedOut || doNotReconnect) {
 			if (res) {
 				if (!SSE && !res.headersSent) {

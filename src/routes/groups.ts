@@ -348,4 +348,46 @@ router.post(
 	group.updateSettings,
 );
 
+/**
+ * @swagger
+ * /groups/leave:
+ *   post:
+ *     tags:
+ *       - Grupos
+ *     summary: Dejar un grupo
+ *     description: Permite al bot salir de un grupo
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - jid
+ *             properties:
+ *               jid:
+ *                 type: string
+ *                 description: ID del grupo que se desea abandonar
+ *     responses:
+ *       200:
+ *         description: Se ha abandonado el grupo exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   description: Indica si la operación fue exitosa
+ */
+router.post(
+	"/leave",
+	body("jid").isString().notEmpty(),
+	requestValidator,
+	sessionValidator,
+	group.leaveGroup
+);
+
 export default router;

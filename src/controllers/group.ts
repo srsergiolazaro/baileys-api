@@ -158,6 +158,20 @@ export const updateSettings: RequestHandler = async (req, res) => {
 
 export const photo = makePhotoURLHandler("group");
 
+export const leaveGroup: RequestHandler = async (req, res) => {
+	try {
+		const { jid } = req.body;
+		const session = getSession(req.appData.sessionId)!;
+		await session.groupLeave(jid);
+
+		res.status(200).json({ success: true });
+	} catch (e) {
+		const message = "An error occurred while leaving the group";
+		logger.error(e, message);
+		res.status(500).json({ error: message });
+	}
+};
+
 export const search: RequestHandler = async (req, res) => {
 	try {
 		const { sessionId } = req.appData;

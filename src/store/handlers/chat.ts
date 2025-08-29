@@ -60,7 +60,53 @@ export default function chatHandler(sessionId: string, event: BaileysEventEmitte
 	const update: BaileysEventHandler<"chats.update"> = async (updates) => {
 		for (const update of updates) {
 			try {
-				const data = transformPrisma(update);
+				// Only include properties that exist in the update object
+				const chatData: Partial<{
+					conversationTimestamp?: number | Long | null;
+					unreadCount?: number | null;
+					readOnly?: boolean | null;
+					ephemeralExpiration?: number | null;
+					ephemeralSettingTimestamp?: number | Long | null;
+					name?: string | null;
+					notSpam?: boolean | null;
+					archived?: boolean | null;
+					disappearingMode?: any;
+					lastMsgTimestamp?: number | Long | null;
+					mediaVisibility?: any; // MediaVisibility type from baileys
+				}> = {};
+
+				// Only assign properties that exist in the update object and are not null/undefined
+				const safeAssign = <T>(key: string, value: T | null | undefined) => {
+					if (value !== null && value !== undefined) {
+						chatData[key as keyof typeof chatData] = value as any;
+					}
+				};
+
+				// Assign each property if it exists in the update
+				if ('conversationTimestamp' in update) safeAssign('conversationTimestamp', update.conversationTimestamp);
+				if ('unreadCount' in update) safeAssign('unreadCount', update.unreadCount);
+				if ('readOnly' in update) safeAssign('readOnly', update.readOnly);
+				if ('ephemeralExpiration' in update) safeAssign('ephemeralExpiration', update.ephemeralExpiration);
+				if ('ephemeralSettingTimestamp' in update) safeAssign('ephemeralSettingTimestamp', update.ephemeralSettingTimestamp);
+				if ('name' in update) safeAssign('name', update.name);
+				if ('notSpam' in update) safeAssign('notSpam', update.notSpam);
+				if ('archived' in update) safeAssign('archived', update.archived);
+				if ('disappearingMode' in update) safeAssign('disappearingMode', update.disappearingMode);
+				if ('lastMsgTimestamp' in update) safeAssign('lastMsgTimestamp', update.lastMsgTimestamp);
+				if ('mediaVisibility' in update) safeAssign('mediaVisibility', update.mediaVisibility);
+
+				const data = transformPrisma(chatData);
+
+				// Check if chat exists before updating
+				const chatExists = await prisma.chat.findUnique({
+					where: { sessionId_id: { id: update.id!, sessionId } }
+				});
+
+				if (!chatExists) {
+					logger.warn({ chatId: update.id }, 'Attempted to update non-existent chat');
+					return;
+				}
+
 				await prisma.chat.update({
 					select: { pkId: true },
 					data: {

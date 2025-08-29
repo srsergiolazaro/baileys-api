@@ -39,17 +39,39 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 				for (const message of messages) {
 					try {
 						const jid = jidNormalizedUser(message.key.remoteJid!);
-						const data = transformPrisma(message) as MakeTransformedPrisma<Message>;
+						// Remove unsupported fields
+						const { statusMentions, messageAddOns, ...restOfMessage } = message;
+						const messageData = { ...restOfMessage };
+						
+						// Transform the message data for Prisma
+						const data = transformPrisma(messageData) as MakeTransformedPrisma<Message>;
+						
+						// Only include fields that exist in the Prisma schema
+						const prismaData = {
+							...data,
+							remoteJid: jid,
+							id: message.key.id!,
+							sessionId,
+							messageStubParameters: [],
+							labels: [],
+							userReceipt: [],
+							reactions: [],
+							pollUpdates: [],
+							eventResponses: [],
+							supportAiCitations: [],
+						};
+
 						await prisma.message.upsert({
 							select: { pkId: true },
-							create: {
-								...data,
-								remoteJid: jid,
-								id: message.key.id!,
-								sessionId,
+							create: prismaData,
+							update: data,
+							where: { 
+								sessionId_remoteJid_id: { 
+									remoteJid: jid, 
+									id: message.key.id!, 
+									sessionId 
+								} 
 							},
-							update: { ...data },
-							where: { sessionId_remoteJid_id: { remoteJid: jid, id: message.key.id!, sessionId } },
 						});
 
 						const chatExists = (await prisma.chat.count({ where: { id: jid, sessionId } })) > 0;
