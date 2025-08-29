@@ -353,4 +353,64 @@ router.post(
 	message.downloadContent,
 );
 
+/**
+ * @swagger
+ * /messages/delete:
+ *   delete:
+ *     tags:
+ *       - Mensajes
+ *     summary: Eliminar mensaje
+ *     description: Elimina un mensaje específico de un chat
+ *     security:
+ *       - ApiKeyAuth: []
+ *       - SessionId : []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - jid
+ *               - key
+ *             properties:
+ *               jid:
+ *                 type: string
+ *                 description: ID del chat (número o grupo)
+ *                 example: "51912519452@s.whatsapp.net"
+ *               key:
+ *                 type: object
+ *                 description: Objeto clave del mensaje a eliminar
+ *                 properties:
+ *                   remoteJid:
+ *                     type: string
+ *                     description: ID del chat remoto
+ *                     example: "51912519452@s.whatsapp.net"
+ *                   id:
+ *                     type: string
+ *                     description: ID del mensaje
+ *                     example: "ABCD1234567890"
+ *                   fromMe:
+ *                     type: boolean
+ *                     description: Si el mensaje fue enviado por el usuario actual
+ *                     example: true
+ *     responses:
+ *       200:
+ *         description: Mensaje eliminado exitosamente
+ *       400:
+ *         description: Datos de entrada inválidos
+ *       403:
+ *         description: API key faltante o inválida
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.delete(
+	"/delete",
+	body("jid").isString().notEmpty(),
+	body("key").isObject().notEmpty(),
+	requestValidator,
+	sessionValidator,
+	message.deleteMessage,
+);
+
 export default router;

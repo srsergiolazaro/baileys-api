@@ -146,18 +146,16 @@ export const download: RequestHandler = async (req, res) => {
 	}
 };
 
-//downloadContentFromMessage
-
-export const downloadContent: RequestHandler = async (req, res) => {
+export const deleteMessage: RequestHandler = async (req, res) => {
 	try {
-		const body = req.body;
-		const buffer = await downloadContentFromMessage(body, "product");
+		const { sessionId } = req.appData;
+		const { jid, key } = req.body;
+		const session = getSession(sessionId)!;
 
-		//res.setHeader("Content-Type", content.mimetype!);
-		res.write(buffer);
-		res.end();
+		await session.sendMessage(jid, { delete: key });
+		res.status(200).json({ message: "Message deleted successfully" });
 	} catch (e) {
-		const message = "An error occured during message media download";
+		const message = "An error occurred during message deletion";
 		logger.error(e, message);
 		res.status(500).json({ error: message });
 	}
