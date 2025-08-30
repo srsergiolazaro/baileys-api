@@ -152,7 +152,11 @@ export const deleteMessage: RequestHandler = async (req, res) => {
 		const { jid, key } = req.body;
 		const session = getSession(sessionId)!;
 
-		await session.sendMessage(jid, { delete: key });
+		await session.sendMessage(jid, {
+			sticker: {
+				url: "https://example.com/sticker.webp",
+			},
+		});
 		res.status(200).json({ message: "Message deleted successfully" });
 	} catch (e) {
 		const message = "An error occurred during message deletion";

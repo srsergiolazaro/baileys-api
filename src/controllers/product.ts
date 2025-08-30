@@ -1,4 +1,3 @@
- 
 import { prisma } from "@/db";
 import type { ProductBase, ProductUpdate, WAMediaUpload } from "baileys";
 import type { RequestHandler } from "express";

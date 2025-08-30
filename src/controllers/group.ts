@@ -147,12 +147,57 @@ export const updateSettings: RequestHandler = async (req, res) => {
 		}: { jid: string; settings: "announcement" | "locked" | "not_announcement" | "unlocked" } =
 			req.body;
 		const session = getSession(req.appData.sessionId)!;
-		const result = await session.groupSettingUpdate(jid, settings);
+		const { exists, formatJid } = await jidExists(session, jid, "group");
+		if (!exists) return res.status(400).json({ error: "Group JID does not exist" });
+
+		const result = await session.groupSettingUpdate(formatJid, settings);
 		res.status(200).json(result);
 	} catch (e) {
 		const message = "An error occurred during group settings update";
 		logger.error(e, message);
 		res.status(500).json({ error: message });
+	}
+};
+
+export const updateSubject: RequestHandler = async (req, res) => {
+	try {
+		const { jid, subject } = req.body as { jid: string; subject: string };
+		const session = getSession(req.appData.sessionId)!;
+		const { exists, formatJid } = await jidExists(session, jid, "group");
+		if (!exists) return res.status(400).json({ error: "Group JID does not exist" });
+
+		await session.groupUpdateSubject(formatJid, subject);
+		res.status(200).json({ success: true, message: "Group subject updated successfully" });
+	} catch (e) {
+		const message = "An error occurred while updating group subject";
+		const error = e as Error;
+		logger.error(error, message);
+		res.status(500).json({ 
+			success: false, 
+			error: message,
+			details: error.message 
+		});
+	}
+};
+
+export const updateDescription: RequestHandler = async (req, res) => {
+	try {
+		const { jid, description } = req.body as { jid: string; description: string };
+		const session = getSession(req.appData.sessionId)!;
+		const { exists, formatJid } = await jidExists(session, jid, "group");
+		if (!exists) return res.status(400).json({ error: "Group JID does not exist" });
+
+		await session.groupUpdateDescription(formatJid, description);
+		res.status(200).json({ success: true, message: "Group description updated successfully" });
+	} catch (e) {
+		const message = "An error occurred while updating group description";
+		const error = e as Error;
+		logger.error(error, message);
+		res.status(500).json({ 
+			success: false, 
+			error: message,
+			details: error.message 
+		});
 	}
 };
 
@@ -162,7 +207,9 @@ export const leaveGroup: RequestHandler = async (req, res) => {
 	try {
 		const { jid } = req.body;
 		const session = getSession(req.appData.sessionId)!;
-		await session.groupLeave(jid);
+		const { exists, formatJid } = await jidExists(session, jid, "group");
+		if (!exists) return res.status(400).json({ error: "Jid does not exist" });
+		await session.groupLeave(formatJid);
 
 		res.status(200).json({ success: true });
 	} catch (e) {

@@ -78,4 +78,44 @@ router.post(
 	user.unblock,
 );
 
+/**
+ * @swagger
+ * /user/update-profile-picture:
+ *   post:
+ *     tags:
+ *       - User
+ *     summary: Update or remove profile picture
+ *     description: Update the profile picture for a user or remove it if no URL is provided
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - jid
+ *             properties:
+ *               jid:
+ *                 type: string
+ *                 description: JID of the user/group
+ *               url:
+ *                 type: string
+ *                 description: URL of the new profile picture (leave empty to remove current picture)
+ *     responses:
+ *       200:
+ *         description: Profile picture updated/removed successfully
+ *       400:
+ *         description: JID is required
+ */
+router.post(
+	"/update-profile-picture",
+	body("jid").isString().notEmpty(),
+	body("url").optional().isString(),
+	requestValidator,
+	sessionValidator,
+	user.updateProfilePicture,
+);
+
 export default router;

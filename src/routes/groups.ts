@@ -387,7 +387,89 @@ router.post(
 	body("jid").isString().notEmpty(),
 	requestValidator,
 	sessionValidator,
-	group.leaveGroup
+	group.leaveGroup,
+);
+
+/**
+ * @swagger
+ * /groups/update-subject:
+ *   post:
+ *     tags:
+ *       - Grupos
+ *     summary: Actualizar asunto del grupo
+ *     description: Actualiza el asunto (nombre) de un grupo
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - jid
+ *               - subject
+ *             properties:
+ *               jid:
+ *                 type: string
+ *                 description: ID del grupo (JID)
+ *               subject:
+ *                 type: string
+ *                 description: Nuevo asunto para el grupo
+ *     responses:
+ *       200:
+ *         description: Asunto del grupo actualizado exitosamente
+ *       400:
+ *         description: Datos de entrada inválidos
+ */
+router.post(
+	"/update-subject",
+	body("jid").isString().notEmpty(),
+	body("subject").isString().notEmpty(),
+	requestValidator,
+	sessionValidator,
+	group.updateSubject,
+);
+
+/**
+ * @swagger
+ * /groups/update-description:
+ *   post:
+ *     tags:
+ *       - Grupos
+ *     summary: Actualizar descripción del grupo
+ *     description: Actualiza la descripción de un grupo
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - jid
+ *               - description
+ *             properties:
+ *               jid:
+ *                 type: string
+ *                 description: ID del grupo (JID)
+ *               description:
+ *                 type: string
+ *                 description: Nueva descripción para el grupo
+ *     responses:
+ *       200:
+ *         description: Descripción del grupo actualizada exitosamente
+ *       400:
+ *         description: Datos de entrada inválidos
+ */
+router.post(
+	"/update-description",
+	body("jid").isString().notEmpty(),
+	body("description").isString().notEmpty(),
+	requestValidator,
+	sessionValidator,
+	group.updateDescription,
 );
 
 export default router;
