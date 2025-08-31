@@ -61,7 +61,7 @@ export const apiKeyValidator: RequestHandler = async (req, res, next) => {
 
 		// Store user ID in appData for use in subsequent handlers
 		if (apiKey.user) {
-			req.appData.userId = apiKey.user.userId;
+			req.appData.userId = apiKey.user.id;
 		}
 
 		next();
