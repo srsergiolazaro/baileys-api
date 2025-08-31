@@ -196,6 +196,7 @@ model Webhook {
   id          Int         @id @default(autoincrement())
   sessionId   String      @db.VarChar(128)
   url         String
+  webhookType String      @default("messages.upsert") @db.VarChar(128)
   userSession UserSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt

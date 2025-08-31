@@ -1,4 +1,10 @@
-import { downloadMediaMessage, type WASocket, type WAMessage, type proto } from "baileys";
+import {
+	downloadMediaMessage,
+	type WASocket,
+	type WAMessage,
+	type proto,
+	ParticipantAction,
+} from "baileys";
 import { prisma } from "@/db";
 import { logger } from "@/shared";
 import { delay } from "@/utils";
@@ -57,7 +63,9 @@ export async function handleMessagesUpsert(
 	}
 
 	try {
-		const webhooks = await prisma.webhook.findMany({ where: { sessionId } });
+		const webhooks = await prisma.webhook.findMany({
+			where: { sessionId, webhookType: "messages.upsert" },
+		});
 
 		const webhookPromises = webhooks.map(async (webhook) => {
 			if (textMessageTypes.includes(messageType)) {
@@ -98,5 +106,29 @@ export async function handleMessagesUpsert(
 		logger.info("Message sent to webhooks");
 	} catch (error) {
 		logger.error(error, "Failed to send message to webhooks");
+	}
+}
+
+export async function handleGroupParticipantsUpdate(
+	socket: WASocket,
+	update: { id: string; participants: string[]; action: ParticipantAction },
+	sessionId: string,
+) {
+	try {
+		const webhooks = await prisma.webhook.findMany({
+			where: { sessionId, webhookType: "group-participants.update" },
+		});
+
+		const webhookPromises = webhooks.map((webhook) =>
+			callWebHook(webhook.url, {
+				...update,
+				session: sessionId,
+			}),
+		);
+
+		await Promise.allSettled(webhookPromises);
+		logger.info({ update }, "Group participants update sent to webhooks");
+	} catch (error) {
+		logger.error(error, "Failed to send group participants update to webhooks");
 	}
 }

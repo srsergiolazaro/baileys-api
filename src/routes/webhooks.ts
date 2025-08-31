@@ -32,8 +32,8 @@ router.get("/", sessionValidator, webhook.list);
  *   get:
  *     tags:
  *       - Webhooks
- *     summary: Check if webhook exists by URL
- *     description: Verifies if a webhook with the given URL exists for the current session
+ *     summary: Check if webhook exists by URL and type
+ *     description: Verifies if a webhook with the given URL and optional type exists for the current session
  *     security:
  *       - ApiKeyAuth: []
  *     parameters:
@@ -43,13 +43,21 @@ router.get("/", sessionValidator, webhook.list);
  *         schema:
  *           type: string
  *         description: URL of the webhook to check
+ *       - in: query
+ *         name: webhookType
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Type of the webhook to check
  *     responses:
  *       200:
- *         description: Returns the webhook if it exists
+ *         description: Returns the webhooks that match the criteria
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Webhook'
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Webhook'
  *       404:
  *         description: Webhook not found
  *       401:
@@ -60,6 +68,7 @@ router.get("/", sessionValidator, webhook.list);
 router.get(
   "/check",
   query("url").isString().notEmpty(),
+  query("webhookType").optional().isString().notEmpty(),
   requestValidator,
   sessionValidator,
   webhook.checkByUrl
@@ -87,6 +96,9 @@ router.get(
  *               url:
  *                 type: string
  *                 description: URL del webhook donde se enviarán las notificaciones
+ *               webhookType:
+ *                 type: string
+ *                 description: Tipo de webhook. Defaults to "messages.upsert".
  *     responses:
  *       201:
  *         description: Webhook creado exitosamente
@@ -98,6 +110,7 @@ router.get(
 router.post(
 	"/",
 	body("url").isString().notEmpty(),
+	body("webhookType").optional().isString(),
 	requestValidator,
 	sessionValidator,
 	webhook.create,
@@ -110,7 +123,7 @@ router.post(
  *     tags:
  *       - Webhooks
  *     summary: Actualizar webhook
- *     description: Actualiza la URL de un webhook existente
+ *     description: Actualiza la URL y/o el tipo de un webhook existente.
  *     security:
  *       - ApiKeyAuth: []
  *     parameters:
@@ -126,17 +139,18 @@ router.post(
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - url
  *             properties:
  *               url:
  *                 type: string
  *                 description: Nueva URL del webhook
+ *               webhookType:
+ *                 type: string
+ *                 description: Nuevo tipo del webhook
  *     responses:
  *       200:
  *         description: Webhook actualizado exitosamente
  *       400:
- *         description: ID o URL inválidos
+ *         description: ID o URL inválidos, o ningún campo para actualizar.
  *       403:
  *         description: API key faltante o inválida
  *       404:
@@ -145,7 +159,8 @@ router.post(
 router.put(
 	"/:id",
 	param("id").isNumeric().notEmpty(),
-	body("url").isString().notEmpty(),
+	body("url").optional().isString().notEmpty(),
+	body("webhookType").optional().isString(),
 	requestValidator,
 	sessionValidator,
 	webhook.update,

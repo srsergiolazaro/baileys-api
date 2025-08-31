@@ -11,7 +11,7 @@ import type { Boom } from "@hapi/boom";
 import type { Response } from "express";
 import { toDataURL } from "qrcode";
 import { sessionsMap } from "./session";
-import { handleMessagesUpsert } from "./handlers";
+import { handleMessagesUpsert, handleGroupParticipantsUpdate } from "./handlers";
 
 const retries = new Map<string, number>();
 const SSEQRGenerations = new Map<string, number>();
@@ -226,6 +226,7 @@ export async function createSession(options: createSessionOptions) {
 	});
 
 	socket.ev.on("messages.upsert", (m) => handleMessagesUpsert(socket, m, sessionId, readIncomingMessages));
+	socket.ev.on("group-participants.update", (c) => handleGroupParticipantsUpdate(socket, c, sessionId));
 
 	await prisma.session.upsert({
 		create: {
