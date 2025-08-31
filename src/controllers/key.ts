@@ -1,12 +1,9 @@
 import { RequestHandler } from "express";
 import { PrismaClient } from "@prisma/client";
 import crypto from "crypto";
-import bcrypt from "bcryptjs";
 import { logger } from "@/shared";
 
 const prisma = new PrismaClient();
-const saltRounds = 10; // For bcrypt hashing
-
 // Helper to generate a random API key
 const generateApiKey = () => {
 	return crypto.randomBytes(32).toString("hex"); // 64 character hex string
@@ -17,7 +14,8 @@ export const create: RequestHandler = async (req, res) => {
 		const { userId } = req.body; // Assuming userId is passed in the body for now
 
 		const plainKey = generateApiKey();
-		const hashedKey = await bcrypt.hash(plainKey, saltRounds);
+		// Usamos SHA-256 para el hashing
+		const hashedKey = crypto.createHash('sha256').update(plainKey).digest('hex');
 
 		const apiKey = await prisma.apiKey.create({
 			data: {
