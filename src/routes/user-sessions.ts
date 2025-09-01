@@ -54,11 +54,14 @@ router.post("/", async (req, res) => {
 			// Crear nueva sesión
 			userSession = await prisma.userSession.create({
 				data: {
+					id: sessionId, // Add required id field
 					userId,
 					sessionId,
 					status: "active",
-					phoneNumber,
-					deviceName,
+					phoneNumber: phoneNumber || null,
+					deviceName: deviceName || "WhatsApp User",
+					createdAt: new Date(),
+					updatedAt: new Date(),
 					lastActive: new Date(),
 				},
 			});
@@ -153,6 +156,13 @@ router.patch("/:sessionId/status", async (req, res) => {
 	try {
 		const { sessionId } = req.params;
 		const { status } = req.body;
+		// Get userId from authenticated user (assuming it's available in req.user)
+		const userId = (req as any).user?.id; // Adjust this based on your auth setup
+
+		if (!userId) {
+			res.status(401).json({ error: "User not authenticated" });
+			return;
+		}
 
 		if (!["active", "inactive", "expired"].includes(status)) {
 			return res.status(400).json({
@@ -185,7 +195,7 @@ router.patch("/:sessionId/status", async (req, res) => {
 			if (!session) {
 				// Si no hay una sesión en memoria, intentar crearla/restaurarla
 				// La función createSession debería cargar los datos de la DB y conectar
-				createSession({ sessionId });
+				createSession({ sessionId, userId });
 				logger.info(
 					"Intentando iniciar/restaurar sesión de WhatsApp debido al cambio de estado a activo",
 					{ sessionId },

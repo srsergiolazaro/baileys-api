@@ -54,8 +54,8 @@ model Chat {
   wallpaper                 Json?
   lastMessageRecvTimestamp  BigInt?
   commentsCount             Int?
-  UserSession               UserSession? @relation(fields: [userSessionId], references: [id])
   userSessionId             String?
+  UserSession               UserSession? @relation(fields: [userSessionId], references: [id])
 
   @@unique([sessionId, id], map: "unique_chat_id_per_session_id")
   @@index([sessionId])
@@ -71,8 +71,8 @@ model Contact {
   imgUrl        String?      @db.VarChar(255)
   status        String?      @db.VarChar(128)
   userId        String?
-  UserSession   UserSession? @relation(fields: [userSessionId], references: [id])
   userSessionId String?
+  UserSession   UserSession? @relation(fields: [userSessionId], references: [id])
 
   @@unique([sessionId, id], map: "unique_contact_id_per_session_id")
   @@index([sessionId])
@@ -98,8 +98,8 @@ model GroupMetadata {
   inviteCode        String?      @db.VarChar(255)
   addressingMode    String?      @db.VarChar(10)
   userId            String?
-  UserSession       UserSession? @relation(fields: [userSessionId], references: [id])
   userSessionId     String?
+  UserSession       UserSession? @relation(fields: [userSessionId], references: [id])
 
   @@unique([sessionId, id], map: "unique_groupmetadata_id_per_session_id")
   @@index([sessionId])
@@ -156,8 +156,8 @@ model Message {
   pinInChat                       Json?
   statusAlreadyViewd              Boolean?
   userId                          String?
-  UserSession                     UserSession? @relation(fields: [userSessionId], references: [id])
   userSessionId                   String?
+  UserSession                     UserSession? @relation(fields: [userSessionId], references: [id])
 
   @@unique([sessionId, remoteJid, id], map: "unique_message_id_per_session_id")
   @@index([sessionId])
@@ -169,8 +169,8 @@ model Session {
   id            String       @db.VarChar(255)
   data          String
   userId        String?
-  UserSession   UserSession? @relation(fields: [userSessionId], references: [id])
   userSessionId String?
+  UserSession   UserSession? @relation(fields: [userSessionId], references: [id])
 
   @@unique([sessionId, id], map: "unique_session_id_per_session_id")
   @@index([sessionId])
@@ -189,9 +189,9 @@ model Product {
   url               String?
   productId         String       @unique @db.VarChar(128)
   userId            String?
+  userSessionId     String?
   images            Image[]
   UserSession       UserSession? @relation(fields: [userSessionId], references: [id])
-  userSessionId     String?
 
   @@index([sessionId])
 }
@@ -211,33 +211,9 @@ model Webhook {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   userId        String?
-  UserSession   UserSession? @relation(fields: [userSessionId], references: [id])
   userSessionId String?
+  UserSession   UserSession? @relation(fields: [userSessionId], references: [id])
 
-  @@index([sessionId])
-}
-
-model UserSession {
-  id            String          @id @default(cuid())
-  userId        String          @unique @db.VarChar(128) // Unique field to link to Clerk user
-  sessionId     String          @unique @db.VarChar(128)
-  status        String          @default("active") @db.VarChar(50)
-  phoneNumber   String?         @db.VarChar(50)
-  deviceName    String?         @db.VarChar(128)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  lastActive    DateTime        @default(now())
-  sessions      Session[]
-  apiKeys       ApiKey[]
-  webhooks      Webhook[]
-  products      Product[]
-  messages      Message[]
-  chats         Chat[]
-  contacts      Contact[]
-  groupMetadata GroupMetadata[]
-  user          user            @relation(fields: [userId], references: [id])
-
-  @@index([userId])
   @@index([sessionId])
 }
 
@@ -248,14 +224,44 @@ model ApiKey {
   createdAt     DateTime     @default(now())
   expiresAt     DateTime?
   enabled       Boolean      @default(true)
-  UserSession   UserSession? @relation(fields: [userSessionId], references: [id])
   userSessionId String?
-  user          user         @relation(fields: [userId], references: [id])
+  user          User         @relation(fields: [userId], references: [id])
+  UserSession   UserSession? @relation(fields: [userSessionId], references: [id])
 
   @@index([userId])
 }
 
-model account {
+model User {
+  id            String        @id
+  name          String
+  email         String        @unique
+  emailVerified Boolean
+  image         String?
+  createdAt     DateTime
+  updatedAt     DateTime
+  status        String        @default("active") @db.VarChar(50)
+  ApiKey        ApiKey[]
+  UserSession   UserSession?
+  user_sessions user_logins[]
+
+  @@map("user")
+}
+
+model user_logins {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  user_id   String   @map("userId")
+  user      User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("user_logins")
+}
+
+model Account {
   id                    String    @id
   accountId             String
   providerId            String
@@ -269,40 +275,41 @@ model account {
   password              String?
   createdAt             DateTime
   updatedAt             DateTime
+
+  @@map("account")
 }
 
-model user {
-  id            String        @id
-  name          String
-  email         String        @unique
-  emailVerified Boolean
-  image         String?
-  createdAt     DateTime
-  updatedAt     DateTime
-  status        String        @default("active") @db.VarChar(50)
-  sessions      UserSession[]
-  apiKeys       ApiKey[]
-
-  user_sessions user_sessions[]
-}
-
-model user_sessions {
-  id        String   @id
-  expiresAt DateTime
-  token     String   @unique
-  createdAt DateTime
-  updatedAt DateTime
-  ipAddress String?
-  userAgent String?
-  userId    String
-  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model verification {
+model Verification {
   id         String    @id
   identifier String
   value      String
   expiresAt  DateTime
   createdAt  DateTime?
   updatedAt  DateTime?
+
+  @@map("verification")
+}
+
+model UserSession {
+  id            String          @id
+  userId        String          @unique @db.VarChar(128)
+  sessionId     String          @unique @db.VarChar(128)
+  status        String          @default("active") @db.VarChar(50)
+  phoneNumber   String?         @db.VarChar(50)
+  deviceName    String?         @db.VarChar(128)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime
+  lastActive    DateTime        @default(now())
+  ApiKey        ApiKey[]
+  Chat          Chat[]
+  Contact       Contact[]
+  GroupMetadata GroupMetadata[]
+  Message       Message[]
+  Product       Product[]
+  Session       Session[]
+  user          User            @relation(fields: [userId], references: [id])
+  Webhook       Webhook[]
+
+  @@index([sessionId])
+  @@index([userId])
 }

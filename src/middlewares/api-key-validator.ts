@@ -5,8 +5,51 @@ import { sessionExists } from "@/whatsapp";
 
 const prisma = new PrismaClient();
 
+/**
+ * Middleware that only validates the API key without checking the session
+ * This is useful for routes that don't require an existing session (like session creation)
+ */
+export const apiKeyValidatorKeyOnly: RequestHandler = async (req, res, next) => {
+	try {
+		const apiKeyHeader = req.headers["x-api-key"];
+
+		if (!apiKeyHeader) {
+			return res.status(401).json({ error: "Unauthorized: API Key missing" });
+		}
+
+		// Initialize appData if it doesn't exist
+		if (!req.appData) {
+			req.appData = { sessionId: "" };
+		}
+
+		const plainApiKey = Array.isArray(apiKeyHeader) ? apiKeyHeader[0] : apiKeyHeader;
+
+		// Find the API key
+		const apiKey = await prisma.apiKey.findFirst({
+			where: {
+				key: plainApiKey,
+				enabled: true,
+				OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+			},
+		});
+
+		if (!apiKey) {
+			return res.status(401).json({ error: "Invalid or expired API key" });
+		}
+		req.appData.userId = apiKey.userId;
+
+		next();
+	} catch (error) {
+		logger.error(error, "Error in apiKeyValidatorKeyOnly middleware");
+		return res.status(500).json({ error: "Internal server error" });
+	}
+};
+
+/**
+ * Middleware that validates both API key and session
+ * This is the original validator that requires both a valid API key and an existing session
+ */
 export const apiKeyValidator: RequestHandler = async (req, res, next) => {
-	console.log("API Key Validator");
 	try {
 		const apiKeyHeader = req.headers["x-api-key"];
 		const sessionId = req.headers["x-session-id"] as string | undefined;
@@ -40,29 +83,34 @@ export const apiKeyValidator: RequestHandler = async (req, res, next) => {
 				key: plainApiKey,
 				enabled: true,
 				OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-				user: {
-					sessions: {
-						some: {
-							sessionId: sessionId,
-						},
-					},
-				},
-			},
-			include: {
-				user: true,
 			},
 		});
 
 		if (!apiKey) {
-			return res
-				.status(403)
-				.json({ error: "Unauthorized: Invalid API key or no access to this session" });
+			return res.status(403).json({ error: "Unauthorized: Invalid API key" });
+		}
+
+		// Check if the user has access to this session
+		const hasAccess = await prisma.userSession.findFirst({
+			where: {
+				userId: apiKey.userId,
+				sessionId: sessionId,
+			},
+			select: {
+				user: {
+					select: {
+						id: true,
+					},
+				},
+			},
+		});
+
+		if (!hasAccess) {
+			return res.status(403).json({ error: "Unauthorized: No access to this session" });
 		}
 
 		// Store user ID in appData for use in subsequent handlers
-		if (apiKey.user) {
-			req.appData.userId = apiKey.user.id;
-		}
+		req.appData.userId = apiKey.userId;
 
 		next();
 	} catch (error) {

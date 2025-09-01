@@ -1,6 +1,7 @@
 import type { RequestHandler } from "express";
 import { prisma } from "@/db";
 import { logger } from "@/shared";
+import { randomBytes } from "crypto";
 import {
 	createSession,
 	deleteSession,
@@ -75,7 +76,13 @@ export const status: RequestHandler = (req, res) => {
 };
 
 export const add: RequestHandler = async (req, res) => {
-	const { sessionId, readIncomingMessages, userId, deviceName, ...socketConfig } = req.body;
+	// First get the userId from the authenticated user
+	const userId = (req as any).user?.id;
+	if (!userId) {
+		return res.status(401).json({ error: "User not authenticated" });
+	}
+
+	const { sessionId, readIncomingMessages, deviceName, ...socketConfig } = req.body;
 
 	if (sessionExists(sessionId)) {
 		return res.status(400).json({ error: "Session already exists" });
@@ -83,28 +90,31 @@ export const add: RequestHandler = async (req, res) => {
 
 	try {
 		// Create or update UserSession
-		if (userId) {
-			await prisma.userSession.upsert({
-				where: { sessionId },
-				update: {
-					status: "active",
-					deviceName: deviceName || "WhatsApp User",
-					lastActive: new Date(),
-					updatedAt: new Date(),
-				},
-				create: {
-					userId,
-					sessionId,
-					status: "active",
-					deviceName: deviceName || "WhatsApp User",
-					phoneNumber: null,
-				},
-			});
-		}
+		await prisma.userSession.upsert({
+			where: { sessionId },
+			update: {
+				status: "active",
+				deviceName: deviceName || "WhatsApp User",
+				lastActive: new Date(),
+				updatedAt: new Date(),
+			},
+			create: {
+				id: sessionId, // Add required id field
+				userId,
+				sessionId,
+				status: "active",
+				deviceName: deviceName || "WhatsApp User",
+				phoneNumber: null,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+				lastActive: new Date(),
+			},
+		});
 
 		// Create the WhatsApp session
 		await createSession({
 			sessionId,
+			userId,
 			res,
 			readIncomingMessages,
 			socketConfig,
@@ -119,17 +129,19 @@ export const add: RequestHandler = async (req, res) => {
 };
 
 export const addSSE: RequestHandler = async (req, res) => {
-	const { sessionId } = req.query;
-
-	if (!sessionId || typeof sessionId !== "string") {
-		res.status(400).json({ error: "SessionId is required" });
-		return;
+	const appData = req.appData;
+	if (!appData.sessionId) {
+		appData.sessionId = randomBytes(16).toString("hex");
 	}
+
+	const sessionId = appData.sessionId;
+	const userId = appData.userId || "";
 
 	res.writeHead(200, {
 		"Content-Type": "text/event-stream",
 		"Cache-Control": "no-cache",
 		Connection: "keep-alive",
+		"x-session-id": sessionId,
 	});
 
 	if (sessionExists(sessionId)) {
@@ -137,7 +149,7 @@ export const addSSE: RequestHandler = async (req, res) => {
 		res.end();
 		return;
 	}
-	createSession({ sessionId, res, SSE: true });
+	createSession({ sessionId, userId, res, SSE: true });
 };
 
 export const del: RequestHandler = async (req, res) => {
@@ -147,7 +159,10 @@ export const del: RequestHandler = async (req, res) => {
 			return res.status(400).json({ error: "Se requiere el ID de la sesión" });
 		}
 
-		const userId = (req as any).user?.id;
+		const appData = req.appData;
+
+		const userId = appData.userId;
+
 		if (userId) {
 			await prisma.userSession.updateMany({
 				where: {

@@ -10,10 +10,10 @@ import userRoutes from "./user";
 
 import userSessionsRoute from "./user-sessions";
 import keysRoutes from "./keys";
-import { apiKeyValidator } from "@/middlewares/api-key-validator";
+import { apiKeyValidator, apiKeyValidatorKeyOnly } from "@/middlewares/api-key-validator";
 
 const router = Router();
-router.use("/sessions", apiKeyValidator, sessionRoutes);
+router.use("/sessions", apiKeyValidatorKeyOnly, sessionRoutes);
 router.use("/chats", apiKeyValidator, chatRoutes);
 router.use("/contacts", apiKeyValidator, contactRoutes);
 router.use("/groups", apiKeyValidator, groupRoutes);

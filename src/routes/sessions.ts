@@ -1,8 +1,7 @@
 import { Router } from "express";
 import { session } from "@/controllers";
 import { getUserSessions } from "@/controllers/session";
-import sessionValidator from "@/middlewares/session-validator";
-import { apiKeyValidator } from "@/middlewares/api-key-validator";
+import { apiKeyValidator, apiKeyValidatorKeyOnly } from "@/middlewares/api-key-validator";
 import { body } from "express-validator";
 
 const router = Router();
@@ -70,7 +69,7 @@ const router = Router();
  *       500:
  *         description: Error interno del servidor
  */
-router.get("/", apiKeyValidator, getUserSessions);
+router.get("/", getUserSessions);
 
 /**
  * @swagger
@@ -98,7 +97,7 @@ router.get("/", apiKeyValidator, getUserSessions);
  *       404:
  *         description: Sesión no encontrada
  */
-router.get("/status", apiKeyValidator, sessionValidator, session.status);
+router.get("/status", session.status);
 
 /**
  * @swagger
@@ -130,12 +129,7 @@ router.get("/status", apiKeyValidator, sessionValidator, session.status);
  *       401:
  *         description: No autorizado - API Key inválida
  */
-router.post(
-	"/add",
-	apiKeyValidator,
-	body("sessionId").isString().notEmpty(),
-	session.add
-);
+router.post("/add", body("sessionId").isString().notEmpty(), session.add);
 
 /**
  * @swagger
@@ -162,7 +156,7 @@ router.post(
  *       401:
  *         description: No autorizado - API Key inválida
  */
-router.get("/add-sse", apiKeyValidator, session.addSSE);
+router.get("/add-sse", session.addSSE);
 
 /**
  * @swagger
@@ -190,6 +184,6 @@ router.get("/add-sse", apiKeyValidator, session.addSSE);
  *       404:
  *         description: Sesión no encontrada
  */
-router.delete("/", apiKeyValidator, sessionValidator, session.del);
+router.delete("/", session.del);
 
 export default router;

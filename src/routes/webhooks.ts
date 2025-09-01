@@ -2,7 +2,6 @@ import { Router } from "express";
 import { body, param, query } from "express-validator";
 import { webhook } from "@/controllers";
 import requestValidator from "@/middlewares/request-validator";
-import sessionValidator from "@/middlewares/session-validator";
 
 const router = Router({ mergeParams: true });
 
@@ -24,7 +23,7 @@ const router = Router({ mergeParams: true });
  *       403:
  *         description: API key faltante o inválida
  */
-router.get("/", sessionValidator, webhook.list);
+router.get("/", webhook.list);
 
 /**
  * @swagger
@@ -66,12 +65,11 @@ router.get("/", sessionValidator, webhook.list);
  *         description: Invalid API key
  */
 router.get(
-  "/check",
-  query("url").isString().notEmpty(),
-  query("webhookType").optional().isString().notEmpty(),
-  requestValidator,
-  sessionValidator,
-  webhook.checkByUrl
+	"/check",
+	query("url").isString().notEmpty(),
+	query("webhookType").optional().isString().notEmpty(),
+	requestValidator,
+	webhook.checkByUrl,
 );
 
 /**
@@ -112,7 +110,6 @@ router.post(
 	body("url").isString().notEmpty(),
 	body("webhookType").optional().isString(),
 	requestValidator,
-	sessionValidator,
 	webhook.create,
 );
 
@@ -162,7 +159,6 @@ router.put(
 	body("url").optional().isString().notEmpty(),
 	body("webhookType").optional().isString(),
 	requestValidator,
-	sessionValidator,
 	webhook.update,
 );
 
@@ -193,12 +189,6 @@ router.put(
  *       404:
  *         description: Webhook no encontrado
  */
-router.delete(
-	"/:id",
-	param("id").isNumeric().notEmpty(),
-	requestValidator,
-	sessionValidator,
-	webhook.remove,
-);
+router.delete("/:id", param("id").isNumeric().notEmpty(), requestValidator, webhook.remove);
 
 export default router;

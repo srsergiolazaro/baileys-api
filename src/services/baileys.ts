@@ -34,6 +34,7 @@ function shouldReconnect(sessionId: string) {
 
 type createSessionOptions = {
 	sessionId: string;
+	userId: string;
 	res?: Response;
 	SSE?: boolean;
 	readIncomingMessages?: boolean;
@@ -41,19 +42,65 @@ type createSessionOptions = {
 };
 
 export async function createSession(options: createSessionOptions) {
-	const { sessionId, res, SSE = false, readIncomingMessages = false, socketConfig } = options;
-
-	await prisma.userSession.upsert({
-		where: { sessionId },
-		create: {
-			sessionId,
-			userId: "unknown_user_id", // Placeholder for userId
-			status: "active", // Default status
-		},
-		update: {
-			lastActive: new Date(), // Update last active timestamp
-		},
+	const {
+		sessionId,
+		userId,
+		res,
+		SSE = false,
+		readIncomingMessages = false,
+		socketConfig,
+	} = options;
+	// First check if there's an existing session for this user
+	const existingSession = await prisma.userSession.findFirst({
+		where: { userId }
 	});
+
+	if (existingSession) {
+		// If the existing session has the same sessionId, just update it
+		if (existingSession.sessionId === sessionId) {
+			await prisma.userSession.update({
+				where: { sessionId },
+				data: {
+					lastActive: new Date(),
+					updatedAt: new Date(),
+				},
+			});
+		} else {
+			// If the user has a different session, delete it first
+			await prisma.userSession.deleteMany({
+				where: { userId }
+			});
+			// Then create the new session
+			await prisma.userSession.create({
+				data: {
+					id: sessionId,
+					sessionId,
+					userId,
+					status: "active",
+					phoneNumber: null,
+					deviceName: "WhatsApp User",
+					createdAt: new Date(),
+					updatedAt: new Date(),
+					lastActive: new Date(),
+				},
+			});
+		}
+	} else {
+		// No existing session for this user, create a new one
+		await prisma.userSession.create({
+			data: {
+				id: sessionId,
+				sessionId,
+				userId,
+				status: "active",
+				phoneNumber: null,
+				deviceName: "WhatsApp User",
+				createdAt: new Date(),
+				updatedAt: new Date(),
+				lastActive: new Date(),
+			},
+		});
+	}
 	const configID = `${SESSION_CONFIG_ID}-${sessionId}`;
 	let connectionState: Partial<ConnectionState> = { connection: "close" };
 
@@ -127,22 +174,22 @@ export async function createSession(options: createSessionOptions) {
 	};
 
 	const handleSSEConnectionUpdate = async () => {
-		logger.info('SSE Connection Update', { 
-			sessionId, 
+		logger.info("SSE Connection Update", {
+			sessionId,
 			connectionState,
 			hasResponse: !!res,
 			responseEnded: res?.writableEnded,
-			currentGenerations: SSEQRGenerations.get(sessionId) ?? 0
+			currentGenerations: SSEQRGenerations.get(sessionId) ?? 0,
 		});
 
 		let qr: string | undefined = undefined;
 		if (connectionState.qr?.length) {
 			try {
 				qr = await toDataURL(connectionState.qr);
-				logger.info('QR code generated', { 
+				logger.info("QR code generated", {
 					sessionId,
 					qrLength: connectionState.qr.length,
-					qrGenerated: !!qr
+					qrGenerated: !!qr,
 				});
 			} catch (e) {
 				logger.error(e, "An error occurred during QR generation");
@@ -151,15 +198,15 @@ export async function createSession(options: createSessionOptions) {
 
 		const currentGenerations = SSEQRGenerations.get(sessionId) ?? 0;
 		if (!res || res.writableEnded || (qr && currentGenerations >= SSE_MAX_QR_GENERATION)) {
-			logger.info('SSE connection ending', {
+			logger.info("SSE connection ending", {
 				sessionId,
 				hasResponse: !!res,
 				responseEnded: res?.writableEnded,
 				qrGenerated: !!qr,
 				currentGenerations,
-				maxGenerations: SSE_MAX_QR_GENERATION
+				maxGenerations: SSE_MAX_QR_GENERATION,
 			});
-			
+
 			if (res && !res.writableEnded) {
 				res.end();
 			}
@@ -171,17 +218,17 @@ export async function createSession(options: createSessionOptions) {
 		if (qr) {
 			SSEQRGenerations.set(sessionId, currentGenerations + 1);
 		}
-		
+
 		try {
 			const message = `data: ${JSON.stringify(data)}\n\n`;
 			res.write(message);
-			logger.info('SSE message sent', { 
+			logger.info("SSE message sent", {
 				sessionId,
 				messageLength: message.length,
-				hasQr: !!qr
+				hasQr: !!qr,
 			});
 		} catch (e) {
-			logger.error(e, 'Error writing SSE message');
+			logger.error(e, "Error writing SSE message");
 			if (res && !res.writableEnded) {
 				res.end();
 			}
@@ -220,13 +267,21 @@ export async function createSession(options: createSessionOptions) {
 		if (connection === "open") {
 			retries.delete(sessionId);
 			SSEQRGenerations.delete(sessionId);
+			if (res && !res.writableEnded) {
+				res.end();
+				return;
+			}
 		}
 		if (connection === "close") handleConnectionClose();
 		handleConnectionUpdate();
 	});
 
-	socket.ev.on("messages.upsert", (m) => handleMessagesUpsert(socket, m, sessionId, readIncomingMessages));
-	socket.ev.on("group-participants.update", (c) => handleGroupParticipantsUpdate(socket, c, sessionId));
+	socket.ev.on("messages.upsert", (m) =>
+		handleMessagesUpsert(socket, m, sessionId, readIncomingMessages),
+	);
+	socket.ev.on("group-participants.update", (c) =>
+		handleGroupParticipantsUpdate(socket, c, sessionId),
+	);
 
 	await prisma.session.upsert({
 		create: {
@@ -240,8 +295,8 @@ export async function createSession(options: createSessionOptions) {
 		where: {
 			sessionId_id: {
 				sessionId,
-				id: configID
-			}
-		}
+				id: configID,
+			},
+		},
 	});
 }

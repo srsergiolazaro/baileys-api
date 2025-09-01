@@ -2,7 +2,6 @@ import { Router } from "express";
 import { body } from "express-validator";
 import { user } from "@/controllers";
 import requestValidator from "@/middlewares/request-validator";
-import sessionValidator from "@/middlewares/session-validator";
 
 const router = Router({ mergeParams: true });
 
@@ -34,13 +33,7 @@ const router = Router({ mergeParams: true });
  *       400:
  *         description: Datos de entrada inválidos
  */
-router.post(
-	"/block",
-	body("jid").isString().notEmpty(),
-	requestValidator,
-	sessionValidator,
-	user.block,
-);
+router.post("/block", body("jid").isString().notEmpty(), requestValidator, user.block);
 
 /**
  * @swagger
@@ -70,13 +63,7 @@ router.post(
  *       400:
  *         description: Datos de entrada inválidos
  */
-router.post(
-	"/unblock",
-	body("jid").isString().notEmpty(),
-	requestValidator,
-	sessionValidator,
-	user.unblock,
-);
+router.post("/unblock", body("jid").isString().notEmpty(), requestValidator, user.unblock);
 
 /**
  * @swagger
@@ -114,7 +101,6 @@ router.post(
 	body("jid").isString().notEmpty(),
 	body("url").optional().isString(),
 	requestValidator,
-	sessionValidator,
 	user.updateProfilePicture,
 );
 

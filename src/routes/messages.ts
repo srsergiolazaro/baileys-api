@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { message } from "@/controllers";
 import requestValidator from "@/middlewares/request-validator";
-import sessionValidator from "@/middlewares/session-validator";
 import { query, body } from "express-validator";
 import multer from "multer";
 
@@ -194,7 +193,7 @@ router.get(
  *               url: "https://ejemplo.com/video.mp4"
  *             ptv: true
  */
-router.post("/send", upload.single("file"), requestValidator, sessionValidator, message.send);
+router.post("/send", upload.single("file"), requestValidator, message.send);
 
 /**
  * @swagger
@@ -265,13 +264,7 @@ router.post("/send", upload.single("file"), requestValidator, sessionValidator, 
  *           message:
  *             text: "Mensaje para el número con retraso de 5 segundos"
  */
-router.post(
-	"/send/bulk",
-	body().isArray().notEmpty(),
-	requestValidator,
-	sessionValidator,
-	message.sendBulk,
-);
+router.post("/send/bulk", body().isArray().notEmpty(), requestValidator, message.sendBulk);
 
 /**
  * @swagger
@@ -305,13 +298,7 @@ router.post(
  *       404:
  *         description: Mensaje no encontrado
  */
-router.post(
-	"/download",
-	body().isObject().notEmpty(),
-	requestValidator,
-	sessionValidator,
-	message.download,
-);
+router.post("/download", body().isObject().notEmpty(), requestValidator, message.download);
 
 /**
  * @swagger
@@ -369,7 +356,6 @@ router.delete(
 	body("jid").isString().notEmpty(),
 	body("key").isObject().notEmpty(),
 	requestValidator,
-	sessionValidator,
 	message.deleteMessage,
 );
 

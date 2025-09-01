@@ -1,8 +1,7 @@
 import { Router } from "express";
 import { key } from "@/controllers";
-import { userSessionValidator } from "@/middlewares/user-session-validator";
+import { userValidator } from "@/middlewares/user-validator";
 import { apiKeyValidator } from "@/middlewares/api-key-validator";
-import sessionValidator from "@/middlewares/session-validator";
 
 const router = Router();
 
@@ -39,7 +38,7 @@ const router = Router();
  *       500:
  *         description: Internal server error
  */
-router.get("/test", apiKeyValidator, sessionValidator, (req, res) => {
+router.get("/test", apiKeyValidator, (req, res) => {
 	console.log("Test");
 	res.status(200).json({
 		success: true,
@@ -135,7 +134,7 @@ router.get("/test", apiKeyValidator, sessionValidator, (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.post("/", userSessionValidator, key.create);
+router.post("/", userValidator, key.create);
 
 /**
  * @swagger
@@ -163,7 +162,7 @@ router.post("/", userSessionValidator, key.create);
  *       500:
  *         description: Internal server error
  */
-router.get("/", userSessionValidator, key.findAll);
+router.get("/", userValidator, key.findAll);
 
 /**
  * @swagger

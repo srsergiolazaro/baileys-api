@@ -2,7 +2,6 @@ import { Router } from "express";
 import { body, query } from "express-validator";
 import { contact } from "@/controllers";
 import requestValidator from "@/middlewares/request-validator";
-import sessionValidator from "@/middlewares/session-validator";
 import jidValidator from "@/middlewares/jid-validator";
 
 const router = Router({ mergeParams: true });
@@ -56,7 +55,7 @@ router.get(
  *       401:
  *         description: No autorizado
  */
-router.get("/blocklist", sessionValidator, contact.listBlocked);
+router.get("/blocklist", contact.listBlocked);
 
 /**
  * @swagger
@@ -95,7 +94,6 @@ router.post(
 	body("jid").isString().notEmpty(),
 	body("action").isString().isIn(["block", "unblock"]).optional(),
 	requestValidator,
-	sessionValidator,
 	contact.updateBlock,
 );
 
@@ -122,7 +120,7 @@ router.post(
  *       404:
  *         description: Contacto no encontrado
  */
-router.get("/:jid", jidValidator, sessionValidator, contact.check);
+router.get("/:jid", jidValidator, contact.check);
 
 /**
  * @swagger
@@ -152,6 +150,6 @@ router.get("/:jid", jidValidator, sessionValidator, contact.check);
  *       404:
  *         description: Foto de perfil no encontrada
  */
-router.get("/:jid/photo", sessionValidator, contact.photo);
+router.get("/:jid/photo", contact.photo);
 
 export default router;

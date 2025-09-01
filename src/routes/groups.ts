@@ -2,7 +2,6 @@ import { Router } from "express";
 import { query, body } from "express-validator";
 import { group } from "@/controllers";
 import requestValidator from "@/middlewares/request-validator";
-import sessionValidator from "@/middlewares/session-validator";
 
 const router = Router({ mergeParams: true });
 
@@ -59,13 +58,7 @@ router.get(
  *       400:
  *         description: Parámetros de consulta inválidos
  */
-router.post(
-	"/search",
-	body("name").isString().optional(),
-	requestValidator,
-	sessionValidator,
-	group.search,
-);
+router.post("/search", body("name").isString().optional(), requestValidator, group.search);
 
 /**
  * @swagger
@@ -95,13 +88,7 @@ router.post(
  *       404:
  *         description: Grupo no encontrado
  */
-router.post(
-	"/find",
-	body("jid").isString().notEmpty(),
-	requestValidator,
-	sessionValidator,
-	group.find,
-);
+router.post("/find", body("jid").isString().notEmpty(), requestValidator, group.find);
 
 /**
  * @swagger
@@ -129,7 +116,7 @@ router.post(
  *       404:
  *         description: Foto no encontrada
  */
-router.get("/:jid/photo", sessionValidator, group.photo);
+router.get("/:jid/photo", group.photo);
 
 /**
  * @swagger
@@ -170,7 +157,6 @@ router.post(
 	body("subject").isString().notEmpty(),
 	body("participants").isArray().notEmpty(),
 	requestValidator,
-	sessionValidator,
 	group.create,
 );
 
@@ -212,7 +198,6 @@ router.put(
 	body("jid").isString().notEmpty(),
 	body("subject").isString().optional(),
 	requestValidator,
-	sessionValidator,
 	group.update,
 );
 
@@ -246,13 +231,7 @@ router.put(
  *       404:
  *         description: Grupo no encontrado
  */
-router.delete(
-	"/delete",
-	body("jid").isString().notEmpty(),
-	requestValidator,
-	sessionValidator,
-	group.deleteGroup,
-);
+router.delete("/delete", body("jid").isString().notEmpty(), requestValidator, group.deleteGroup);
 
 /**
  * @swagger
@@ -301,7 +280,6 @@ router.post(
 	body("action").isString().isIn(["add", "remove", "promote", "demote"]).notEmpty(),
 	body("participants").isArray().notEmpty(),
 	requestValidator,
-	sessionValidator,
 	group.updateParticipants,
 );
 
@@ -344,7 +322,6 @@ router.post(
 	body("jid").isString().notEmpty(),
 	body("settings").isString().notEmpty(),
 	requestValidator,
-	sessionValidator,
 	group.updateSettings,
 );
 
@@ -382,13 +359,7 @@ router.post(
  *                   type: boolean
  *                   description: Indica si la operación fue exitosa
  */
-router.post(
-	"/leave",
-	body("jid").isString().notEmpty(),
-	requestValidator,
-	sessionValidator,
-	group.leaveGroup,
-);
+router.post("/leave", body("jid").isString().notEmpty(), requestValidator, group.leaveGroup);
 
 /**
  * @swagger
@@ -427,7 +398,6 @@ router.post(
 	body("jid").isString().notEmpty(),
 	body("subject").isString().notEmpty(),
 	requestValidator,
-	sessionValidator,
 	group.updateSubject,
 );
 
@@ -468,7 +438,6 @@ router.post(
 	body("jid").isString().notEmpty(),
 	body("description").isString().notEmpty(),
 	requestValidator,
-	sessionValidator,
 	group.updateDescription,
 );
 
