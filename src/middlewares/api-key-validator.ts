@@ -51,8 +51,9 @@ export const apiKeyValidatorKeyOnly: RequestHandler = async (req, res, next) => 
  */
 export const apiKeyValidator: RequestHandler = async (req, res, next) => {
 	try {
-		const apiKeyHeader = req.headers["x-api-key"];
-		const sessionId = req.headers["x-session-id"] as string | undefined;
+		const apiKeyHeader = req.headers["x-api-key"] || req.query.apiKey || req.body.apiKey;
+		const sessionId =
+			(req.headers["x-session-id"] as string) || req.query.sessionId || req.body.sessionId;
 
 		if (!apiKeyHeader) {
 			return res.status(401).json({ error: "Unauthorized: API Key missing" });

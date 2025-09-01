@@ -11,11 +11,11 @@ const generateApiKey = () => {
 
 export const create: RequestHandler = async (req, res) => {
 	try {
-		const { userId } = req.body; // Assuming userId is passed in the body for now
+		const userId = req.body.userId || req.query.userId;
 
 		const plainKey = generateApiKey();
 		// Usamos SHA-256 para el hashing
-		const hashedKey = crypto.createHash('sha256').update(plainKey).digest('hex');
+		const hashedKey = crypto.createHash("sha256").update(plainKey).digest("hex");
 
 		const apiKey = await prisma.apiKey.create({
 			data: {
