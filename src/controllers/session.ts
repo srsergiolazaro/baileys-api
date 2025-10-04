@@ -77,7 +77,7 @@ export const status: RequestHandler = (req, res) => {
 
 export const add: RequestHandler = async (req, res) => {
 	// First get the userId from the authenticated user
-	const userId = (req as any).user?.id;
+	const userId = req.appData.userId;
 	if (!userId) {
 		return res.status(401).json({ error: "User not authenticated" });
 	}

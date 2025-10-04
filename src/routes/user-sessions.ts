@@ -157,7 +157,7 @@ router.patch("/:sessionId/status", async (req, res) => {
 		const { sessionId } = req.params;
 		const { status } = req.body;
 		// Get userId from authenticated user (assuming it's available in req.user)
-		const userId = (req as any).user?.id; // Adjust this based on your auth setup
+		const userId = req.appData.userId; // Adjust this based on your auth setup
 
 		if (!userId) {
 			res.status(401).json({ error: "User not authenticated" });
