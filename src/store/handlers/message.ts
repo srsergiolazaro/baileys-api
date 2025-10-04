@@ -57,22 +57,34 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 							userReceipt: [],
 							reactions: [],
 							pollUpdates: [],
-							eventResponses: [],
-							supportAiCitations: [],
+							eventResponses: []
+							// Removed supportAiCitations as it's not in the schema
 						};
 
-						await prisma.message.upsert({
-							select: { pkId: true },
-							create: prismaData,
-							update: data,
-							where: { 
-								sessionId_remoteJid_id: { 
-									remoteJid: jid, 
-									id: message.key.id!, 
-									sessionId 
-								} 
-							},
-						});
+						try {
+							await prisma.message.upsert({
+								select: { pkId: true },
+								create: prismaData,
+								update: data,
+								where: { 
+									sessionId_remoteJid_id: { 
+										remoteJid: jid, 
+										id: message.key.id!, 
+										sessionId 
+									} 
+								},
+							});
+						} catch (error) {
+							// Log the full error for debugging
+							logger.error({ 
+								error, 
+								message: 'Failed to upsert message',
+								messageId: message.key.id,
+								remoteJid: jid,
+								sessionId
+							});
+							// Don't throw the error to prevent crashing the handler
+						}
 
 						const chatExists = (await prisma.chat.count({ where: { id: jid, sessionId } })) > 0;
 						if (type === "notify" && !chatExists) {
