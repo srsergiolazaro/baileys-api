@@ -14,11 +14,15 @@ const options: swaggerJsdoc.Options = {
 		},
 		servers: [
 			{
-				url: "http://localhost:3001",
+				url: "http://localhost:3000",
 				description: "Servidor de desarrollo",
 			},
 			{
 				url: "https://whatsapp.taptapp.xyz",
+				description: "Servidor de producción",
+			},
+			{
+				url: "https://whs.taptapp.xyz",
 				description: "Servidor de producción",
 			},
 		],
