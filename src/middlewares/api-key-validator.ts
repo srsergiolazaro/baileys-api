@@ -12,6 +12,10 @@ const prisma = new PrismaClient();
 export const apiKeyValidatorKeyOnly: RequestHandler = async (req, res, next) => {
 	const userId = (req.headers["x-user-id"] as string) || req.query.userId || req.body.userId;
 
+	// Initialize appData if it doesn't exist
+	if (!req.appData) {
+		req.appData = {} as any;
+	}
 	req.appData.userId = userId;
 
 	return next();
