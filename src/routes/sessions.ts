@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { session } from "@/controllers";
 import { getUserSessions } from "@/controllers/session";
-import { apiKeyValidator, apiKeyValidatorKeyOnly } from "@/middlewares/api-key-validator";
 import { body } from "express-validator";
 
 const router = Router();

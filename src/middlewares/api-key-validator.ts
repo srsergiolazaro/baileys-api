@@ -10,21 +10,9 @@ const prisma = new PrismaClient();
  * This is useful for routes that don't require an existing session (like session creation)
  */
 export const apiKeyValidatorKeyOnly: RequestHandler = async (req, res, next) => {
-	const sessionId =
-		(req.headers["x-session-id"] as string) || req.query.sessionId || req.body.sessionId;
+	const userId = (req.headers["x-user-id"] as string) || req.query.userId || req.body.userId;
 
-	const userSession = await prisma.userSession.findFirst({
-		where: {
-			userId: sessionId,
-		},
-	});
-
-	if (!userSession) {
-		return res.status(404).json({ error: `Session not found: ${sessionId}` });
-	}
-	req.appData.userId = userSession.userId;
-
-	req.appData.sessionId = sessionId;
+	req.appData.userId = userId;
 
 	return next();
 	/*
