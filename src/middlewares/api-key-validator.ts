@@ -10,6 +10,23 @@ const prisma = new PrismaClient();
  * This is useful for routes that don't require an existing session (like session creation)
  */
 export const apiKeyValidatorKeyOnly: RequestHandler = async (req, res, next) => {
+	const sessionId =
+		(req.headers["x-session-id"] as string) || req.query.sessionId || req.body.sessionId;
+
+	const userSession = await prisma.userSession.findFirst({
+		where: {
+			userId: sessionId,
+		},
+	});
+
+	if (!userSession) {
+		return res.status(404).json({ error: `Session not found: ${sessionId}` });
+	}
+	req.appData.userId = userSession.userId;
+
+	req.appData.sessionId = sessionId;
+
+	return next();
 	try {
 		const apiKeyHeader = req.headers["x-api-key"];
 
@@ -50,10 +67,25 @@ export const apiKeyValidatorKeyOnly: RequestHandler = async (req, res, next) => 
  * This is the original validator that requires both a valid API key and an existing session
  */
 export const apiKeyValidator: RequestHandler = async (req, res, next) => {
+	const sessionId =
+		(req.headers["x-session-id"] as string) || req.query.sessionId || req.body.sessionId;
+
+	const userSession = await prisma.userSession.findFirst({
+		where: {
+			userId: sessionId,
+		},
+	});
+
+	if (!userSession) {
+		return res.status(404).json({ error: `Session not found: ${sessionId}` });
+	}
+	req.appData.userId = userSession.userId;
+
+	req.appData.sessionId = sessionId;
+
+	return next();
 	try {
 		const apiKeyHeader = req.headers["x-api-key"] || req.query.apiKey || req.body.apiKey;
-		const sessionId =
-			(req.headers["x-session-id"] as string) || req.query.sessionId || req.body.sessionId;
 
 		if (!apiKeyHeader) {
 			return res.status(401).json({ error: "Unauthorized: API Key missing" });
