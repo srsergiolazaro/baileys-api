@@ -17,7 +17,7 @@ export const list: RequestHandler = (req, res) => {
 
 export const getUserSessions: RequestHandler = async (req, res) => {
 	try {
-		const userId = (req as any).user?.id;
+		const userId = req.appData.userId;
 		if (!userId) {
 			return res.status(401).json({ error: "No se pudo identificar al usuario" });
 		}
