@@ -64,9 +64,14 @@ export const apiKeyValidator: RequestHandler = async (req, res, next) => {
 	const sessionId =
 		(req.headers["x-session-id"] as string) || req.query.sessionId || req.body.sessionId;
 
+	// Initialize appData if it doesn't exist
+	if (!req.appData) {
+		req.appData = {} as any;
+	}
+
 	const userSession = await prisma.userSession.findFirst({
 		where: {
-			userId: sessionId,
+			sessionId: sessionId,
 		},
 	});
 
