@@ -42,7 +42,6 @@ export const send: RequestHandler = async (req, res) => {
 		// Procesa los datos de form-data si existen
 		if (req.is("multipart/form-data")) {
 			jid = req.body.jid;
-			type = req.body.type || "number";
 			message = req.body.message ? JSON.parse(req.body.message) : undefined;
 			options = req.body.options ? JSON.parse(req.body.options) : undefined;
 
@@ -56,17 +55,38 @@ export const send: RequestHandler = async (req, res) => {
 			}
 		}
 
-		const session = getSession(req.appData.sessionId)!;
+		const session = getSession(req.appData.sessionId);
 
-		const { exists, formatJid } = await jidExists(session, jid, type);
-		if (!exists) return res.status(400).json({ error: "JID does not exist" });
+		if (!session) {
+			return res.status(400).json({ error: "Session not found or not connected" });
+		}
 
-		const result = await session.sendMessage(formatJid, message, options);
-		res.status(200).json(result);
+		const { exists, formatJid, error } = await jidExists(session, jid, type);
+		if (!exists) {
+			return res.status(400).json({ 
+				error: error || "JID does not exist",
+				details: `Failed to verify JID: ${jid}`
+			});
+		}
+
+		try {
+			const result = await session.sendMessage(formatJid, message, options);
+			return res.status(200).json(result);
+		} catch (sendError) {
+			const errorMessage = `Failed to send message: ${sendError instanceof Error ? sendError.message : 'Unknown error'}`;
+			logger.error(sendError, errorMessage);
+			return res.status(500).json({ 
+				error: errorMessage,
+				details: sendError instanceof Error ? sendError.stack : undefined
+			});
+		}
 	} catch (e) {
 		const errorMessage = "An error occurred during message send";
 		logger.error(e, errorMessage);
-		res.status(500).json({ error: errorMessage });
+		return res.status(500).json({ 
+			error: errorMessage,
+			details: e instanceof Error ? e.stack : undefined
+		});
 	}
 };
 

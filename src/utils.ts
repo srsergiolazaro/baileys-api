@@ -1,5 +1,6 @@
 import parsePhoneNumber from "libphonenumber-js";
 import type { Session } from "./types";
+import { logger } from "./shared";
 
 export const serializePrisma = (obj: any) => {
 	return JSON.parse(
@@ -16,19 +17,24 @@ export function delay(ms: number) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function formatPhoneNumber(phoneNumber: string) {
+function formatPhoneNumber(phoneNumber: string): string {
 	const defaultCountry = "PE"; // Código de país de Perú
 	const parsedNumber = parsePhoneNumber(phoneNumber, defaultCountry);
-	if (parsedNumber) {
-		return parsedNumber.number.replace("+", "");
+	if (!parsedNumber) {
+		throw new Error("Invalid phone number format");
 	}
+	return parsedNumber.number.replace("+", "");
 }
 
 export async function jidExists(
-	session: Session,
+	session: Session | undefined,
 	jid: string,
 	type: "group" | "number" = "number",
-): Promise<{ exists: boolean; formatJid: string }> {
+): Promise<{ exists: boolean; formatJid: string; error?: string }> {
+	if (!session) {
+		return { exists: false, formatJid: jid, error: "Session not found or not connected" };
+	}
+
 	try {
 		const formatJid = (jid: string) =>
 			jid.includes("@") ? jid : `${formatPhoneNumber(jid)}@s.whatsapp.net`;
@@ -41,8 +47,9 @@ export async function jidExists(
 		}
 
 		const groupMeta = await session.groupMetadata(jid);
-		return { exists: !!groupMeta.id, formatJid: jid };
+		return { exists: !!groupMeta.id, formatJid: groupMeta.id };
 	} catch (e) {
-		return Promise.reject(e);
+		logger.error(e, "Error in jidExists");
+		return { exists: false, formatJid: jid, error: e instanceof Error ? e.message : "Unknown error" };
 	}
 }
