@@ -27,6 +27,7 @@ export const apiKeyValidatorKeyOnly: RequestHandler = async (req, res, next) => 
 	req.appData.sessionId = sessionId;
 
 	return next();
+	/*
 	try {
 		const apiKeyHeader = req.headers["x-api-key"];
 
@@ -60,6 +61,7 @@ export const apiKeyValidatorKeyOnly: RequestHandler = async (req, res, next) => 
 		logger.error(error, "Error in apiKeyValidatorKeyOnly middleware");
 		return res.status(500).json({ error: "Internal server error" });
 	}
+	*/
 };
 
 /**
@@ -84,6 +86,7 @@ export const apiKeyValidator: RequestHandler = async (req, res, next) => {
 	req.appData.sessionId = sessionId;
 
 	return next();
+	/*
 	try {
 		const apiKeyHeader = req.headers["x-api-key"] || req.query.apiKey || req.body.apiKey;
 
@@ -150,4 +153,5 @@ export const apiKeyValidator: RequestHandler = async (req, res, next) => {
 		logger.error("API key validation error:", error);
 		return res.status(500).json({ error: "Internal server error during API key validation" });
 	}
+	*/
 };
