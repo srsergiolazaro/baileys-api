@@ -14,6 +14,7 @@ import type { Response } from "express";
 import { toDataURL } from "qrcode";
 import { sessionsMap } from "./session";
 import { handleMessagesUpsert, handleGroupParticipantsUpdate } from "./handlers";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
 const retries = new Map<string, number>();
 const SSEQRGenerations = new Map<string, number>();
@@ -64,27 +65,71 @@ export async function createSession(options: createSessionOptions) {
 		hasSocketConfig: !!socketConfig,
 	});
 	// Ensure one UserSession per user atomically (avoids race conditions)
-	await prisma.userSession.upsert({
-		where: { userId },
-		update: {
-			sessionId,
-			status: "active",
-			deviceName: "WhatsApp User",
-			lastActive: new Date(),
-			updatedAt: new Date(),
-		},
-		create: {
-			id: sessionId,
-			sessionId,
-			userId,
-			status: "active",
-			phoneNumber: null,
-			deviceName: "WhatsApp User",
-			createdAt: new Date(),
-			updatedAt: new Date(),
-			lastActive: new Date(),
-		},
-	});
+	const now = new Date();
+	try {
+		await prisma.userSession.upsert({
+			where: { userId },
+			update: {
+				sessionId,
+				status: "active",
+				deviceName: "WhatsApp User",
+				lastActive: now,
+				updatedAt: now,
+			},
+			create: {
+				id: sessionId,
+				sessionId,
+				userId,
+				status: "active",
+				phoneNumber: null,
+				deviceName: "WhatsApp User",
+				createdAt: now,
+				updatedAt: now,
+				lastActive: now,
+			},
+		});
+	} catch (error) {
+		if (error instanceof PrismaClientKnownRequestError) {
+			if (error.code === "P2025") {
+				logger.warn("UserSession missing while upserting by userId; recreating", {
+					sessionId,
+					userId,
+				});
+				await prisma.userSession.create({
+					data: {
+						id: sessionId,
+						sessionId,
+						userId,
+						status: "active",
+						phoneNumber: null,
+						deviceName: "WhatsApp User",
+						createdAt: now,
+						updatedAt: now,
+						lastActive: now,
+					},
+				});
+			} else if (error.code === "P2002") {
+				logger.warn(
+					"Unique constraint conflict while upserting user session; attempting direct update",
+					{ sessionId, userId },
+				);
+				await prisma.userSession.update({
+					where: { sessionId },
+					data: {
+						userId,
+						status: "active",
+						deviceName: "WhatsApp User",
+						lastActive: now,
+						updatedAt: now,
+					},
+				});
+			} else {
+				throw error;
+			}
+		} else {
+			throw error;
+		}
+	}
 
 	logger.info("createSession: userSession upserted", { sessionId, userId });
 	const configID = `${SESSION_CONFIG_ID}-${sessionId}`;
@@ -154,22 +199,22 @@ export async function createSession(options: createSessionOptions) {
 	};
 
 	const handleNormalConnectionUpdate = async () => {
-		if (connectionState.qr?.length) {
-			console.log("QR", connectionState.qr);
-			console.log("res.headersSent", !res?.headersSent);
+		if (!connectionState.qr?.length) {
+			return;
+		}
 
-			if (res) {
+		if (res && !res.writableEnded) {
 			try {
 				const qr = await toDataURL(connectionState.qr);
-				res.status(200).json({ qr });
-				return;
+				res.status(200).json({ qr, sessionId });
 			} catch (e) {
 				logger.error("An error occurred during QR generation", e);
 				res.status(500).json({ error: "Unable to generate QR" });
 			}
+			return;
 		}
-		destroy();
-		}
+
+		logger.warn("QR generated but no HTTP response channel available", { sessionId });
 	};
 
 	const handleSSEConnectionUpdate = async () => {
@@ -209,7 +254,11 @@ export async function createSession(options: createSessionOptions) {
 			if (res && !res.writableEnded) {
 				res.end();
 			}
-			destroy();
+			if (connectionState.connection !== "open") {
+				await destroy();
+			} else {
+				logger.info("Session remains active after SSE completion", { sessionId });
+			}
 			return;
 		}
 
