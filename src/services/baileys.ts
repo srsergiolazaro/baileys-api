@@ -35,6 +35,7 @@ function shouldReconnect(sessionId: string) {
 }
 
 type createSessionOptions = {
+	sessionId?: string;
 	userId: string;
 	res?: Response;
 	SSE?: boolean;
@@ -43,12 +44,18 @@ type createSessionOptions = {
 };
 
 export async function createSession(options: createSessionOptions) {
-	const { userId, res, SSE = false, readIncomingMessages = false, socketConfig } = options;
+	const {
+		sessionId = uuidv4(),
+		userId,
+		res,
+		SSE = false,
+		readIncomingMessages = false,
+		socketConfig,
+	} = options;
 	// First check if there's an existing session for this user
 	const existingSession = await prisma.userSession.findFirst({
 		where: { userId },
 	});
-	const sessionId = uuidv4();
 
 	if (existingSession) {
 		// If the existing session has the same sessionId, just update it
