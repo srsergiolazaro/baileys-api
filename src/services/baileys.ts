@@ -110,9 +110,19 @@ export async function createSession(options: createSessionOptions) {
 	};
 
 	const handleConnectionClose = () => {
-		const code = (connectionState.lastDisconnect?.error as Boom)?.output?.statusCode;
+		const lastErr = connectionState.lastDisconnect?.error as Boom | undefined;
+		const code = lastErr?.output?.statusCode;
 		const restartRequired = code === DisconnectReason.restartRequired;
 		const doNotReconnect = !shouldReconnect(sessionId);
+
+		logger.info("connection.close", {
+			sessionId,
+			code,
+			restartRequired,
+			doNotReconnect,
+			attempts: retries.get(sessionId) ?? 1,
+			message: (lastErr as any)?.message,
+		});
 
 		if (code === DisconnectReason.connectionReplaced) {
 			logger.warn(
@@ -120,7 +130,7 @@ export async function createSession(options: createSessionOptions) {
 				"Connection replaced. You have been logged out because another session has been started elsewhere.",
 			);
 		} else if (code === DisconnectReason.loggedOut) {
-			logger.warn({ sessionId }, "Connection logged out. You have been logged out.");
+			logger.warn("Connection logged out. You have been logged out.", { sessionId });
 		}
 
 		if (code === DisconnectReason.loggedOut || doNotReconnect) {
