@@ -55,6 +55,14 @@ export async function createSession(options: createSessionOptions) {
 	if (res && !res.writableEnded) {
 		res.write("sessionId " + sessionId);
 	}
+
+	logger.info("createSession: start", {
+		sessionId,
+		userId,
+		SSE,
+		readIncomingMessages,
+		hasSocketConfig: !!socketConfig,
+	});
 	// Ensure one UserSession per user atomically (avoids race conditions)
 	await prisma.userSession.upsert({
 		where: { userId },
@@ -77,6 +85,8 @@ export async function createSession(options: createSessionOptions) {
 			lastActive: new Date(),
 		},
 	});
+
+	logger.info("createSession: userSession upserted", { sessionId, userId });
 	const configID = `${SESSION_CONFIG_ID}-${sessionId}`;
 	let connectionState: Partial<ConnectionState> = { connection: "close" };
 
@@ -91,9 +101,9 @@ export async function createSession(options: createSessionOptions) {
 				prisma.userSession.delete({ where: { sessionId } }),
 				prisma.webhook.deleteMany({ where: { sessionId } }),
 			]);
-			logger.info({ session: sessionId }, "Session destroyed");
+			logger.info("Session destroyed", { session: sessionId });
 		} catch (e) {
-			logger.error(e, "An error occurred during session destroy");
+			logger.error("An error occurred during session destroy", e);
 		} finally {
 			sessionsMap.delete(sessionId);
 		}
@@ -125,7 +135,7 @@ export async function createSession(options: createSessionOptions) {
 		}
 
 		if (!restartRequired) {
-			logger.info({ attempts: retries.get(sessionId) ?? 1, sessionId }, "Reconnecting...");
+			logger.info("Reconnecting...", { attempts: retries.get(sessionId) ?? 1, sessionId });
 		}
 		setTimeout(
 			() => createSession({ ...options, sessionId }),
@@ -139,16 +149,16 @@ export async function createSession(options: createSessionOptions) {
 			console.log("res.headersSent", !res?.headersSent);
 
 			if (res) {
-				try {
-					const qr = await toDataURL(connectionState.qr);
-					res.status(200).json({ qr });
-					return;
-				} catch (e) {
-					logger.error(e, "An error occurred during QR generation");
-					res.status(500).json({ error: "Unable to generate QR" });
-				}
+			try {
+				const qr = await toDataURL(connectionState.qr);
+				res.status(200).json({ qr });
+				return;
+			} catch (e) {
+				logger.error("An error occurred during QR generation", e);
+				res.status(500).json({ error: "Unable to generate QR" });
 			}
-			destroy();
+		}
+		destroy();
 		}
 	};
 
@@ -171,7 +181,7 @@ export async function createSession(options: createSessionOptions) {
 					qrGenerated: !!qr,
 				});
 			} catch (e) {
-				logger.error(e, "An error occurred during QR generation");
+				logger.error("An error occurred during QR generation", e);
 			}
 		}
 
@@ -207,7 +217,7 @@ export async function createSession(options: createSessionOptions) {
 				hasQr: !!qr,
 			});
 		} catch (e) {
-			logger.error(e, "Error writing SSE message");
+			logger.error("Error writing SSE message", e);
 			if (res && !res.writableEnded) {
 				res.end();
 			}
@@ -239,9 +249,10 @@ export async function createSession(options: createSessionOptions) {
 	sessionsMap.set(sessionId, { ...socket, destroy, store });
 
 	socket.ev.on("creds.update", saveCreds);
-	socket.ev.on("connection.update", (update) => {
-		connectionState = update;
-		const { connection } = update;
+		socket.ev.on("connection.update", (update) => {
+			connectionState = update;
+			const { connection } = update;
+			logger.info("connection.update", { sessionId, connection, hasRes: !!res, SSE });
 
 		if (connection === "open") {
 			retries.delete(sessionId);
@@ -262,6 +273,7 @@ export async function createSession(options: createSessionOptions) {
 		handleGroupParticipantsUpdate(socket, c, sessionId),
 	);
 
+	try {
 	await prisma.session.upsert({
 		create: {
 			sessionId,
@@ -280,4 +292,9 @@ export async function createSession(options: createSessionOptions) {
 			},
 		},
 	});
+	logger.info("createSession: session-config upserted", { sessionId });
+	} catch (e) {
+		logger.error("createSession: failed to upsert session-config", e);
+		throw e;
+	}
 }

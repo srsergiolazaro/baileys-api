@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { createSession } from "./services/baileys";
+import { logger } from "./shared";
 export { jidExists } from "./utils";
 export {
 	getSessionStatus,
@@ -16,7 +17,7 @@ export async function init() {
         select: { sessionId: true, data: true, userId: true },
         where: { id: { startsWith: SESSION_CONFIG_ID } },
     });
-    console.log("sessions", sessions);
+    logger.info("init: loaded session-config rows", { count: sessions.length });
 
     const processedUsers = new Set<string>();
     for (const { sessionId, data, userId } of sessions) {
@@ -30,13 +31,16 @@ export async function init() {
         }
 
         if (!effectiveUserId) {
+            logger.warn("init: skipping session due to missing userId", { sessionId });
             continue;
         }
         if (processedUsers.has(effectiveUserId)) {
             // Only one active session per user is supported; skip duplicates
+            logger.info("init: duplicate session for user skipped", { sessionId, userId: effectiveUserId });
             continue;
         }
         processedUsers.add(effectiveUserId);
+        logger.info("init: creating session", { sessionId, userId: effectiveUserId });
         createSession({ sessionId, userId: effectiveUserId, readIncomingMessages, socketConfig });
     }
 }
