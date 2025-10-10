@@ -17,12 +17,12 @@ export async function init() {
 		where: { id: { startsWith: SESSION_CONFIG_ID } },
 	});
 
-	for (const { data, userId } of sessions) {
+	for (const { sessionId, data, userId } of sessions) {
 		const { readIncomingMessages, ...socketConfig } = JSON.parse(data);
 		if (!userId) {
 			continue;
 		}
-		createBaileysSession({ userId, readIncomingMessages, socketConfig });
+		createBaileysSession({ sessionId, userId, readIncomingMessages, socketConfig });
 	}
 }
 
