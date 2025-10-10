@@ -18,6 +18,7 @@ export async function init() {
     });
     console.log("sessions", sessions);
 
+    const processedUsers = new Set<string>();
     for (const { sessionId, data, userId } of sessions) {
         const { readIncomingMessages, ...socketConfig } = JSON.parse(data);
         let effectiveUserId: string | null = userId;
@@ -31,6 +32,11 @@ export async function init() {
         if (!effectiveUserId) {
             continue;
         }
+        if (processedUsers.has(effectiveUserId)) {
+            // Only one active session per user is supported; skip duplicates
+            continue;
+        }
+        processedUsers.add(effectiveUserId);
         createSession({ sessionId, userId: effectiveUserId, readIncomingMessages, socketConfig });
     }
 }

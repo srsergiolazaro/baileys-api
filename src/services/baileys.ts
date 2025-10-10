@@ -55,57 +55,28 @@ export async function createSession(options: createSessionOptions) {
 	if (res && !res.writableEnded) {
 		res.write("sessionId " + sessionId);
 	}
-	// First check if there's an existing session for this user
-	const existingSession = await prisma.userSession.findFirst({
+	// Ensure one UserSession per user atomically (avoids race conditions)
+	await prisma.userSession.upsert({
 		where: { userId },
+		update: {
+			sessionId,
+			status: "active",
+			deviceName: "WhatsApp User",
+			lastActive: new Date(),
+			updatedAt: new Date(),
+		},
+		create: {
+			id: sessionId,
+			sessionId,
+			userId,
+			status: "active",
+			phoneNumber: null,
+			deviceName: "WhatsApp User",
+			createdAt: new Date(),
+			updatedAt: new Date(),
+			lastActive: new Date(),
+		},
 	});
-
-	if (existingSession) {
-		// If the existing session has the same sessionId, just update it
-		if (existingSession.sessionId === sessionId) {
-			await prisma.userSession.update({
-				where: { sessionId },
-				data: {
-					lastActive: new Date(),
-					updatedAt: new Date(),
-				},
-			});
-		} else {
-			// If the user has a different session, delete it first
-			await prisma.userSession.deleteMany({
-				where: { userId },
-			});
-			// Then create the new session
-			await prisma.userSession.create({
-				data: {
-					id: sessionId,
-					sessionId,
-					userId,
-					status: "active",
-					phoneNumber: null,
-					deviceName: "WhatsApp User",
-					createdAt: new Date(),
-					updatedAt: new Date(),
-					lastActive: new Date(),
-				},
-			});
-		}
-	} else {
-		// No existing session for this user, create a new one
-		await prisma.userSession.create({
-			data: {
-				id: sessionId,
-				sessionId,
-				userId,
-				status: "active",
-				phoneNumber: null,
-				deviceName: "WhatsApp User",
-				createdAt: new Date(),
-				updatedAt: new Date(),
-				lastActive: new Date(),
-			},
-		});
-	}
 	const configID = `${SESSION_CONFIG_ID}-${sessionId}`;
 	let connectionState: Partial<ConnectionState> = { connection: "close" };
 
