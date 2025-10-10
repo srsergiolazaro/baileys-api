@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { prisma } from "@/db";
 import { logger } from "@/shared";
-import { deleteSession, getSession, createSession } from "@/whatsapp";
+import { deleteSession, getSession } from "@/whatsapp";
 import { jidDecode } from "baileys";
+import { createSession } from "@/services/baileys";
 
 const router = Router();
 

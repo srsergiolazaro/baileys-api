@@ -2,13 +2,13 @@ import type { RequestHandler } from "express";
 import { prisma } from "@/db";
 import { logger } from "@/shared";
 import {
-	createSession,
 	deleteSession,
 	getSession,
 	getSessionStatus,
 	listSessions,
 	sessionExists,
 } from "@/whatsapp";
+import { createSession } from "@/services/baileys";
 
 export const list: RequestHandler = (req, res) => {
 	res.status(200).json(listSessions());
