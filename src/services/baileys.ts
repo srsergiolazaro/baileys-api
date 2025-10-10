@@ -296,9 +296,13 @@ export async function createSession(options: createSessionOptions) {
 			sessionId,
 			id: configID,
 			data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
+			userId,
+			userSessionId: sessionId,
 		},
 		update: {
 			data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
+			userId,
+			userSessionId: sessionId,
 		},
 		where: {
 			sessionId_id: {
