@@ -1,7 +1,6 @@
 import type { RequestHandler } from "express";
 import { prisma } from "@/db";
 import { logger } from "@/shared";
-import { randomBytes } from "crypto";
 import {
 	createSession,
 	deleteSession,
@@ -113,7 +112,6 @@ export const add: RequestHandler = async (req, res) => {
 
 		// Create the WhatsApp session
 		await createSession({
-			sessionId,
 			userId,
 			res,
 			readIncomingMessages,
@@ -130,26 +128,18 @@ export const add: RequestHandler = async (req, res) => {
 
 export const addSSE: RequestHandler = async (req, res) => {
 	const appData = req.appData;
-	if (!appData.sessionId) {
-		appData.sessionId = randomBytes(16).toString("hex");
+
+	const userId = appData.userId;
+
+	if (!userId) {
+		return;
 	}
-
-	const sessionId = appData.sessionId;
-	const userId = appData.userId || "";
-
 	res.writeHead(200, {
 		"Content-Type": "text/event-stream",
 		"Cache-Control": "no-cache",
 		Connection: "keep-alive",
-		"x-session-id": sessionId,
 	});
-
-	if (sessionExists(sessionId)) {
-		res.write(`data: ${JSON.stringify({ error: "Session already exists" })}\n\n`);
-		res.end();
-		return;
-	}
-	createSession({ sessionId, userId, res, SSE: true });
+	createSession({ userId, res, SSE: true });
 };
 
 export const del: RequestHandler = async (req, res) => {

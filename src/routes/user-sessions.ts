@@ -195,7 +195,7 @@ router.patch("/:sessionId/status", async (req, res) => {
 			if (!session) {
 				// Si no hay una sesión en memoria, intentar crearla/restaurarla
 				// La función createSession debería cargar los datos de la DB y conectar
-				createSession({ sessionId, userId });
+				createSession({ userId });
 				logger.info(
 					"Intentando iniciar/restaurar sesión de WhatsApp debido al cambio de estado a activo",
 					{ sessionId },

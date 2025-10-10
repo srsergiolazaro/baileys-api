@@ -1,3 +1,5 @@
+import { v4 as uuidv4 } from "uuid";
+
 import makeWASocket, {
 	DisconnectReason,
 	isJidBroadcast,
@@ -33,7 +35,6 @@ function shouldReconnect(sessionId: string) {
 }
 
 type createSessionOptions = {
-	sessionId: string;
 	userId: string;
 	res?: Response;
 	SSE?: boolean;
@@ -42,18 +43,12 @@ type createSessionOptions = {
 };
 
 export async function createSession(options: createSessionOptions) {
-	const {
-		sessionId,
-		userId,
-		res,
-		SSE = false,
-		readIncomingMessages = false,
-		socketConfig,
-	} = options;
+	const { userId, res, SSE = false, readIncomingMessages = false, socketConfig } = options;
 	// First check if there's an existing session for this user
 	const existingSession = await prisma.userSession.findFirst({
-		where: { userId }
+		where: { userId },
 	});
+	const sessionId = uuidv4();
 
 	if (existingSession) {
 		// If the existing session has the same sessionId, just update it
@@ -68,7 +63,7 @@ export async function createSession(options: createSessionOptions) {
 		} else {
 			// If the user has a different session, delete it first
 			await prisma.userSession.deleteMany({
-				where: { userId }
+				where: { userId },
 			});
 			// Then create the new session
 			await prisma.userSession.create({

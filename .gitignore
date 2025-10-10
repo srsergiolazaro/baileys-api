@@ -8,3 +8,4 @@ prisma/migrations/
 .env.example
 lumi
 lumipanel
+$HOME
