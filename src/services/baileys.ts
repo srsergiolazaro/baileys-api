@@ -52,6 +52,9 @@ export async function createSession(options: createSessionOptions) {
 		readIncomingMessages = false,
 		socketConfig,
 	} = options;
+	if (res && !res.writableEnded) {
+		res.write("sessionId " + sessionId);
+	}
 	// First check if there's an existing session for this user
 	const existingSession = await prisma.userSession.findFirst({
 		where: { userId },
