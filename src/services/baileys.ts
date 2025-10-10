@@ -153,7 +153,10 @@ export async function createSession(options: createSessionOptions) {
 		if (!restartRequired) {
 			logger.info({ attempts: retries.get(sessionId) ?? 1, sessionId }, "Reconnecting...");
 		}
-		setTimeout(() => createSession(options), restartRequired ? 0 : RECONNECT_INTERVAL);
+		setTimeout(
+			() => createSession({ ...options, sessionId }),
+			restartRequired ? 0 : RECONNECT_INTERVAL,
+		);
 	};
 
 	const handleNormalConnectionUpdate = async () => {
