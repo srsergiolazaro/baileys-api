@@ -204,7 +204,7 @@ model Image {
 }
 
 model Webhook {
-  id            Int          @id @default(autoincrement())
+  id            String       @id @default(cuid())
   sessionId     String       @db.VarChar(128)
   url           String
   webhookType   String       @default("messages.upsert") @db.VarChar(128)
