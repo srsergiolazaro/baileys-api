@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { session } from "@/controllers";
+import { session } from "@/controllers/index";
 import { getUserSessions } from "@/controllers/session";
 import { body } from "express-validator";
 
@@ -186,3 +186,4 @@ router.get("/add-sse", session.addSSE);
 router.delete("/", session.del);
 
 export default router;
+

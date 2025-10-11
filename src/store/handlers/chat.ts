@@ -72,38 +72,59 @@ export default function chatHandler(sessionId: string, event: BaileysEventEmitte
 					archived?: boolean | null;
 					disappearingMode?: any;
 					lastMsgTimestamp?: number | Long | null;
+					lastMessageRecvTimestamp?: number | Long | null;
 					mediaVisibility?: any; // MediaVisibility type from baileys
+					pnJid?: string | null;
+					lidJid?: string | null;
+					addressingMode?: string | null;
+					shareOwnPn?: boolean | null;
+					markedAsUnread?: boolean | null;
+					support?: boolean | null;
+					pnhDuplicateLidThread?: boolean | null;
 				}> = {};
 
 				// Only assign properties that exist in the update object and are not null/undefined
 				const safeAssign = <T>(key: string, value: T | null | undefined) => {
-					if (value !== null && value !== undefined) {
+					if (value !== undefined) {
 						chatData[key as keyof typeof chatData] = value as any;
 					}
 				};
 
 				// Assign each property if it exists in the update
-				if ('conversationTimestamp' in update) safeAssign('conversationTimestamp', update.conversationTimestamp);
-				if ('unreadCount' in update) safeAssign('unreadCount', update.unreadCount);
-				if ('readOnly' in update) safeAssign('readOnly', update.readOnly);
-				if ('ephemeralExpiration' in update) safeAssign('ephemeralExpiration', update.ephemeralExpiration);
-				if ('ephemeralSettingTimestamp' in update) safeAssign('ephemeralSettingTimestamp', update.ephemeralSettingTimestamp);
-				if ('name' in update) safeAssign('name', update.name);
-				if ('notSpam' in update) safeAssign('notSpam', update.notSpam);
-				if ('archived' in update) safeAssign('archived', update.archived);
-				if ('disappearingMode' in update) safeAssign('disappearingMode', update.disappearingMode);
-				if ('lastMsgTimestamp' in update) safeAssign('lastMsgTimestamp', update.lastMsgTimestamp);
-				if ('mediaVisibility' in update) safeAssign('mediaVisibility', update.mediaVisibility);
+				if ("conversationTimestamp" in update)
+					safeAssign("conversationTimestamp", update.conversationTimestamp);
+				if ("unreadCount" in update) safeAssign("unreadCount", update.unreadCount);
+				if ("readOnly" in update) safeAssign("readOnly", update.readOnly);
+				if ("ephemeralExpiration" in update)
+					safeAssign("ephemeralExpiration", update.ephemeralExpiration);
+				if ("ephemeralSettingTimestamp" in update)
+					safeAssign("ephemeralSettingTimestamp", update.ephemeralSettingTimestamp);
+				if ("name" in update) safeAssign("name", update.name);
+				if ("notSpam" in update) safeAssign("notSpam", update.notSpam);
+				if ("archived" in update) safeAssign("archived", update.archived);
+				if ("disappearingMode" in update) safeAssign("disappearingMode", update.disappearingMode);
+				if ("lastMsgTimestamp" in update) safeAssign("lastMsgTimestamp", update.lastMsgTimestamp);
+				if ("lastMessageRecvTimestamp" in update)
+					safeAssign("lastMessageRecvTimestamp", update.lastMessageRecvTimestamp);
+				if ("mediaVisibility" in update) safeAssign("mediaVisibility", update.mediaVisibility);
+				if ("pnJid" in update) safeAssign("pnJid", update.pnJid);
+				if ("lidJid" in update) safeAssign("lidJid", update.lidJid);
+				if ("addressingMode" in update) safeAssign("addressingMode", update.addressingMode);
+				if ("shareOwnPn" in update) safeAssign("shareOwnPn", update.shareOwnPn);
+				if ("markedAsUnread" in update) safeAssign("markedAsUnread", update.markedAsUnread);
+				if ("support" in update) safeAssign("support", update.support);
+				if ("pnhDuplicateLidThread" in update)
+					safeAssign("pnhDuplicateLidThread", update.pnhDuplicateLidThread);
 
 				const data = transformPrisma(chatData);
 
 				// Check if chat exists before updating
 				const chatExists = await prisma.chat.findUnique({
-					where: { sessionId_id: { id: update.id!, sessionId } }
+					where: { sessionId_id: { id: update.id!, sessionId } },
 				});
 
 				if (!chatExists) {
-					logger.warn({ chatId: update.id }, 'Attempted to update non-existent chat');
+					logger.warn({ chatId: update.id }, "Attempted to update non-existent chat");
 					return;
 				}
 

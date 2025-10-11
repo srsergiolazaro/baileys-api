@@ -1,7 +1,7 @@
 import { logger } from "@/shared";
 import { prisma } from "@/db";
 import type { Chat, Message } from "@prisma/client";
-import { getSession } from "@/whatsapp";
+import { getSession, jidExists } from "@/whatsapp";
 import type { Request, Response } from "express";
 import { serializePrisma } from "@/utils";
 
@@ -29,7 +29,6 @@ export const list = async (req: Request, res: Response) => {
 				return res.status(400).json({ error: "Invalid cursor parameter" });
 			}
 		}
-
 
 		const chats = (
 			await prisma.chat.findMany({
@@ -67,7 +66,10 @@ export const find = async (req: Request, res: Response) => {
 			cursor: cursor ? { pkId: Number(cursor) } : undefined,
 			take: Number(limit),
 			skip: cursor ? 1 : 0,
-			where: { sessionId, remoteJid: jid },
+			where: {
+				sessionId,
+				OR: [{ remoteJid: jid }, { remoteJidAlt: jid }],
+			},
 			orderBy: { messageTimestamp: "desc" },
 		});
 
@@ -108,7 +110,19 @@ export const mute = async (req: Request, res: Response) => {
 
 		const { jid, duration } = req.body;
 		const session = getSession(appData.sessionId)!;
-		await session.chatModify({ mute: duration }, jid);
+		const isGroup = typeof jid === "string" && jid.endsWith("@g.us");
+		let targetJid = jid;
+		if (!isGroup) {
+			const { exists, formatJid, error } = await jidExists(session, jid, "number");
+			if (!exists) {
+				return res.status(400).json({
+					error: error || "JID does not exist",
+					details: `Failed to resolve chat JID: ${jid}`,
+				});
+			}
+			targetJid = formatJid;
+		}
+		await session.chatModify({ mute: duration }, targetJid);
 		res.status(200).json({ message: "Chat muted successfully" });
 	} catch (e) {
 		const message = "An error occured during chat mute";
@@ -126,7 +140,19 @@ export const markRead = async (req: Request, res: Response) => {
 
 		const { jid, messageIds } = req.body;
 		const session = getSession(appData.sessionId)!;
-		await session.readMessages(messageIds.map((id: string) => ({ remoteJid: jid, id })));
+		const isGroup = typeof jid === "string" && jid.endsWith("@g.us");
+		let targetJid = jid;
+		if (!isGroup) {
+			const { exists, formatJid, error } = await jidExists(session, jid, "number");
+			if (!exists) {
+				return res.status(400).json({
+					error: error || "JID does not exist",
+					details: `Failed to resolve chat JID: ${jid}`,
+				});
+			}
+			targetJid = formatJid;
+		}
+		await session.readMessages(messageIds.map((id: string) => ({ remoteJid: targetJid, id })));
 		res.status(200).json({ message: "Messages marked as read successfully" });
 	} catch (e) {
 		const message = "An error occured during mark read";
@@ -144,7 +170,19 @@ export const setDisappearing = async (req: Request, res: Response) => {
 
 		const { jid, duration = 604800 } = req.body; // default duration to 1 week
 		const session = getSession(appData.sessionId)!;
-		await session.sendMessage(jid, { disappearingMessagesInChat: duration });
+		const isGroup = typeof jid === "string" && jid.endsWith("@g.us");
+		let targetJid = jid;
+		if (!isGroup) {
+			const { exists, formatJid, error } = await jidExists(session, jid, "number");
+			if (!exists) {
+				return res.status(400).json({
+					error: error || "JID does not exist",
+					details: `Failed to resolve chat JID: ${jid}`,
+				});
+			}
+			targetJid = formatJid;
+		}
+		await session.sendMessage(targetJid, { disappearingMessagesInChat: duration });
 		res.status(200).json({ message: "Disappearing messages set successfully" });
 	} catch (e) {
 		const message = "An error occured during setting disappearing messages";

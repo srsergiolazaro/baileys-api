@@ -1,4 +1,5 @@
 import parsePhoneNumber from "libphonenumber-js";
+import { jidNormalizedUser } from "baileys";
 import type { Session } from "./types";
 import { logger } from "./shared";
 
@@ -36,14 +37,55 @@ export async function jidExists(
 	}
 
 	try {
-		const formatJid = (jid: string) =>
-			jid.includes("@") ? jid : `${formatPhoneNumber(jid)}@s.whatsapp.net`;
+		const formatJid = (value: string) =>
+			value.includes("@") ? value : `${formatPhoneNumber(value)}@s.whatsapp.net`;
+		const trimmedJid = jid.trim();
+
+		if (trimmedJid.endsWith("@lid")) {
+			try {
+				const pnForLid = await session.signalRepository?.lidMapping.getPNForLID(trimmedJid);
+				if (pnForLid) {
+					const normalizedPn = jidNormalizedUser(pnForLid);
+					if (normalizedPn) {
+						const validationResults = await session.onWhatsApp(normalizedPn);
+						const validation = validationResults?.[0];
+						if (!validation?.exists) {
+							return { exists: false, formatJid: trimmedJid };
+						}
+					}
+				}
+			} catch (error) {
+				logger.warn(
+					{ err: error, lid: trimmedJid },
+					"Failed to verify PN mapping for LID; continuing with LID",
+				);
+			}
+			return { exists: true, formatJid: trimmedJid };
+		}
 
 		if (type === "number") {
-			const formattedJid = formatJid(jid);
-			const results = await session.onWhatsApp(formattedJid);
+			const formattedPnJid = formatJid(trimmedJid);
+			const normalizedPnJid = jidNormalizedUser(formattedPnJid) || formattedPnJid;
+			const results = await session.onWhatsApp(normalizedPnJid);
 			const result = results?.[0];
-			return { exists: !!result?.exists, formatJid: formattedJid };
+			if (!result?.exists) {
+				return { exists: false, formatJid: formattedPnJid };
+			}
+
+			let targetJid = formattedPnJid;
+			try {
+				const lid = await session.signalRepository?.lidMapping.getLIDForPN(normalizedPnJid);
+				if (lid) {
+					targetJid = lid;
+				}
+			} catch (error) {
+				logger.warn(
+					{ err: error, formattedPnJid },
+					"Failed to resolve LID mapping for phone number; falling back to PN",
+				);
+			}
+
+			return { exists: true, formatJid: targetJid };
 		}
 
 		const groupMeta = await session.groupMetadata(jid);
@@ -53,3 +95,4 @@ export async function jidExists(
 		return { exists: false, formatJid: jid, error: e instanceof Error ? e.message : "Unknown error" };
 	}
 }
+

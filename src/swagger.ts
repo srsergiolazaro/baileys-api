@@ -1,7 +1,7 @@
 import swaggerJsdoc from "swagger-jsdoc";
 
-const isProduction = process.env.NODE_ENV === 'production';
-const port = process.env.PORT || '3000';
+const isProduction = process.env.NODE_ENV === "production";
+const port = process.env.PORT || "3000";
 
 const options: swaggerJsdoc.Options = {
 	definition: {
@@ -20,22 +20,38 @@ const options: swaggerJsdoc.Options = {
 				url: `http://localhost:${port}`,
 				description: "Servidor de desarrollo local",
 			},
-			...(!isProduction ? [{
-				url: `http://localhost:${port}`,
-				description: "Servidor de desarrollo",
-			}] : []),
-			...(!isProduction ? [{
-				url: `http://${process.env.HOST || 'localhost'}:${port}`,
-				description: "Servidor de desarrollo (red)",
-			}] : []),
-			...(!isProduction ? [{
-				url: "https://whatsapp.taptapp.xyz",
-				description: "Servidor de producción",
-			}] : []),
-			...(!isProduction ? [{
-				url: "https://whs.taptapp.xyz",
-				description: "Servidor de producción",
-			}] : []),
+			...(!isProduction
+				? [
+						{
+							url: `http://localhost:${port}`,
+							description: "Servidor de desarrollo",
+						},
+					]
+				: []),
+			...(!isProduction
+				? [
+						{
+							url: `http://${process.env.HOST || "localhost"}:${port}`,
+							description: "Servidor de desarrollo (red)",
+						},
+					]
+				: []),
+			...(!isProduction
+				? [
+						{
+							url: "https://whatsapp.taptapp.xyz",
+							description: "Servidor de producción",
+						},
+					]
+				: []),
+			...(!isProduction
+				? [
+						{
+							url: "https://whs.taptapp.xyz",
+							description: "Servidor de producción",
+						},
+					]
+				: []),
 		],
 		components: {
 			securitySchemes: {

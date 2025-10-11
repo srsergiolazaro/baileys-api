@@ -25,11 +25,7 @@ const swaggerUiOptions = {
 } as const;
 
 // Serve Swagger UI
-app.use(
-    "/api-docs",
-    swaggerUi.serve,
-    swaggerUi.setup(swaggerSpec, swaggerUiOptions)
-);
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerUiOptions));
 
 // Endpoint para obtener la especificación de Swagger en formato JSON
 app.get("/swagger.json", (req: Request, res: Response) => {

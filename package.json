@@ -2,11 +2,12 @@
 	"name": "baileys-api",
 	"version": "1.1.4",
 	"description": "Simple WhatsApp REST API with multiple device support",
+	"type": "module",
 	"main": "dist/index.js",
 	"scripts": {
-		"build": "prisma generate && tsc --project tsconfig.json && tscpaths -p tsconfig.json -s ./src",
+		"build": "prisma generate && tsc --project tsconfig.json && node ./scripts/esm-fix-paths.mjs",
 		"start": "node ./dist/index.js",
-		"dev": "prisma generate && nodemon --exec \"ts-node -r tsconfig-paths/register\" src/index.ts",
+		"dev": "prisma generate && nodemon --watch src --ext ts --exec \"tsx\" src/index.ts",
 		"lint": "eslint . --ext .ts --fix",
 		"format": "prettier . --write",
 		"postinstall": "prisma generate",
@@ -21,7 +22,7 @@
 		"@prisma/client": "^6.14.0",
 		"@types/swagger-jsdoc": "^6.0.4",
 		"axios": "^1.11.0",
-		"baileys": "^6.7.20",
+		"baileys": "https://github.com/WhiskeySockets/Baileys/releases/download/v7.0.0-rc.5/baileys.tgz",
 		"cors": "^2.8.5",
 		"dotenv": "^17.2.1",
 		"express": "^4.18.3",
@@ -66,13 +67,13 @@
 		"prettier-plugin-organize-imports": "^4.2.0",
 		"prisma": "^6.14.0",
 		"ts-node": "^10.9.2",
+		"tsx": "^4.19.2",
 		"ts-node-dev": "^2.0.0",
 		"tsconfig-paths": "^4.2.0",
-		"tscpaths": "^0.0.9",
 		"typescript": "^5.9.2"
 	},
 	"engines": {
-		"node": ">=18.19.0"
+		"node": ">=20.0.0"
 	},
 	"files": [
 		"dist/",

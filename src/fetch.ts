@@ -1,4 +1,3 @@
- 
 import axios from "axios";
 import FormData from "form-data";
 import type { proto } from "baileys";

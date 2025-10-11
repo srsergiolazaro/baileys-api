@@ -1,4 +1,3 @@
- 
 import type { BaileysEventMap } from "baileys";
 import type Long from "long";
 

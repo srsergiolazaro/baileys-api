@@ -65,6 +65,8 @@ model Contact {
   pkId          Int          @id @default(autoincrement())
   sessionId     String       @db.VarChar(128)
   id            String       @db.VarChar(128)
+  lid           String?      @db.VarChar(128)
+  phoneNumber   String?      @db.VarChar(128)
   name          String?      @db.VarChar(128)
   notify        String?      @db.VarChar(128)
   verifiedName  String?      @db.VarChar(128)
@@ -83,12 +85,15 @@ model GroupMetadata {
   sessionId         String       @db.VarChar(128)
   id                String       @db.VarChar(128)
   owner             String?      @db.VarChar(128)
+  ownerPn           String?      @db.VarChar(128)
   subject           String       @db.VarChar(128)
   subjectOwner      String?      @db.VarChar(128)
+  subjectOwnerPn    String?      @db.VarChar(128)
   subjectTime       Int?
   creation          Int?
   desc              String?      @db.VarChar(255)
   descOwner         String?      @db.VarChar(128)
+  descOwnerPn       String?      @db.VarChar(128)
   descId            String?      @db.VarChar(128)
   restrict          Boolean?
   announce          Boolean?
@@ -109,6 +114,9 @@ model Message {
   pkId                            Int          @id @default(autoincrement())
   sessionId                       String       @db.VarChar(128)
   remoteJid                       String       @db.VarChar(128)
+  remoteJidAlt                    String?      @db.VarChar(128)
+  participantAlt                  String?      @db.VarChar(128)
+  addressingMode                  String?      @db.VarChar(10)
   id                              String       @db.VarChar(128)
   agentId                         String?      @db.VarChar(128)
   bizPrivacyStatus                Int?

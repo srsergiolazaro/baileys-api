@@ -1,5 +1,5 @@
-import type { BaileysEventEmitter, MessageUserReceipt, proto, WAMessageKey } from "baileys";
-import { jidNormalizedUser, toNumber } from "baileys";
+import type { BaileysEventEmitter, MessageUserReceipt, proto, WAMessage, WAMessageKey } from "baileys";
+import { toNumber } from "baileys";
 import type { BaileysEventHandler, MakeTransformedPrisma } from "@/store/types";
 import { transformPrisma } from "@/store/utils";
 import { prisma } from "@/db";
@@ -7,7 +7,59 @@ import { logger } from "@/shared";
 import type { Message } from "@prisma/client";
 
 const getKeyAuthor = (key: WAMessageKey | undefined | null) =>
-	(key?.fromMe ? "me" : key?.participant || key?.remoteJid) || "";
+	(key?.fromMe
+		? "me"
+		: key?.participantAlt || key?.participant || key?.remoteJidAlt || key?.remoteJid) || "";
+
+const toPrismaMessage = (message: WAMessage, sessionId: string) => {
+	const sanitizedMessage = message as WAMessage & {
+		statusMentions?: unknown;
+		messageAddOns?: unknown;
+	};
+	const { statusMentions: _statusMentions, messageAddOns: _messageAddOns, ...rest } =
+		sanitizedMessage;
+	const transformed = transformPrisma(rest) as MakeTransformedPrisma<Message>;
+	const remoteJid = message.key.remoteJid ?? transformed.remoteJid;
+	const id = message.key.id ?? transformed.id;
+	if (!remoteJid || !id) {
+		throw new Error("Missing message key parameters");
+	}
+	const remoteJidAlt = message.key.remoteJidAlt ?? transformed.remoteJidAlt ?? null;
+	const participant = message.key.participant ?? transformed.participant;
+	const participantAlt = message.key.participantAlt ?? transformed.participantAlt;
+	const addressingMode = message.key.addressingMode ?? transformed.addressingMode ?? null;
+
+	const createData: MakeTransformedPrisma<Message> = {
+		...transformed,
+		sessionId,
+		id,
+		remoteJid,
+		remoteJidAlt,
+		participant: participant ?? null,
+		participantAlt: participantAlt ?? null,
+		addressingMode,
+		messageStubParameters: transformed.messageStubParameters ?? [],
+		labels: transformed.labels ?? [],
+		userReceipt: transformed.userReceipt ?? [],
+		reactions: transformed.reactions ?? [],
+		pollUpdates: transformed.pollUpdates ?? [],
+		eventResponses: transformed.eventResponses ?? [],
+	};
+
+	const updateData = {
+		...transformed,
+		remoteJidAlt,
+		participant: participant ?? undefined,
+		participantAlt: participantAlt ?? undefined,
+		addressingMode,
+	} as Partial<MakeTransformedPrisma<Message>>;
+
+	delete (updateData as Record<string, unknown>).sessionId;
+	delete (updateData as Record<string, unknown>).remoteJid;
+	delete (updateData as Record<string, unknown>).id;
+
+	return { createData, updateData, remoteJid, id };
+};
 
 export default function messageHandler(sessionId: string, event: BaileysEventEmitter) {
 	let listening = false;
@@ -17,14 +69,21 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 			await prisma.$transaction(async (tx) => {
 				if (isLatest) await tx.message.deleteMany({ where: { sessionId } });
 
-				await tx.message.createMany({
-					data: messages.map((message) => ({
-						...(transformPrisma(message) as MakeTransformedPrisma<Message>),
-						remoteJid: message.key.remoteJid!,
-						id: message.key.id!,
-						sessionId,
-					})),
+				const records = messages.flatMap((message) => {
+					try {
+						return [toPrismaMessage(message, sessionId).createData];
+					} catch (error) {
+						logger.warn(
+							{ err: error, sessionId, messageId: message.key?.id },
+							"Skipping message during history sync due to missing key data",
+						);
+						return [];
+					}
 				});
+
+				if (records.length > 0) {
+					await tx.message.createMany({ data: records });
+				}
 			});
 			logger.info({ messages: messages.length }, "Synced messages");
 		} catch (e) {
@@ -38,66 +97,43 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 			case "notify":
 				for (const message of messages) {
 					try {
-						const jid = jidNormalizedUser(message.key.remoteJid!);
-						// Remove unsupported fields
-						const { statusMentions, messageAddOns, ...restOfMessage } = message;
-						const messageData = { ...restOfMessage };
-						
-						// Transform the message data for Prisma
-						const data = transformPrisma(messageData) as MakeTransformedPrisma<Message>;
-						
-						// Only include fields that exist in the Prisma schema
-						const prismaData = {
-							...data,
-							remoteJid: jid,
-							id: message.key.id!,
+						const { createData, updateData, remoteJid, id } = toPrismaMessage(
+							message,
 							sessionId,
-							messageStubParameters: [],
-							labels: [],
-							userReceipt: [],
-							reactions: [],
-							pollUpdates: [],
-							eventResponses: []
-							// Removed supportAiCitations as it's not in the schema
-						};
+						);
 
-						try {
-							await prisma.message.upsert({
-								select: { pkId: true },
-								create: prismaData,
-								update: data,
-								where: { 
-									sessionId_remoteJid_id: { 
-										remoteJid: jid, 
-										id: message.key.id!, 
-										sessionId 
-									} 
+						await prisma.message.upsert({
+							select: { pkId: true },
+							create: createData,
+							update: updateData,
+							where: {
+								sessionId_remoteJid_id: {
+									remoteJid,
+									id,
+									sessionId,
 								},
-							});
-						} catch (error) {
-							// Log the full error for debugging
-							logger.error({ 
-								error, 
-								message: 'Failed to upsert message',
-								messageId: message.key.id,
-								remoteJid: jid,
-								sessionId
-							});
-							// Don't throw the error to prevent crashing the handler
-						}
+							},
+						});
 
-						const chatExists = (await prisma.chat.count({ where: { id: jid, sessionId } })) > 0;
+						const chatExists =
+							(await prisma.chat.count({ where: { id: remoteJid, sessionId } })) > 0;
 						if (type === "notify" && !chatExists) {
 							event.emit("chats.upsert", [
 								{
-									id: jid,
+									id: remoteJid,
 									conversationTimestamp: toNumber(message.messageTimestamp),
 									unreadCount: 1,
+									pnJid: message.key.remoteJidAlt?.includes("@s.whatsapp.net")
+										? message.key.remoteJidAlt
+										: undefined,
 								},
 							]);
 						}
 					} catch (e) {
-						logger.error(e, "An error occured during message upsert");
+						logger.error(
+							{ err: e, sessionId, messageId: message.key?.id },
+							"An error occured during message upsert",
+						);
 					}
 				}
 				break;
@@ -280,3 +316,4 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 
 	return { listen, unlisten };
 }
+

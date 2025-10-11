@@ -12,7 +12,10 @@ export const list: RequestHandler = async (req, res) => {
 			cursor: cursor ? { pkId: Number(cursor) } : undefined,
 			take: Number(limit),
 			skip: cursor ? 1 : 0,
-			where: { id: { endsWith: "s.whatsapp.net" }, sessionId },
+			where: {
+				sessionId,
+				OR: [{ id: { endsWith: "s.whatsapp.net" } }, { id: { endsWith: "@lid" } }],
+			},
 		});
 
 		res.status(200).json({
@@ -78,3 +81,4 @@ export const check: RequestHandler = async (req, res) => {
 };
 
 export const photo = makePhotoURLHandler();
+

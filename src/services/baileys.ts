@@ -357,6 +357,10 @@ export async function createSession(options: createSessionOptions) {
 		handleGroupParticipantsUpdate(socket, c, sessionId),
 	);
 
+	socket.ev.on("lid-mapping.update", ({ lid, pn }) => {
+		logger.debug({ sessionId, lid, pn }, "Received lid-mapping update");
+	});
+
 	try {
 		await prisma.session.upsert({
 			create: {

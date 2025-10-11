@@ -2,10 +2,10 @@ import pino, { type Logger } from "pino";
 
 // Custom log method type that accepts metadata objects
 type CustomLogger = Logger & {
-  info: (msg: string, obj?: any) => void;
-  error: (msg: string, obj?: any) => void;
-  warn: (msg: string, obj?: any) => void;
-  debug: (msg: string, obj?: any) => void;
+	info: (msg: string, obj?: any) => void;
+	error: (msg: string, obj?: any) => void;
+	warn: (msg: string, obj?: any) => void;
+	debug: (msg: string, obj?: any) => void;
 };
 
 export const logger: CustomLogger = pino({

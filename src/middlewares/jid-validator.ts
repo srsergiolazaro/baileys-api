@@ -8,8 +8,8 @@ export default function jidValidator(req: Request, res: Response, next: NextFunc
 		return res.status(400).json({ error: "JID is required" });
 	}
 
-	// Validación básica del formato JID
-	const jidRegex = /^[0-9]+@(s\.whatsapp\.net|g\.us)$/;
+	// Validación básica del formato JID (PN, LID o grupos)
+	const jidRegex = /^[0-9A-Za-z:.-]+@(s\.whatsapp\.net|g\.us|lid)$/;
 	if (!jidRegex.test(jid)) {
 		return res.status(400).json({ error: "Invalid JID format" });
 	}
