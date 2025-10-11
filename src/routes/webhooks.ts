@@ -155,7 +155,7 @@ router.post(
  */
 router.put(
 	"/:id",
-	param("id").isNumeric().notEmpty(),
+	param("id").isString().notEmpty(),
 	body("url").optional().isString().notEmpty(),
 	body("webhookType").optional().isString(),
 	requestValidator,
@@ -189,6 +189,6 @@ router.put(
  *       404:
  *         description: Webhook no encontrado
  */
-router.delete("/:id", param("id").isNumeric().notEmpty(), requestValidator, webhook.remove);
+router.delete("/:id", param("id").isString().notEmpty(), requestValidator, webhook.remove);
 
 export default router;
