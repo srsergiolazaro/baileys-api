@@ -322,10 +322,7 @@ export async function createSession(options: createSessionOptions) {
 			await originalSendRetryRequest(...args);
 		} catch (error) {
 			if (isConnectionClosedError(error)) {
-				logger.warn(
-					{ sessionId },
-					"sendRetryRequest skipped because connection already closed",
-				);
+				logger.warn({ sessionId }, "sendRetryRequest skipped because connection already closed");
 				return;
 			}
 			throw error;
@@ -349,7 +346,7 @@ export async function createSession(options: createSessionOptions) {
 		if (connection === "close") handleConnectionClose();
 		handleConnectionUpdate();
 	});
-
+	/*
 	socket.ev.on("messages.upsert", (m) =>
 		handleMessagesUpsert(socket, m, sessionId, readIncomingMessages),
 	);
@@ -357,7 +354,7 @@ export async function createSession(options: createSessionOptions) {
 	socket.ev.on("group-participants.update", (c) =>
 		handleGroupParticipantsUpdate(socket, c, sessionId),
 	);
-
+*/
 	try {
 		await prisma.session.upsert({
 			create: {
