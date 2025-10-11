@@ -43,7 +43,7 @@ export const update: RequestHandler = async (req, res) => {
 		if (webhookType) data.webhookType = webhookType;
 
 		const webhook = await prisma.webhook.update({
-			where: { id: Number(id) },
+			where: { id },
 			data,
 		});
 		res.status(200).json(webhook);
@@ -83,7 +83,7 @@ export const remove: RequestHandler = async (req, res) => {
 	try {
 		const { id } = req.params;
 		await prisma.webhook.delete({
-			where: { id: Number(id) },
+			where: { id },
 		});
 		res.status(200).json({ message: "Webhook deleted successfully" });
 	} catch (e) {
