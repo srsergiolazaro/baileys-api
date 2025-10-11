@@ -24,6 +24,15 @@ const MAX_RECONNECT_RETRIES = Number(process.env.MAX_RECONNECT_RETRIES || 5);
 const SSE_MAX_QR_GENERATION = Number(process.env.SSE_MAX_QR_GENERATION || 5);
 const SESSION_CONFIG_ID = "session-config";
 
+function isConnectionClosedError(error: unknown): error is Boom {
+	if (!error || typeof error !== "object") return false;
+	const boomError = error as Boom;
+	return (
+		Boolean((boomError as Boom)?.isBoom) &&
+		boomError.output?.statusCode === DisconnectReason.connectionClosed
+	);
+}
+
 function shouldReconnect(sessionId: string) {
 	let attempts = retries.get(sessionId) ?? 0;
 
@@ -307,6 +316,22 @@ export async function createSession(options: createSessionOptions) {
 	const store = new Store(sessionId, socket.ev);
 	sessionsMap.set(sessionId, { ...socket, destroy, store });
 
+	const originalSendRetryRequest = socket.sendRetryRequest.bind(socket);
+	socket.sendRetryRequest = async (...args) => {
+		try {
+			await originalSendRetryRequest(...args);
+		} catch (error) {
+			if (isConnectionClosedError(error)) {
+				logger.warn(
+					{ sessionId },
+					"sendRetryRequest skipped because connection already closed",
+				);
+				return;
+			}
+			throw error;
+		}
+	};
+
 	socket.ev.on("creds.update", saveCreds);
 	socket.ev.on("connection.update", (update) => {
 		connectionState = update;
@@ -324,11 +349,11 @@ export async function createSession(options: createSessionOptions) {
 		if (connection === "close") handleConnectionClose();
 		handleConnectionUpdate();
 	});
-	/*
+
 	socket.ev.on("messages.upsert", (m) =>
-		// handleMessagesUpsert(socket, m, sessionId, readIncomingMessages),
+		handleMessagesUpsert(socket, m, sessionId, readIncomingMessages),
 	);
-	*/
+
 	socket.ev.on("group-participants.update", (c) =>
 		handleGroupParticipantsUpdate(socket, c, sessionId),
 	);
