@@ -305,12 +305,14 @@ export async function createSession(options: createSessionOptions) {
 		},
 		logger,
 		shouldIgnoreJid: (jid) => isJidBroadcast(jid),
+		/*
 		getMessage: async (key) => {
 			const data = await prisma.message.findFirst({
 				where: { remoteJid: key.remoteJid!, id: key.id!, sessionId },
 			});
 			return (data?.message || undefined) as proto.IMessage | undefined;
 		},
+		*/
 	});
 
 	const store = new Store(sessionId, socket.ev);
@@ -346,7 +348,7 @@ export async function createSession(options: createSessionOptions) {
 		if (connection === "close") handleConnectionClose();
 		handleConnectionUpdate();
 	});
-	/*
+
 	socket.ev.on("messages.upsert", (m) =>
 		handleMessagesUpsert(socket, m, sessionId, readIncomingMessages),
 	);
@@ -354,7 +356,7 @@ export async function createSession(options: createSessionOptions) {
 	socket.ev.on("group-participants.update", (c) =>
 		handleGroupParticipantsUpdate(socket, c, sessionId),
 	);
-*/
+
 	try {
 		await prisma.session.upsert({
 			create: {
