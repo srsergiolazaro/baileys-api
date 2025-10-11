@@ -108,32 +108,61 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 		for (const { update, key } of updates) {
 			try {
 				await prisma.$transaction(async (tx) => {
-					const prevData = await tx.message.findFirst({
-						where: { id: key.id!, remoteJid: key.remoteJid!, sessionId },
+					const updateAny = update as any;
+					const incomingId =
+						typeof key?.id === "string"
+							? key.id
+							: typeof updateAny?.key?.id === "string"
+								? updateAny.key.id
+								: typeof updateAny?.message?.key?.id === "string"
+									? updateAny.message.key.id
+									: undefined;
+					const incomingRemoteJid =
+						typeof key?.remoteJid === "string"
+							? key.remoteJid
+							: typeof updateAny?.key?.remoteJid === "string"
+								? updateAny.key.remoteJid
+								: typeof updateAny?.message?.key?.remoteJid === "string"
+									? updateAny.message.key.remoteJid
+									: undefined;
+
+					if (!incomingId || !incomingRemoteJid) {
+						logger.warn({ update, key }, "Skipping message update without complete message key");
+						return;
+					}
+
+					const prevData = await tx.message.findUnique({
+						where: {
+							sessionId_remoteJid_id: {
+								id: incomingId,
+								remoteJid: incomingRemoteJid,
+								sessionId,
+							},
+						},
 					});
 					if (!prevData) {
 						return logger.info({ update }, "Got update for non existent message");
 					}
 
 					const data = { ...prevData, ...update } as proto.IWebMessageInfo;
-					await tx.message.delete({
-						select: { pkId: true },
-						where: {
-							sessionId_remoteJid_id: {
-								id: key.id!,
-								remoteJid: key.remoteJid!,
-								sessionId,
-							},
-						},
-					});
-					await tx.message.create({
+					const transformed = transformPrisma(data) as MakeTransformedPrisma<Message>;
+					const {
+						pkId: _pkId,
+						sessionId: _sessionId,
+						remoteJid: _remoteJid,
+						id: _id,
+						...prismaData
+					} = transformed;
+
+					await tx.message.update({
 						select: { pkId: true },
 						data: {
-							...(transformPrisma(data) as MakeTransformedPrisma<Message>),
-							id: data.key.id!,
-							remoteJid: data.key.remoteJid!,
+							...prismaData,
+							id: incomingId,
+							remoteJid: incomingRemoteJid,
 							sessionId,
 						},
+						where: { pkId: prevData.pkId },
 					});
 				});
 			} catch (e) {
