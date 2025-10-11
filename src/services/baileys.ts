@@ -308,10 +308,10 @@ export async function createSession(options: createSessionOptions) {
 	sessionsMap.set(sessionId, { ...socket, destroy, store });
 
 	socket.ev.on("creds.update", saveCreds);
-		socket.ev.on("connection.update", (update) => {
-			connectionState = update;
-			const { connection } = update;
-			logger.info("connection.update", { sessionId, connection, hasRes: !!res, SSE });
+	socket.ev.on("connection.update", (update) => {
+		connectionState = update;
+		const { connection } = update;
+		logger.info("connection.update", { sessionId, connection, hasRes: !!res, SSE });
 
 		if (connection === "open") {
 			retries.delete(sessionId);
@@ -324,34 +324,35 @@ export async function createSession(options: createSessionOptions) {
 		if (connection === "close") handleConnectionClose();
 		handleConnectionUpdate();
 	});
-
+	/*
 	socket.ev.on("messages.upsert", (m) =>
 		// handleMessagesUpsert(socket, m, sessionId, readIncomingMessages),
 	);
+	*/
 	socket.ev.on("group-participants.update", (c) =>
 		handleGroupParticipantsUpdate(socket, c, sessionId),
 	);
 
 	try {
-	await prisma.session.upsert({
-		create: {
-			sessionId,
-			id: configID,
-			data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
-			userId,
-		},
-		update: {
-			data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
-			userId,
-		},
-		where: {
-			sessionId_id: {
+		await prisma.session.upsert({
+			create: {
 				sessionId,
 				id: configID,
+				data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
+				userId,
 			},
-		},
-	});
-	logger.info("createSession: session-config upserted", { sessionId });
+			update: {
+				data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
+				userId,
+			},
+			where: {
+				sessionId_id: {
+					sessionId,
+					id: configID,
+				},
+			},
+		});
+		logger.info("createSession: session-config upserted", { sessionId });
 	} catch (e) {
 		logger.error("createSession: failed to upsert session-config", e);
 		throw e;
