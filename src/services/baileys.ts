@@ -326,7 +326,7 @@ export async function createSession(options: createSessionOptions) {
 	});
 
 	socket.ev.on("messages.upsert", (m) =>
-		handleMessagesUpsert(socket, m, sessionId, readIncomingMessages),
+		// handleMessagesUpsert(socket, m, sessionId, readIncomingMessages),
 	);
 	socket.ev.on("group-participants.update", (c) =>
 		handleGroupParticipantsUpdate(socket, c, sessionId),
