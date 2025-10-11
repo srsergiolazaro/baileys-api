@@ -63,9 +63,9 @@ export const send: RequestHandler = async (req, res) => {
 
 		const { exists, formatJid, error } = await jidExists(session, jid, type);
 		if (!exists) {
-			return res.status(400).json({ 
+			return res.status(400).json({
 				error: error || "JID does not exist",
-				details: `Failed to verify JID: ${jid}`
+				details: `Failed to verify JID: ${jid}`,
 			});
 		}
 
@@ -73,19 +73,19 @@ export const send: RequestHandler = async (req, res) => {
 			const result = await session.sendMessage(formatJid, message, options);
 			return res.status(200).json(result);
 		} catch (sendError) {
-			const errorMessage = `Failed to send message: ${sendError instanceof Error ? sendError.message : 'Unknown error'}`;
+			const errorMessage = `Failed to send message: ${sendError instanceof Error ? sendError.message : "Unknown error"}`;
 			logger.error(sendError, errorMessage);
-			return res.status(500).json({ 
+			return res.status(500).json({
 				error: errorMessage,
-				details: sendError instanceof Error ? sendError.stack : undefined
+				details: sendError instanceof Error ? sendError.stack : undefined,
 			});
 		}
 	} catch (e) {
 		const errorMessage = "An error occurred during message send";
 		logger.error(e, errorMessage);
-		return res.status(500).json({ 
+		return res.status(500).json({
 			error: errorMessage,
-			details: e instanceof Error ? e.stack : undefined
+			details: e instanceof Error ? e.stack : undefined,
 		});
 	}
 };
@@ -169,13 +169,21 @@ export const download: RequestHandler = async (req, res) => {
 export const deleteMessage: RequestHandler = async (req, res) => {
 	try {
 		const { sessionId } = req.appData;
-		const { jid, key } = req.body;
+		const { jid, key, type = "number" } = req.body;
 		const session = getSession(sessionId)!;
 
-		await session.sendMessage(jid, {
-			sticker: {
-				url: "https://example.com/sticker.webp",
-			},
+		if (!session) {
+			return res.status(400).json({ error: "Session not found or not connected" });
+		}
+		const { exists, formatJid, error } = await jidExists(session, jid, type);
+		if (!exists) {
+			return res.status(400).json({
+				error: error || "JID does not exist",
+				details: `Failed to verify JID: ${jid}`,
+			});
+		}
+		await session.sendMessage(formatJid, {
+			delete: key,
 		});
 		res.status(200).json({ message: "Message deleted successfully" });
 	} catch (e) {

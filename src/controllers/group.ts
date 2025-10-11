@@ -172,10 +172,10 @@ export const updateSubject: RequestHandler = async (req, res) => {
 		const message = "An error occurred while updating group subject";
 		const error = e as Error;
 		logger.error(error, message);
-		res.status(500).json({ 
-			success: false, 
+		res.status(500).json({
+			success: false,
 			error: message,
-			details: error.message 
+			details: error.message,
 		});
 	}
 };
@@ -193,10 +193,10 @@ export const updateDescription: RequestHandler = async (req, res) => {
 		const message = "An error occurred while updating group description";
 		const error = e as Error;
 		logger.error(error, message);
-		res.status(500).json({ 
-			success: false, 
+		res.status(500).json({
+			success: false,
 			error: message,
-			details: error.message 
+			details: error.message,
 		});
 	}
 };
@@ -239,9 +239,7 @@ export const search: RequestHandler = async (req, res) => {
 		});
 
 		const result = fuse.search(name as string);
-		res.status(200).json({
-			data: result.map((r) => r.item),
-		});
+		res.status(200).json(result.map((r) => r.item));
 	} catch (e) {
 		const message = "An error occurred during group search";
 		logger.error(e, message);
