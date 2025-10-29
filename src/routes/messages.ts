@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { message } from "@/controllers/index";
+import { message } from "@/controllers";
 import requestValidator from "@/middlewares/request-validator";
 import { query, body } from "express-validator";
 import multer from "multer";
