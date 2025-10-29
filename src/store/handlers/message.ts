@@ -101,19 +101,25 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 							message,
 							sessionId,
 						);
-
-						await prisma.message.upsert({
-							select: { pkId: true },
-							create: createData,
-							update: updateData,
-							where: {
-								sessionId_remoteJid_id: {
-									remoteJid,
-									id,
-									sessionId,
+						try {
+							await prisma.message.upsert({
+								select: { pkId: true },
+								create: createData,
+								update: updateData,
+								where: {
+									sessionId_remoteJid_id: {
+										remoteJid,
+										id,
+										sessionId,
+									},
 								},
-							},
-						});
+							});
+							
+						} catch (error) {
+							console.log("Error in Upsert")
+							
+						}
+
 
 						const chatExists =
 							(await prisma.chat.count({ where: { id: remoteJid, sessionId } })) > 0;
