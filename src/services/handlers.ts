@@ -3,8 +3,8 @@ import {
 	DisconnectReason,
 	type WASocket,
 	type WAMessage,
-	type proto,
 	ParticipantAction,
+	GroupParticipant,
 } from "baileys";
 import { prisma } from "@/db";
 import { logger } from "@/shared";
@@ -135,7 +135,7 @@ export async function handleMessagesUpsert(
 
 export async function handleGroupParticipantsUpdate(
 	socket: WASocket,
-	update: { id: string; participants: string[]; action: ParticipantAction },
+	update: { id: string; participants: GroupParticipant[]; action: ParticipantAction },
 	sessionId: string,
 ) {
 	try {
