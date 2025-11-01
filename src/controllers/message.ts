@@ -1,5 +1,5 @@
 import type { proto, WAGenericMediaMessage, WAMessage } from "baileys";
-import { downloadMediaMessage, downloadContentFromMessage } from "baileys";
+import { downloadMediaMessage } from "baileys";
 import { serializePrisma } from "@/utils";
 import type { RequestHandler } from "express";
 import { logger } from "@/shared";
@@ -37,7 +37,8 @@ export const list: RequestHandler = async (req, res) => {
 
 export const send: RequestHandler = async (req, res) => {
 	try {
-		let { jid, type = "number", message, options } = req.body;
+		const { type = "number" } = req.body;
+		let { jid, message, options } = req.body;
 
 		// Procesa los datos de form-data si existen
 		if (req.is("multipart/form-data")) {

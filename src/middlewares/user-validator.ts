@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import type { Request, Response, NextFunction } from "express";
 import { prisma } from "@/db";
 
 export const userValidator = async (req: Request, res: Response, next: NextFunction) => {

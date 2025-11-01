@@ -167,6 +167,9 @@ model Message {
   userSessionId                   String?
   UserSession                     UserSession? @relation(fields: [userSessionId], references: [id])
 
+  statusMentionSources Json[] @default([])
+  supportAiCitations   Json[] @default([])
+
   @@unique([sessionId, remoteJid, id], map: "unique_message_id_per_session_id")
   @@index([sessionId])
 }

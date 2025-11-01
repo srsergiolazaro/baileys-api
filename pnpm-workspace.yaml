@@ -1,0 +1,9 @@
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - '@scarf/scarf'
+  - baileys
+  - esbuild
+  - prisma
+  - protobufjs
+  - sharp

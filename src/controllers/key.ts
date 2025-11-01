@@ -1,4 +1,4 @@
-import { RequestHandler } from "express";
+import type { RequestHandler } from "express";
 import { PrismaClient } from "@prisma/client";
 import crypto from "crypto";
 import { logger } from "@/shared";

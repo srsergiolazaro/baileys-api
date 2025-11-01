@@ -1,4 +1,13 @@
-import type { BaileysEventEmitter, MessageUserReceipt, proto, WAMessage, WAMessageKey } from "baileys";
+import type { Prisma } from "@prisma/client";
+
+import type {
+	BaileysEventEmitter,
+	MessageUserReceipt,
+	proto,
+	WAMessage,
+	WAMessageKey,
+} from "baileys";
+
 import { toNumber } from "baileys";
 import type { BaileysEventHandler, MakeTransformedPrisma } from "@/store/types";
 import { transformPrisma } from "@/store/utils";
@@ -16,8 +25,9 @@ const toPrismaMessage = (message: WAMessage, sessionId: string) => {
 		statusMentions?: unknown;
 		messageAddOns?: unknown;
 	};
-	const { statusMentions: _statusMentions, messageAddOns: _messageAddOns, ...rest } =
-		sanitizedMessage;
+	const rest = Object.fromEntries(
+		Object.entries(sanitizedMessage).filter(([key]) => !["statusMentions", "messageAddOns"].includes(key))
+	);
 	const transformed = transformPrisma(rest) as MakeTransformedPrisma<Message>;
 	const remoteJid = message.key.remoteJid ?? transformed.remoteJid;
 	const id = message.key.id ?? transformed.id;
@@ -44,6 +54,8 @@ const toPrismaMessage = (message: WAMessage, sessionId: string) => {
 		reactions: transformed.reactions ?? [],
 		pollUpdates: transformed.pollUpdates ?? [],
 		eventResponses: transformed.eventResponses ?? [],
+		statusMentionSources: (transformed.statusMentionSources || []) as Prisma.InputJsonValue[],
+		supportAiCitations: (transformed.supportAiCitations || []) as Prisma.InputJsonValue[],
 	};
 
 	const updateData = {
@@ -52,6 +64,8 @@ const toPrismaMessage = (message: WAMessage, sessionId: string) => {
 		participant: participant ?? undefined,
 		participantAlt: participantAlt ?? undefined,
 		addressingMode,
+		statusMentionSources: (transformed.statusMentionSources || []) as Prisma.InputJsonValue[],
+		supportAiCitations: (transformed.supportAiCitations || []) as Prisma.InputJsonValue[],
 	} as Partial<MakeTransformedPrisma<Message>>;
 
 	delete (updateData as Record<string, unknown>).sessionId;
@@ -82,7 +96,13 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 				});
 
 				if (records.length > 0) {
-					await tx.message.createMany({ data: records });
+					// ESTA LÍNEA ES LA QUE CAMBIA
+					await tx.message.createMany({
+						data: records as (Message & {
+							statusMentionSources: Prisma.InputJsonValue[];
+							supportAiCitations: Prisma.InputJsonValue[];
+						})[],
+					});
 				}
 			});
 			logger.info({ messages: messages.length }, "Synced messages");
@@ -97,15 +117,18 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 			case "notify":
 				for (const message of messages) {
 					try {
-						const { createData, updateData, remoteJid, id } = toPrismaMessage(
-							message,
-							sessionId,
-						);
+						const { createData, updateData, remoteJid, id } = toPrismaMessage(message, sessionId);
 						try {
 							await prisma.message.upsert({
 								select: { pkId: true },
-								create: createData,
-								update: updateData,
+								create: createData as Message & {
+									statusMentionSources: Prisma.InputJsonValue[];
+									supportAiCitations: Prisma.InputJsonValue[];
+								},
+								update: updateData as Message & {
+									statusMentionSources: Prisma.InputJsonValue[];
+									supportAiCitations: Prisma.InputJsonValue[];
+								},
 								where: {
 									sessionId_remoteJid_id: {
 										remoteJid,
@@ -114,12 +137,9 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 									},
 								},
 							});
-							
 						} catch (error) {
-							console.log("Error in Upsert")
-							
+							console.log("Error in Upsert");
 						}
-
 
 						const chatExists =
 							(await prisma.chat.count({ where: { id: remoteJid, sessionId } })) > 0;
@@ -188,13 +208,9 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 
 					const data = { ...prevData, ...update } as proto.IWebMessageInfo;
 					const transformed = transformPrisma(data) as MakeTransformedPrisma<Message>;
-					const {
-						pkId: _pkId,
-						sessionId: _sessionId,
-						remoteJid: _remoteJid,
-						id: _id,
-						...prismaData
-					} = transformed;
+					const prismaData = Object.fromEntries(
+						Object.entries(transformed).filter(([key]) => !["pkId", "sessionId", "remoteJid", "id"].includes(key))
+					);
 
 					await tx.message.update({
 						select: { pkId: true },
@@ -322,4 +338,3 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 
 	return { listen, unlisten };
 }
-

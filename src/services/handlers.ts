@@ -1,10 +1,11 @@
+import type {
+	ParticipantAction,
+	GroupParticipant} from "baileys";
 import {
 	downloadMediaMessage,
 	DisconnectReason,
 	type WASocket,
-	type WAMessage,
-	ParticipantAction,
-	GroupParticipant,
+	type WAMessage
 } from "baileys";
 import { prisma } from "@/db";
 import { logger } from "@/shared";

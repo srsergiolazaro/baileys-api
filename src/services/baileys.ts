@@ -5,7 +5,7 @@ import makeWASocket, {
 	isJidBroadcast,
 	makeCacheableSignalKeyStore,
 } from "baileys";
-import type { ConnectionState, SocketConfig, WASocket, proto } from "baileys";
+import type { ConnectionState, SocketConfig } from "baileys";
 import { Store, useSession } from "../store";
 import { prisma } from "../db";
 import { logger } from "../shared";
