@@ -252,7 +252,7 @@ model User {
   updatedAt     DateTime
   status        String        @default("active") @db.VarChar(50)
   ApiKey        ApiKey[]
-  UserSession   UserSession?
+  UserSession   UserSession[]
   user_sessions user_logins[]
 
   @@map("user")
@@ -303,7 +303,7 @@ model Verification {
 
 model UserSession {
   id            String          @id @default(cuid())
-  userId        String          @unique @db.VarChar(128)
+  userId        String          @db.VarChar(128)
   sessionId     String          @unique @db.VarChar(128)
   status        String          @default("active") @db.VarChar(50)
   phoneNumber   String?         @db.VarChar(50)
