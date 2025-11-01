@@ -303,8 +303,8 @@ model Verification {
 
 model UserSession {
   id            String          @id @default(cuid())
-  sessionId     String          @unique
   userId        String          @db.VarChar(128)
+  sessionId     String          @unique @db.VarChar(128)
   status        String          @default("active") @db.VarChar(50)
   phoneNumber   String?         @db.VarChar(50)
   deviceName    String?         @db.VarChar(128)
