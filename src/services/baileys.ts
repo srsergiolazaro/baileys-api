@@ -152,7 +152,7 @@ export async function createSession(options: createSessionOptions) {
 				prisma.contact.deleteMany({ where: { sessionId } }),
 				prisma.message.deleteMany({ where: { sessionId } }),
 				prisma.groupMetadata.deleteMany({ where: { sessionId } }),
-				prisma.userSession.delete({ where: { sessionId } }),
+				prisma.userSession.deleteMany({ where: { sessionId } }),
 				prisma.webhook.deleteMany({ where: { sessionId } }),
 			]);
 			logger.info("Session destroyed", { session: sessionId });
