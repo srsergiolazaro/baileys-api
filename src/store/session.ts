@@ -58,12 +58,17 @@ export async function useSession(sessionId: string): Promise<{
 				where: { sessionId_id: { id: fixId(id), sessionId } },
 			});
 		} catch (e) {
+			// Si el error es porque el registro no se encontró, simplemente lo registramos
+			// como una advertencia y continuamos. No es un error crítico.
 			if (e instanceof PrismaClientKnownRequestError && e.code === "P2025") {
-				// Session doesn't exist, which is fine for a delete operation
-				logger.info({ id }, "Tried to delete non-existent session");
-			} else {
-				logger.error(e, "An error occurred during session delete");
+				logger.warn({ id }, "Tried to delete a session key that was already gone. This is safe.");
+				return; // Salimos de la función sin lanzar un error.
 			}
+
+			// Si es cualquier otro tipo de error, lo registramos como un error
+			// y lo volvemos a lanzar para que el sistema sepa que algo falló.
+			logger.error(e, `An unexpected error occurred during session delete: ${id}`);
+			throw e;
 		}
 	};
 
