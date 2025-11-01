@@ -221,7 +221,6 @@ model Webhook {
   webhookType String       @default("messages.upsert") @db.VarChar(128)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
-  userId      String?
   UserSession UserSession? @relation(fields: [sessionId], references: [id])
 
   @@index([sessionId])
