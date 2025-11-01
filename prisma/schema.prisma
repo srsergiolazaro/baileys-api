@@ -215,15 +215,14 @@ model Image {
 }
 
 model Webhook {
-  id            String       @id @default(cuid())
-  sessionId     String       @db.VarChar(128)
-  url           String
-  webhookType   String       @default("messages.upsert") @db.VarChar(128)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  userId        String?
-  userSessionId String?
-  UserSession   UserSession? @relation(fields: [userSessionId], references: [id])
+  id          String       @id @default(cuid())
+  sessionId   String       @db.VarChar(128)
+  url         String
+  webhookType String       @default("messages.upsert") @db.VarChar(128)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  userId      String?
+  UserSession UserSession? @relation(fields: [sessionId], references: [id])
 
   @@index([sessionId])
 }
