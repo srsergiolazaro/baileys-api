@@ -77,30 +77,43 @@ export async function createSession(options: createSessionOptions) {
 	const now = new Date();
 	try {
 		const now = new Date();
-		await prisma.userSession.upsert({
-			// Busca una sesión existente por su sessionId
+		const sessionExists = await prisma.userSession.findUnique({
 			where: {
 				sessionId: sessionId,
 			},
-			// Si la encuentra, actualízala
-			update: {
-				status: "active",
-				lastActive: now,
-				updatedAt: now,
-			},
-			// Si no la encuentra, créala
-			create: {
-				id: sessionId,
-				sessionId,
-				userId,
-				status: "active",
-				deviceName: "WhatsApp User",
-				phoneNumber: null,
-				createdAt: now,
-				updatedAt: now,
-				lastActive: now,
+			select: {
+				id: true, // Solo necesitamos saber si existe
 			},
 		});
+
+		if (sessionExists) {
+			// Si la sesión ya existe, solo la actualizamos
+			await prisma.userSession.update({
+				where: {
+					sessionId: sessionId,
+				},
+				data: {
+					status: "active",
+					lastActive: now,
+					updatedAt: now,
+				},
+			});
+		} else {
+			// Si no existe, la creamos
+			await prisma.userSession.create({
+				data: {
+					id: sessionId, // Usamos sessionId como el ID principal de la fila
+					sessionId,
+					userId,
+					status: "active",
+					deviceName: "WhatsApp User",
+					phoneNumber: null,
+					createdAt: now,
+					updatedAt: now,
+					lastActive: now,
+				},
+			});
+		}
 	} catch (error) {
 		if (error instanceof PrismaClientKnownRequestError) {
 			if (error.code === "P2025") {
