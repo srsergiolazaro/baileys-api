@@ -90,6 +90,7 @@ export async function createSession(options: createSessionOptions) {
 			},
 			create: {
 				id: sessionId,
+				sessionId,
 				userId,
 				status: "active",
 				deviceName: "WhatsApp User",
