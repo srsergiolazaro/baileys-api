@@ -43,11 +43,16 @@ const toPrismaMessage = (message: WAMessage, sessionId: string) => {
 		statusMentions?: unknown;
 		messageAddOns?: unknown;
 	};
+
 	const rest = Object.fromEntries(
 		Object.entries(sanitizedMessage).filter(
-			([key]) => !["statusMentions", "messageAddOns", "reportingTokenInfo"].includes(key),
+			([key]) =>
+				!["statusMentions", "messageAddOns", "reportingTokenInfo", "isMentionedInStatus"].includes(
+					key,
+				),
 		),
 	);
+
 	const transformed = transformPrisma(rest) as MakeTransformedPrisma<Message>;
 	const remoteJid = message.key.remoteJid ?? transformed.remoteJid;
 	const id = message.key.id ?? transformed.id;
@@ -70,7 +75,6 @@ const toPrismaMessage = (message: WAMessage, sessionId: string) => {
 		participant: participant ?? null,
 		participantAlt: participantAlt ?? null,
 		addressingMode,
-		// Ahora toBigInt siempre devuelve un bigint, satisfaciendo el tipo
 		messageTimestamp: toBigInt(transformed.messageTimestamp),
 		messageStubParameters: transformed.messageStubParameters ?? [],
 		labels: transformed.labels ?? [],
@@ -89,7 +93,6 @@ const toPrismaMessage = (message: WAMessage, sessionId: string) => {
 		participant: participant ?? undefined,
 		participantAlt: participantAlt ?? undefined,
 		addressingMode,
-		// También aquí, el tipo ahora es correcto (bigint es asignable a bigint | undefined)
 		messageTimestamp: toBigInt(transformed.messageTimestamp),
 		statusMentionSources: (transformed.statusMentionSources || []) as Prisma.InputJsonValue[],
 		supportAiCitations: (transformed.supportAiCitations || []) as Prisma.InputJsonValue[],
@@ -99,8 +102,6 @@ const toPrismaMessage = (message: WAMessage, sessionId: string) => {
 	delete (updateData as Record<string, unknown>).sessionId;
 	delete (updateData as Record<string, unknown>).remoteJid;
 	delete (updateData as Record<string, unknown>).id;
-
-	// También eliminé reportingTokenInfo del objeto 'rest' al principio para simplificar
 
 	return { createData, updateData, remoteJid, id };
 };
