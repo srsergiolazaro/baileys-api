@@ -17,7 +17,7 @@
 		"typeRoots": ["./node_modules/@types", "./src/@types"]
 	},
 	"include": ["src/**/*.ts"],
-	"exclude": ["dist", "node_modules", ".eslintrc.js", "prettier.config.js"],
+	"exclude": ["dist", "node_modules", ".eslintrc.js", "prettier.config.cjs"],
 	"ts-node": {
 		"files": true,
 		"transpileOnly": false
