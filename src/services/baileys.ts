@@ -76,22 +76,15 @@ export async function createSession(options: createSessionOptions) {
 	// Ensure one UserSession per user atomically (avoids race conditions)
 	const now = new Date();
 	try {
-		await prisma.userSession.upsert({
-			where: { userId },
-			update: {
-				sessionId,
-				status: "active",
-				deviceName: "WhatsApp User",
-				lastActive: now,
-				updatedAt: now,
-			},
-			create: {
-				id: sessionId,
+		const now = new Date();
+		await prisma.userSession.create({
+			data: {
+				id: sessionId, // Usamos el sessionId como ID principal de la fila
 				sessionId,
 				userId,
 				status: "active",
-				phoneNumber: null,
 				deviceName: "WhatsApp User",
+				phoneNumber: null,
 				createdAt: now,
 				updatedAt: now,
 				lastActive: now,
