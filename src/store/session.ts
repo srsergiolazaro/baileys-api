@@ -53,20 +53,15 @@ export async function useSession(sessionId: string): Promise<{
 
 	const del = async (id: string) => {
 		try {
-			await model.delete({
-				select: { pkId: true },
-				where: { sessionId_id: { id: fixId(id), sessionId } },
+			await model.deleteMany({
+				where: {
+					id: fixId(id),
+					sessionId: sessionId,
+				},
 			});
 		} catch (e) {
-			// Si el error es porque el registro no se encontró, simplemente lo registramos
-			// como una advertencia y continuamos. No es un error crítico.
-			if (e instanceof PrismaClientKnownRequestError && e.code === "P2025") {
-				logger.warn({ id }, "Tried to delete a session key that was already gone. This is safe.");
-				return; // Salimos de la función sin lanzar un error.
-			}
-
-			// Si es cualquier otro tipo de error, lo registramos como un error
-			// y lo volvemos a lanzar para que el sistema sepa que algo falló.
+			// Este catch ahora solo se ejecutará para errores graves
+			// de base de datos, no para el "no encontrado".
 			logger.error(e, `An unexpected error occurred during session delete: ${id}`);
 			throw e;
 		}
