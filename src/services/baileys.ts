@@ -76,30 +76,47 @@ export async function createSession(options: createSessionOptions) {
 	// Ensure one UserSession per user atomically (avoids race conditions)
 	const now = new Date();
 	try {
+		// ----- LA SOLUCIÓN CORRECTA SIN MODIFICAR EL ESQUEMA -----
 		const now = new Date();
-		await prisma.userSession.upsert({
+		// Paso 1: Busca si ya existe una sesión con este sessionId.
+		// Usamos findFirst en lugar de findUnique por flexibilidad.
+		let session = await prisma.userSession.findFirst({
 			where: {
-				// Usamos sessionId, que es @unique y la clave de nuestra operación
 				sessionId: sessionId,
 			},
-			update: {
-				// Si existe, actualizamos estos campos
-				status: "active",
-				lastActive: now,
-				updatedAt: now,
-			},
-			create: {
-				id: sessionId,
-				sessionId,
-				userId,
-				status: "active",
-				deviceName: "WhatsApp User",
-				phoneNumber: null,
-				createdAt: now,
-				updatedAt: now,
-				lastActive: now,
-			},
 		});
+
+		if (session) {
+			// Paso 2a: Si la sesión ya existe, la actualizamos.
+			await prisma.userSession.update({
+				where: {
+					// Usamos el 'id' del registro que encontramos para actualizarlo.
+					id: session.id,
+				},
+				data: {
+					status: "active",
+					lastActive: now,
+					updatedAt: now,
+				},
+			});
+		} else {
+			// Paso 2b: Si no existe, la creamos.
+			// ¡IMPORTANTE! No pasamos el campo 'id' en la data.
+			// Dejamos que Prisma lo genere automáticamente con cuid().
+			await prisma.userSession.create({
+				data: {
+					// id: sessionId, <-- ESTA LÍNEA SE ELIMINA
+					sessionId,
+					userId,
+					status: "active",
+					deviceName: "WhatsApp User",
+					phoneNumber: null,
+					createdAt: now,
+					updatedAt: now,
+					lastActive: now,
+				},
+			});
+		}
 	} catch (error) {
 		if (error instanceof PrismaClientKnownRequestError) {
 			if (error.code === "P2025") {
