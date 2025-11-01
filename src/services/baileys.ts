@@ -77,9 +77,20 @@ export async function createSession(options: createSessionOptions) {
 	const now = new Date();
 	try {
 		const now = new Date();
-		await prisma.userSession.create({
-			data: {
-				id: sessionId, // Usamos el sessionId como ID principal de la fila
+		await prisma.userSession.upsert({
+			// Busca una sesión existente por su sessionId
+			where: {
+				sessionId: sessionId,
+			},
+			// Si la encuentra, actualízala
+			update: {
+				status: "active",
+				lastActive: now,
+				updatedAt: now,
+			},
+			// Si no la encuentra, créala
+			create: {
+				id: sessionId,
 				sessionId,
 				userId,
 				status: "active",
