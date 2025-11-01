@@ -13,6 +13,26 @@ import { prisma } from "@/db";
 import { logger } from "@/shared";
 import type { Message } from "@prisma/client";
 
+const toBigInt = (timestamp: any): bigint => {
+	if (timestamp === null || timestamp === undefined) {
+		return 0n; // Usamos 0n (notación para BigInt(0))
+	}
+	if (typeof timestamp === "bigint") {
+		return timestamp;
+	}
+	if (typeof timestamp === "number") {
+		return BigInt(timestamp);
+	}
+	// Maneja el formato de objeto que a veces envía Baileys
+	if (typeof timestamp === "object" && "low" in timestamp && "high" in timestamp) {
+		const low = BigInt(timestamp.low);
+		const high = BigInt(timestamp.high);
+		return (high << 32n) + low;
+	}
+	// Si el tipo no es reconocido, devolvemos 0n como fallback seguro
+	return 0n;
+};
+
 const getKeyAuthor = (key: WAMessageKey | undefined | null) =>
 	(key?.fromMe
 		? "me"
@@ -25,7 +45,7 @@ const toPrismaMessage = (message: WAMessage, sessionId: string) => {
 	};
 	const rest = Object.fromEntries(
 		Object.entries(sanitizedMessage).filter(
-			([key]) => !["statusMentions", "messageAddOns"].includes(key),
+			([key]) => !["statusMentions", "messageAddOns", "reportingTokenInfo"].includes(key),
 		),
 	);
 	const transformed = transformPrisma(rest) as MakeTransformedPrisma<Message>;
@@ -39,13 +59,7 @@ const toPrismaMessage = (message: WAMessage, sessionId: string) => {
 	const participantAlt = message.key.participantAlt ?? transformed.participantAlt;
 	const addressingMode = message.key.addressingMode ?? transformed.addressingMode ?? null;
 
-	// Helper to handle Prisma's JSON null representation
-	const handleJsonNull = (value: any) => {
-		if (value === null) {
-			return Prisma.JsonNull;
-		}
-		return value;
-	};
+	const handleJsonNull = (value: any) => (value === null ? Prisma.JsonNull : value);
 
 	const createData: MakeTransformedPrisma<Message> = {
 		...transformed,
@@ -56,6 +70,8 @@ const toPrismaMessage = (message: WAMessage, sessionId: string) => {
 		participant: participant ?? null,
 		participantAlt: participantAlt ?? null,
 		addressingMode,
+		// Ahora toBigInt siempre devuelve un bigint, satisfaciendo el tipo
+		messageTimestamp: toBigInt(transformed.messageTimestamp),
 		messageStubParameters: transformed.messageStubParameters ?? [],
 		labels: transformed.labels ?? [],
 		userReceipt: (transformed.userReceipt as any) ?? [],
@@ -73,6 +89,8 @@ const toPrismaMessage = (message: WAMessage, sessionId: string) => {
 		participant: participant ?? undefined,
 		participantAlt: participantAlt ?? undefined,
 		addressingMode,
+		// También aquí, el tipo ahora es correcto (bigint es asignable a bigint | undefined)
+		messageTimestamp: toBigInt(transformed.messageTimestamp),
 		statusMentionSources: (transformed.statusMentionSources || []) as Prisma.InputJsonValue[],
 		supportAiCitations: (transformed.supportAiCitations || []) as Prisma.InputJsonValue[],
 		finalLiveLocation: handleJsonNull(transformed.finalLiveLocation),
@@ -81,6 +99,8 @@ const toPrismaMessage = (message: WAMessage, sessionId: string) => {
 	delete (updateData as Record<string, unknown>).sessionId;
 	delete (updateData as Record<string, unknown>).remoteJid;
 	delete (updateData as Record<string, unknown>).id;
+
+	// También eliminé reportingTokenInfo del objeto 'rest' al principio para simplificar
 
 	return { createData, updateData, remoteJid, id };
 };
