@@ -81,4 +81,3 @@ export const check: RequestHandler = async (req, res) => {
 };
 
 export const photo = makePhotoURLHandler();
-

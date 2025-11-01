@@ -8,6 +8,7 @@ const config = {
 	endOfLine: "lf",
 	semi: true,
 	singleQuote: false,
+	endOfLine: "lf",
 };
 
 // Cambia esta línea

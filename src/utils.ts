@@ -92,7 +92,10 @@ export async function jidExists(
 		return { exists: !!groupMeta.id, formatJid: groupMeta.id };
 	} catch (e) {
 		logger.error(e, "Error in jidExists");
-		return { exists: false, formatJid: jid, error: e instanceof Error ? e.message : "Unknown error" };
+		return {
+			exists: false,
+			formatJid: jid,
+			error: e instanceof Error ? e.message : "Unknown error",
+		};
 	}
 }
-

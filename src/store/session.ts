@@ -1,4 +1,3 @@
- 
 import type { AuthenticationCreds, AuthenticationState, SignalDataTypeMap } from "baileys";
 import { proto } from "baileys";
 import { BufferJSON, initAuthCreds } from "baileys";
@@ -59,7 +58,7 @@ export async function useSession(sessionId: string): Promise<{
 				where: { sessionId_id: { id: fixId(id), sessionId } },
 			});
 		} catch (e) {
-			if (e instanceof PrismaClientKnownRequestError && e.code === 'P2025') {
+			if (e instanceof PrismaClientKnownRequestError && e.code === "P2025") {
 				// Session doesn't exist, which is fine for a delete operation
 				logger.info({ id }, "Tried to delete non-existent session");
 			} else {
@@ -109,4 +108,3 @@ export async function useSession(sessionId: string): Promise<{
 		saveCreds: () => write(creds, "creds"),
 	};
 }
-

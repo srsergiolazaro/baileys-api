@@ -186,4 +186,3 @@ router.get("/add-sse", session.addSSE);
 router.delete("/", session.del);
 
 export default router;
-

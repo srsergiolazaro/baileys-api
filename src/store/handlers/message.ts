@@ -26,7 +26,9 @@ const toPrismaMessage = (message: WAMessage, sessionId: string) => {
 		messageAddOns?: unknown;
 	};
 	const rest = Object.fromEntries(
-		Object.entries(sanitizedMessage).filter(([key]) => !["statusMentions", "messageAddOns"].includes(key))
+		Object.entries(sanitizedMessage).filter(
+			([key]) => !["statusMentions", "messageAddOns"].includes(key),
+		),
 	);
 	const transformed = transformPrisma(rest) as MakeTransformedPrisma<Message>;
 	const remoteJid = message.key.remoteJid ?? transformed.remoteJid;
@@ -209,7 +211,9 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 					const data = { ...prevData, ...update } as proto.IWebMessageInfo;
 					const transformed = transformPrisma(data) as MakeTransformedPrisma<Message>;
 					const prismaData = Object.fromEntries(
-						Object.entries(transformed).filter(([key]) => !["pkId", "sessionId", "remoteJid", "id"].includes(key))
+						Object.entries(transformed).filter(
+							([key]) => !["pkId", "sessionId", "remoteJid", "id"].includes(key),
+						),
 					);
 
 					await tx.message.update({
