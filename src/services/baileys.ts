@@ -262,9 +262,6 @@ export async function createSession(options: createSessionOptions) {
 
 			if (res && !res.writableEnded) {
 				res.end();
-			}
-			if (connectionState.connection !== "open") {
-				await destroy();
 			} else {
 				logger.info("Session remains active after SSE completion", { sessionId });
 			}
