@@ -37,7 +37,6 @@ export const list: RequestHandler = async (req, res) => {
 
 export const send: RequestHandler = async (req, res) => {
 	try {
-		const { type = "number" } = req.body;
 		let { jid, message, options } = req.body;
 
 		// Procesa los datos de form-data si existen
@@ -62,7 +61,7 @@ export const send: RequestHandler = async (req, res) => {
 			return res.status(400).json({ error: "Session not found or not connected" });
 		}
 
-		const { exists, formatJid, error } = await jidExists(session, jid, type);
+		const { exists, formatJid, error } = await jidExists(session, jid);
 		if (!exists) {
 			return res.status(400).json({
 				error: error || "JID does not exist",
@@ -98,13 +97,12 @@ export const sendBulk: RequestHandler = async (req, res) => {
 
 	for (const [index, data] of req.body.entries()) {
 		try {
-			let { jid, type = "number", message, options } = data;
+			let { jid, message, options } = data;
 			const delay = data.delay || 1000; // 'delay' es constante porque no se reasigna
 
 			// Procesa los datos de form-data si existen
 			if (req.is("multipart/form-data")) {
 				jid = data.jid;
-				type = data.type || "number";
 				message = data.message ? JSON.parse(data.message) : undefined;
 				options = data.options ? JSON.parse(data.options) : undefined;
 
@@ -119,7 +117,7 @@ export const sendBulk: RequestHandler = async (req, res) => {
 			}
 
 			// Verificar si el JID existe
-			const { exists, formatJid } = await jidExists(session, jid, type);
+			const { exists, formatJid } = await jidExists(session, jid);
 			if (!exists) {
 				errors.push({ index, error: "JID does not exist" });
 				continue;
@@ -170,13 +168,13 @@ export const download: RequestHandler = async (req, res) => {
 export const deleteMessage: RequestHandler = async (req, res) => {
 	try {
 		const { sessionId } = req.appData;
-		const { jid, key, type = "number" } = req.body;
+		const { jid, key } = req.body;
 		const session = getSession(sessionId)!;
 
 		if (!session) {
 			return res.status(400).json({ error: "Session not found or not connected" });
 		}
-		const { exists, formatJid, error } = await jidExists(session, jid, type);
+		const { exists, formatJid, error } = await jidExists(session, jid);
 		if (!exists) {
 			return res.status(400).json({
 				error: error || "JID does not exist",
