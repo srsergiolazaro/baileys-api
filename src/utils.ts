@@ -68,24 +68,12 @@ export async function jidExists(
 			const normalizedPnJid = jidNormalizedUser(formattedPnJid) || formattedPnJid;
 			const results = await session.onWhatsApp(normalizedPnJid);
 			const result = results?.[0];
-			if (!result?.exists) {
-				return { exists: false, formatJid: formattedPnJid };
+
+			if (result?.exists) {
+				return { exists: true, formatJid: formattedPnJid };
 			}
 
-			let targetJid = formattedPnJid;
-			try {
-				const lid = await session.signalRepository?.lidMapping.getLIDForPN(normalizedPnJid);
-				if (lid) {
-					targetJid = lid;
-				}
-			} catch (error) {
-				logger.warn(
-					{ err: error, formattedPnJid },
-					"Failed to resolve LID mapping for phone number; falling back to PN",
-				);
-			}
-
-			return { exists: true, formatJid: targetJid };
+			return { exists: false, formatJid: formattedPnJid };
 		}
 
 		const groupMeta = await session.groupMetadata(jid);
