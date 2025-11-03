@@ -3,9 +3,20 @@ import { jidNormalizedUser } from "baileys";
 import type { Session } from "./types";
 import { logger } from "./shared";
 
-// (Asegúrate de que estas funciones auxiliares estén disponibles)
-// export const serializePrisma = ...
-// export function delay(...)
+export const serializePrisma = (obj: any) => {
+	return JSON.parse(
+		JSON.stringify(obj, (key, value) => {
+			if (typeof value === "bigint") {
+				return value.toString();
+			}
+			return value;
+		}),
+	);
+};
+
+export function delay(ms: number) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 /**
  * Formatea un número de teléfono a un formato E.164 sin el símbolo '+'.
