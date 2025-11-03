@@ -19,7 +19,7 @@ export async function init() {
 	});
 	logger.info("init: loaded session-config rows", { count: sessions.length });
 
-	const processedUsers = new Set<string>();
+
 	for (const { sessionId, data, userId } of sessions) {
 		const { readIncomingMessages, ...socketConfig } = JSON.parse(data);
 		let effectiveUserId: string | null = userId;
@@ -34,15 +34,7 @@ export async function init() {
 			logger.warn("init: skipping session due to missing userId", { sessionId });
 			continue;
 		}
-		if (processedUsers.has(effectiveUserId)) {
-			// Only one active session per user is supported; skip duplicates
-			logger.info("init: duplicate session for user skipped", {
-				sessionId,
-				userId: effectiveUserId,
-			});
-			continue;
-		}
-		processedUsers.add(effectiveUserId);
+
 		logger.info("init: creating session", { sessionId, userId: effectiveUserId });
 		createSession({ sessionId, userId: effectiveUserId, readIncomingMessages, socketConfig });
 	}
