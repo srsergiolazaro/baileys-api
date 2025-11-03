@@ -41,7 +41,7 @@ export const create: RequestHandler = async (req, res) => {
 		const { subject, participants }: { subject: string; participants: string[] } = req.body;
 		const session = getSession(req.appData.sessionId)!;
 		const participantResults = await Promise.allSettled(
-			participants.map((participant) => jidExists(session, participant, "number")),
+			participants.map((participant) => jidExists(session, participant)),
 		);
 
 		const validParticipants = participantResults
@@ -77,7 +77,7 @@ export const deleteGroup: RequestHandler = async (req, res) => {
 		const { jid }: { jid: string } = req.body;
 
 		const session = getSession(req.appData.sessionId)!;
-		const { exists } = await jidExists(session, jid, "group");
+		const { exists } = await jidExists(session, jid);
 		if (!exists) {
 			return res.status(404).json({ error: "Group not found" });
 		}
@@ -123,7 +123,7 @@ export const updateParticipants: RequestHandler = async (req, res) => {
 		}
 
 		const participantResults = await Promise.allSettled(
-			participants.map((participant) => jidExists(session, participant, "number")),
+			participants.map((participant) => jidExists(session, participant)),
 		);
 
 		const validParticipants = participantResults
@@ -147,7 +147,7 @@ export const updateSettings: RequestHandler = async (req, res) => {
 		}: { jid: string; settings: "announcement" | "locked" | "not_announcement" | "unlocked" } =
 			req.body;
 		const session = getSession(req.appData.sessionId)!;
-		const { exists, formatJid } = await jidExists(session, jid, "group");
+		const { exists, formatJid } = await jidExists(session, jid);
 		if (!exists) return res.status(400).json({ error: "Group JID does not exist" });
 
 		const result = await session.groupSettingUpdate(formatJid, settings);
@@ -163,7 +163,7 @@ export const updateSubject: RequestHandler = async (req, res) => {
 	try {
 		const { jid, subject } = req.body as { jid: string; subject: string };
 		const session = getSession(req.appData.sessionId)!;
-		const { exists, formatJid } = await jidExists(session, jid, "group");
+		const { exists, formatJid } = await jidExists(session, jid);
 		if (!exists) return res.status(400).json({ error: "Group JID does not exist" });
 
 		await session.groupUpdateSubject(formatJid, subject);
@@ -184,7 +184,7 @@ export const updateDescription: RequestHandler = async (req, res) => {
 	try {
 		const { jid, description } = req.body as { jid: string; description: string };
 		const session = getSession(req.appData.sessionId)!;
-		const { exists, formatJid } = await jidExists(session, jid, "group");
+		const { exists, formatJid } = await jidExists(session, jid);
 		if (!exists) return res.status(400).json({ error: "Group JID does not exist" });
 
 		await session.groupUpdateDescription(formatJid, description);
@@ -207,7 +207,7 @@ export const leaveGroup: RequestHandler = async (req, res) => {
 	try {
 		const { jid } = req.body;
 		const session = getSession(req.appData.sessionId)!;
-		const { exists, formatJid } = await jidExists(session, jid, "group");
+		const { exists, formatJid } = await jidExists(session, jid);
 		if (!exists) return res.status(400).json({ error: "Jid does not exist" });
 		await session.groupLeave(formatJid);
 

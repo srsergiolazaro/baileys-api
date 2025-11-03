@@ -9,7 +9,7 @@ const updateBlockStatus =
 			const session = getSession(req.appData.sessionId)!;
 			const { jid } = req.body;
 
-			const { exists, formatJid } = await jidExists(session, jid, "number");
+			const { exists, formatJid } = await jidExists(session, jid);
 			if (!exists) return res.status(400).json({ error: "Jid does not exist" });
 
 			await session.updateBlockStatus(formatJid, action);
@@ -32,7 +32,7 @@ export const updateProfilePicture: RequestHandler = async (req, res) => {
 		if (!jid) {
 			return res.status(400).json({ error: "JID is required" });
 		}
-		const { exists, formatJid } = await jidExists(session, jid, "number");
+		const { exists, formatJid } = await jidExists(session, jid);
 
 		if (!exists) return res.status(400).json({ error: "Jid does not exist" });
 

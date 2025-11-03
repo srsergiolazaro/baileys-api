@@ -14,7 +14,7 @@ export const list: RequestHandler = async (req, res) => {
 			return res.status(404).json({ error: "Session not found" });
 		}
 
-		const { exists, formatJid } = await jidExists(session, jid, "number");
+		const { exists, formatJid } = await jidExists(session, jid);
 		if (!exists) return res.status(400).json({ error: "JID does not exist" });
 
 		const products = await session.getCatalog({ jid: formatJid });
@@ -38,7 +38,7 @@ export const getCollections: RequestHandler = async (req, res) => {
 
 		// Verificar JID si se proporciona
 		if (jid) {
-			const { exists } = await jidExists(session, jid, "number");
+			const { exists } = await jidExists(session, jid);
 			if (!exists) return res.status(400).json({ error: "JID does not exist" });
 		}
 
@@ -212,7 +212,7 @@ export const sendProductMessage: RequestHandler = async (req, res) => {
 			return res.status(404).json({ error: "Session not found" });
 		}
 
-		const { exists, formatJid } = await jidExists(session, jid, "number");
+		const { exists, formatJid } = await jidExists(session, jid);
 		if (!exists) return res.status(400).json({ error: "JID does not exist" });
 
 		const message = await session.sendMessage(formatJid, product, options);

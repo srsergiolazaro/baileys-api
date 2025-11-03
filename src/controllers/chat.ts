@@ -1,9 +1,8 @@
 import { logger } from "@/shared";
 import { prisma } from "@/db";
-import type { Chat, Message } from "@prisma/client";
+import type { Message } from "@prisma/client";
 import { getSession, jidExists } from "@/whatsapp";
 import type { Request, Response } from "express";
-import { serializePrisma } from "@/utils";
 
 export const list = async (req: Request, res: Response) => {
 	try {
@@ -30,14 +29,12 @@ export const list = async (req: Request, res: Response) => {
 			}
 		}
 
-		const chats = (
-			await prisma.chat.findMany({
-				cursor: parsedCursor ? { pkId: parsedCursor } : undefined,
-				take: parsedLimit,
-				skip: parsedCursor ? 1 : 0,
-				where: { sessionId },
-			})
-		).map((c: Chat) => serializePrisma(c));
+		const chats = await prisma.chat.findMany({
+			cursor: parsedCursor ? { pkId: parsedCursor } : undefined,
+			take: parsedLimit,
+			skip: parsedCursor ? 1 : 0,
+			where: { sessionId },
+		});
 
 		res.status(200).json({
 			data: chats,
@@ -74,7 +71,7 @@ export const find = async (req: Request, res: Response) => {
 		});
 
 		const messages = messagesFromDb.map((m: Message) => {
-			const serializedMessage = serializePrisma(m) as any; // Cast to any to handle pkId potentially being bigint
+			const serializedMessage = m as any; // Cast to any to handle pkId potentially being bigint
 			// Convert BigInt fields to string for JSON serialization
 			const messageToReturn = { ...serializedMessage };
 			if (serializedMessage.pkId && typeof serializedMessage.pkId === "bigint") {
@@ -113,7 +110,7 @@ export const mute = async (req: Request, res: Response) => {
 		const isGroup = typeof jid === "string" && jid.endsWith("@g.us");
 		let targetJid = jid;
 		if (!isGroup) {
-			const { exists, formatJid, error } = await jidExists(session, jid, "number");
+			const { exists, formatJid, error } = await jidExists(session, jid);
 			if (!exists) {
 				return res.status(400).json({
 					error: error || "JID does not exist",
@@ -143,7 +140,7 @@ export const markRead = async (req: Request, res: Response) => {
 		const isGroup = typeof jid === "string" && jid.endsWith("@g.us");
 		let targetJid = jid;
 		if (!isGroup) {
-			const { exists, formatJid, error } = await jidExists(session, jid, "number");
+			const { exists, formatJid, error } = await jidExists(session, jid);
 			if (!exists) {
 				return res.status(400).json({
 					error: error || "JID does not exist",
@@ -173,7 +170,7 @@ export const setDisappearing = async (req: Request, res: Response) => {
 		const isGroup = typeof jid === "string" && jid.endsWith("@g.us");
 		let targetJid = jid;
 		if (!isGroup) {
-			const { exists, formatJid, error } = await jidExists(session, jid, "number");
+			const { exists, formatJid, error } = await jidExists(session, jid);
 			if (!exists) {
 				return res.status(400).json({
 					error: error || "JID does not exist",

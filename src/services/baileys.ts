@@ -80,7 +80,7 @@ export async function createSession(options: createSessionOptions) {
 		const now = new Date();
 		// Paso 1: Busca si ya existe una sesión con este sessionId.
 		// Usamos findFirst en lugar de findUnique por flexibilidad.
-		let session = await prisma.userSession.findFirst({
+		const session = await prisma.userSession.findFirst({
 			where: {
 				sessionId: sessionId,
 			},
