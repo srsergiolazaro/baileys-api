@@ -39,6 +39,7 @@ export async function init() {
 				sessionId,
 			},
 		});
+		console.log(isActive);
 
 		if (isActive?.isActive) {
 			logger.info(`init: creating session ${sessionId}`);
