@@ -1,18 +1,8 @@
 import type { ParticipantAction, GroupParticipant } from "baileys";
-import { downloadMediaMessage, DisconnectReason, type WASocket, type WAMessage } from "baileys";
+import { downloadMediaMessage, type WASocket, type WAMessage } from "baileys";
 import { prisma } from "@/db";
 import { logger } from "@/shared";
-import { delay } from "@/utils";
 import { callWebHook, callWebHookFile } from "@/fetch";
-import type { Boom } from "@hapi/boom";
-
-const isConnectionClosedError = (error: unknown): error is Boom =>
-	Boolean(
-		error &&
-			typeof error === "object" &&
-			(error as Boom).isBoom &&
-			(error as Boom).output?.statusCode === DisconnectReason.connectionClosed,
-	);
 
 export async function handleMessagesUpsert(
 	socket: WASocket,
@@ -24,23 +14,6 @@ export async function handleMessagesUpsert(
 
 	if (readIncomingMessages) {
 		if (message.key.fromMe || m.type !== "notify") return;
-
-		await delay(1000);
-		try {
-			await socket.readMessages([message.key]);
-		} catch (error) {
-			if (isConnectionClosedError(error)) {
-				logger.debug(
-					{ sessionId, messageId: message.key.id },
-					"Skipping read receipt because connection already closed",
-				);
-			} else {
-				logger.error(
-					{ err: error, sessionId, messageId: message.key.id },
-					"Failed to mark message as read",
-				);
-			}
-		}
 	}
 
 	if (!m.messages || !message.message) return;
