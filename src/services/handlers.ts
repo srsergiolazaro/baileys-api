@@ -46,8 +46,8 @@ export async function handleMessagesUpsert(
 	} else if (messageContent && "text" in messageContent) {
 		text = messageContent.text ?? "";
 	}
-
-	if (message.key.fromMe) {
+	console.log("key", message.key);
+	if (message.key) {
 		console.log("Mensaje enviado:", text);
 	} else {
 		console.log("Mensaje recibido:", text);
