@@ -19,31 +19,18 @@ export async function init() {
 	});
 	logger.info("init: loaded session-config rows", { count: sessions.length });
 
-	for (const { sessionId, data, userId } of sessions) {
+	for (const { sessionId, data } of sessions) {
 		const { readIncomingMessages, ...socketConfig } = JSON.parse(data);
-		let effectiveUserId: string | null = userId;
-
-		// Backward compatibility: if userId not stored in session config, try resolve from UserSession
-		if (!effectiveUserId) {
-			const userSession = await prisma.userSession.findUnique({ where: { sessionId } });
-			effectiveUserId = userSession?.userId ?? null;
-		}
-
-		if (!effectiveUserId) {
-			logger.warn("init: skipping session due to missing userId", { sessionId });
-			continue;
-		}
-
-		const isActive = await prisma.userSession.findFirst({
+		const userSession = await prisma.userSession.findFirst({
 			where: {
 				sessionId,
+				isActive: true,
 			},
 		});
-		console.log(isActive);
 
-		if (isActive?.isActive) {
+		if (userSession) {
 			logger.info(`init: creating session ${sessionId}`);
-			createSession({ sessionId, userId: effectiveUserId, readIncomingMessages, socketConfig });
+			createSession({ sessionId, userId: userSession.userId, readIncomingMessages, socketConfig });
 		}
 	}
 }
