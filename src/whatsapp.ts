@@ -19,7 +19,6 @@ export async function init() {
 	});
 	logger.info("init: loaded session-config rows", { count: sessions.length });
 
-
 	for (const { sessionId, data, userId } of sessions) {
 		const { readIncomingMessages, ...socketConfig } = JSON.parse(data);
 		let effectiveUserId: string | null = userId;
@@ -36,7 +35,15 @@ export async function init() {
 		}
 
 		logger.info("init: creating session", { sessionId, userId: effectiveUserId });
-		createSession({ sessionId, userId: effectiveUserId, readIncomingMessages, socketConfig });
+
+		const isActive = await prisma.userSession.findFirst({
+			where: {
+				sessionId,
+			},
+		});
+
+		if (isActive?.isActive)
+			createSession({ sessionId, userId: effectiveUserId, readIncomingMessages, socketConfig });
 	}
 }
 //git pull && pm2 restart baileys-api && pm2 logs baileys-api
