@@ -53,10 +53,10 @@ export default function groupMetadataHandler(sessionId: string, event: BaileysEv
 		participants,
 	}) => {
 		try {
-			const metadata = ((await model.findFirst({
+			const metadata = await model.findFirst({
 				select: { participants: true },
 				where: { id, sessionId },
-			})) || []) as { participants: any[] } | null;
+			});
 
 			if (!metadata) {
 				return logger.info(
