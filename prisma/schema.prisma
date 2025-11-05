@@ -65,8 +65,6 @@ model Contact {
   pkId          Int          @id @default(autoincrement())
   sessionId     String       @db.VarChar(128)
   id            String       @db.VarChar(128)
-  lid           String?      @db.VarChar(128)
-  phoneNumber   String?      @db.VarChar(128)
   name          String?      @db.VarChar(128)
   notify        String?      @db.VarChar(128)
   verifiedName  String?      @db.VarChar(128)
@@ -74,6 +72,8 @@ model Contact {
   status        String?      @db.VarChar(128)
   userId        String?
   userSessionId String?
+  lid           String?      @db.VarChar(128)
+  phoneNumber   String?      @db.VarChar(128)
   UserSession   UserSession? @relation(fields: [userSessionId], references: [id])
 
   @@unique([sessionId, id], map: "unique_contact_id_per_session_id")
@@ -85,15 +85,12 @@ model GroupMetadata {
   sessionId         String       @db.VarChar(128)
   id                String       @db.VarChar(128)
   owner             String?      @db.VarChar(128)
-  ownerPn           String?      @db.VarChar(128)
   subject           String       @db.VarChar(128)
   subjectOwner      String?      @db.VarChar(128)
-  subjectOwnerPn    String?      @db.VarChar(128)
   subjectTime       Int?
   creation          Int?
   desc              String?      @db.VarChar(255)
   descOwner         String?      @db.VarChar(128)
-  descOwnerPn       String?      @db.VarChar(128)
   descId            String?      @db.VarChar(128)
   restrict          Boolean?
   announce          Boolean?
@@ -104,6 +101,9 @@ model GroupMetadata {
   addressingMode    String?      @db.VarChar(10)
   userId            String?
   userSessionId     String?
+  descOwnerPn       String?      @db.VarChar(128)
+  ownerPn           String?      @db.VarChar(128)
+  subjectOwnerPn    String?      @db.VarChar(128)
   UserSession       UserSession? @relation(fields: [userSessionId], references: [id])
 
   @@unique([sessionId, id], map: "unique_groupmetadata_id_per_session_id")
@@ -114,9 +114,6 @@ model Message {
   pkId                            Int          @id @default(autoincrement())
   sessionId                       String       @db.VarChar(128)
   remoteJid                       String       @db.VarChar(128)
-  remoteJidAlt                    String?      @db.VarChar(128)
-  participantAlt                  String?      @db.VarChar(128)
-  addressingMode                  String?      @db.VarChar(10)
   id                              String       @db.VarChar(128)
   agentId                         String?      @db.VarChar(128)
   bizPrivacyStatus                Int?
@@ -165,10 +162,12 @@ model Message {
   statusAlreadyViewd              Boolean?
   userId                          String?
   userSessionId                   String?
+  addressingMode                  String?      @db.VarChar(10)
+  participantAlt                  String?      @db.VarChar(128)
+  remoteJidAlt                    String?      @db.VarChar(128)
+  statusMentionSources            Json[]       @default([])
+  supportAiCitations              Json[]       @default([])
   UserSession                     UserSession? @relation(fields: [userSessionId], references: [id])
-
-  statusMentionSources Json[] @default([])
-  supportAiCitations   Json[] @default([])
 
   @@unique([sessionId, remoteJid, id], map: "unique_message_id_per_session_id")
   @@index([sessionId])
@@ -215,13 +214,13 @@ model Image {
 }
 
 model Webhook {
-  id          String       @id @default(cuid())
-  sessionId   String       @db.VarChar(128)
+  id          String      @id @default(cuid())
+  sessionId   String      @db.VarChar(128)
   url         String
-  webhookType String       @default("messages.upsert") @db.VarChar(128)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  UserSession UserSession? @relation(fields: [sessionId], references: [sessionId])
+  webhookType String      @default("messages.upsert") @db.VarChar(128)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  UserSession UserSession @relation(fields: [sessionId], references: [sessionId])
 
   @@index([sessionId])
 }
@@ -318,6 +317,7 @@ model UserSession {
   Session       Session[]
   user          User            @relation(fields: [userId], references: [id])
   Webhook       Webhook[]
+  isActive      Boolean?        @default(true)
 
   @@index([sessionId])
   @@index([userId])
