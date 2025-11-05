@@ -34,16 +34,16 @@ export async function init() {
 			continue;
 		}
 
-		logger.info("init: creating session", { sessionId, userId: effectiveUserId });
-
 		const isActive = await prisma.userSession.findFirst({
 			where: {
 				sessionId,
 			},
 		});
 
-		if (isActive?.isActive)
+		if (isActive?.isActive) {
+			logger.info(`init: creating session ${sessionId}`);
 			createSession({ sessionId, userId: effectiveUserId, readIncomingMessages, socketConfig });
+		}
 	}
 }
 //git pull && pm2 restart baileys-api && pm2 logs baileys-api
