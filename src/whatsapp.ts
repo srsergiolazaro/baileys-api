@@ -20,17 +20,30 @@ export async function init() {
 	logger.info("init: loaded session-config rows", { count: sessions.length });
 
 	for (const { sessionId, data } of sessions) {
-		const { readIncomingMessages, ...socketConfig } = JSON.parse(data);
-		const userSession = await prisma.userSession.findFirst({
-			where: {
-				sessionId,
-				isActive: true,
-			},
-		});
+		try {
+			const { readIncomingMessages, ...socketConfig } = JSON.parse(data);
 
-		if (userSession) {
+			const userSession = await prisma.userSession.findFirst({
+				where: { sessionId, isActive: true },
+			});
+
+			if (!userSession) {
+				logger.warn(`init: skipping inactive or missing session ${sessionId}`);
+				continue;
+			}
+
 			logger.info(`init: creating session ${sessionId}`);
-			createSession({ sessionId, userId: userSession.userId, readIncomingMessages, socketConfig });
+			// 👇 No esperes createSession() — déjala correr en segundo plano
+			createSession({
+				sessionId,
+				userId: userSession.userId,
+				readIncomingMessages,
+				socketConfig,
+			}).catch((err) => {
+				logger.error(`init: failed to create session ${sessionId}`, err);
+			});
+		} catch (err) {
+			logger.error(`init: error processing session ${sessionId}`, err);
 		}
 	}
 }
