@@ -65,28 +65,36 @@ export default function groupMetadataHandler(sessionId: string, event: BaileysEv
 				);
 			}
 
+			// 👇 Aseguramos que participants sea un array de objetos
+			let groupParticipants = (metadata.participants as any[]) ?? [];
+
 			switch (action) {
 				case "add":
-					metadata.participants.push(
-						participants.map((id) => ({ id, isAdmin: false, isSuperAdmin: false })),
-					);
+					groupParticipants = [
+						...groupParticipants,
+						...participants.map((id) => ({
+							id,
+							isAdmin: false,
+							isSuperAdmin: false,
+						})),
+					];
 					break;
+
 				case "demote":
 				case "promote":
-					for (const participant of metadata.participants) {
-						if (participants.includes(participant.id)) {
-							participant.isAdmin = action === "promote";
-						}
-					}
+					groupParticipants = groupParticipants.map((p) =>
+						participants.includes(p.id) ? { ...p, isAdmin: action === "promote" } : p,
+					);
 					break;
+
 				case "remove":
-					metadata.participants = metadata.participants.filter((p) => !participants.includes(p.id));
+					groupParticipants = groupParticipants.filter((p) => !participants.includes(p.id));
 					break;
 			}
 
 			await model.update({
 				select: { pkId: true },
-				data: transformPrisma({ participants: metadata.participants }),
+				data: transformPrisma({ participants: groupParticipants }),
 				where: { sessionId_id: { id, sessionId } },
 			});
 		} catch (e) {
