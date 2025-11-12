@@ -19,15 +19,11 @@ export async function init() {
 	});
 	logger.info(`init: loaded session-config rows sessions ${sessions.length}`);
 
-	for (const { sessionId, data } of sessions) {
+	for (const { sessionId, data, userId } of sessions) {
 		try {
 			const { readIncomingMessages, ...socketConfig } = JSON.parse(data);
 
-			const userSession = await prisma.userSession.findFirst({
-				where: { sessionId, isActive: true },
-			});
-
-			if (!userSession) {
+			if (!userId) {
 				logger.warn(`init: skipping inactive or missing session ${sessionId}`);
 				continue;
 			}
@@ -36,7 +32,7 @@ export async function init() {
 			// 👇 No esperes createSession() — déjala correr en segundo plano
 			createSession({
 				sessionId,
-				userId: userSession.userId,
+				userId,
 				readIncomingMessages,
 				socketConfig,
 			}).catch((err) => {
