@@ -351,18 +351,35 @@ export async function createSession(options: createSessionOptions) {
 	socket.ev.on("creds.update", saveCreds);
 	socket.ev.on("connection.update", (update) => {
 		connectionState = update;
-		const { connection } = update;
-		logger.info("connection.update", { sessionId, connection, hasRes: !!res, SSE });
+		const { connection, lastDisconnect } = update;
+		const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
+
+		logger.info("connection.update", { sessionId, connection, statusCode, hasRes: !!res, SSE });
 
 		if (connection === "open") {
 			retries.delete(sessionId);
 			SSEQRGenerations.delete(sessionId);
+
 			if (res && !res.writableEnded) {
 				res.end();
 				return;
 			}
 		}
-		if (connection === "close") handleConnectionClose();
+
+		if (connection === "close") {
+			// ✅ Detección de cierre permanente (oficial)
+			if (statusCode === DisconnectReason.loggedOut) {
+				logger.warn("❌ Sesión cerrada permanentemente. No reconectar.", { sessionId });
+				// Limpieza completa y logout
+				destroy(true);
+				return;
+			}
+
+			// 🔁 Desconexión temporal → reintenta
+			logger.info("🔁 Desconexión temporal, reconectando...", { sessionId, statusCode });
+			handleConnectionClose();
+		}
+
 		handleConnectionUpdate();
 	});
 
