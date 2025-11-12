@@ -17,7 +17,7 @@ export async function init() {
 		select: { sessionId: true, data: true, userId: true },
 		where: { id: { startsWith: SESSION_CONFIG_ID } },
 	});
-	logger.info("init: loaded session-config rows", { count: sessions.length });
+	logger.info(`init: loaded session-config rows sessions ${sessions.length}`);
 
 	for (const { sessionId, data } of sessions) {
 		try {
