@@ -7,9 +7,16 @@ import swaggerSpec from "./swagger";
 import express, { type Request, type Response } from "express";
 dotenv.config();
 
+console.log("🚀 Iniciando servidor... cargando configuraciones...");
+
 const app = express();
+console.log("✔️  Express inicializado");
+
 app.use(cors());
+console.log("✔️  CORS habilitado");
+
 app.use(express.json());
+console.log("✔️  Middleware JSON habilitado");
 
 // Configuración de Swagger UI
 const swaggerUiOptions = {
@@ -18,42 +25,49 @@ const swaggerUiOptions = {
 	customfavIcon: "/favicon.ico",
 	swaggerOptions: {
 		persistAuthorization: true,
-		docExpansion: "none" as const,
+		docExpansion: "none",
 		filter: true,
 		defaultModelsExpandDepth: -1,
 	},
-} as const;
+};
+
+console.log("✔️  Configuración de Swagger lista");
 
 // Serve Swagger UI
-app.use(
-	"/api-docs",
-	swaggerUi.serve,
-	swaggerUi.setup(swaggerSpec, swaggerUiOptions)
-);
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerUiOptions));
+console.log("✔️  Swagger UI montado en /api-docs");
 
-// Endpoint para obtener la especificación de Swagger en formato JSON
-app.get("/swagger.json", (req: Request, res: Response) => {
+// Endpoint para obtener swagger.json
+app.get("/swagger.json", (_: Request, res: Response) => {
+	console.log("📄 Petición recibida: /swagger.json");
 	res.setHeader("Content-Type", "application/json");
 	res.send(swaggerSpec);
 });
 
 app.use("/", routes);
+console.log("✔️  Rutas principales cargadas");
 
-app.all("*", (_: Request, res: Response) => res.status(404).json({ error: "URL not found" }));
+app.all("*", (_: Request, res: Response) => {
+	console.warn("⚠️ Ruta no encontrada");
+	return res.status(404).json({ error: "URL not found" });
+});
 
 import { startCluster } from "./cluster";
 
 const host = process.env.HOST || "0.0.0.0";
-// The PORT env var will be handled by the cluster manager for workers
-// For the master, it uses the initial PORT env var
+
+console.log("🔧 Iniciando cluster...");
 
 startCluster(async (workerId, totalWorkers) => {
-	// Worker logic
+	console.log(`🧵 [worker ${workerId}] iniciado. Total workers: ${totalWorkers}`);
+
 	const port = Number(process.env.PORT);
 
+	console.log(`🔍 [worker ${workerId}] ejecutando init()...`);
 	await init(workerId, totalWorkers);
+	console.log(`✔️ [worker ${workerId}] init() terminado`);
 
 	app.listen(port, () => {
-		console.log(`[worker ${workerId}]: Server is running at http://${host}:${port}`);
+		console.log(`✅ [worker ${workerId}]: Server running at http://${host}:${port}`);
 	});
 });
