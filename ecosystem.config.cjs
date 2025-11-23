@@ -3,18 +3,12 @@ module.exports = {
         {
             name: "baileys-api",
             script: "dist/index.js",
-            cwd: __dirname,
+            exec_mode: "fork",
             instances: 1,
-            autorestart: true,
-            watch: false,
+            node_args: "--enable-source-maps",
             env: {
                 NODE_ENV: "production"
-            },
-            // 👇 Esto hace que cada reinicio compile y ejecute tu script de fix
-            post_update: [
-                "npm install",
-                "npm run build"
-            ]
+            }
         }
     ]
-}
+};

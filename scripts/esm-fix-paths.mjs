@@ -28,9 +28,30 @@ async function resolveSpecifier(dir, spec) {
 
 	// Relative imports "./" "../"
 	if (spec.startsWith("./") || spec.startsWith("../")) {
-		const targetBase = path.join(dir, spec);
-		return await resolveTarget(dir, targetBase);
+		let target = path.join(fileDir, spec);
+
+		// Si apunta a un directorio => añade index.js
+		if (await pathExists(target) && (await fs.lstat(target)).isDirectory()) {
+			target = path.join(target, "index.js");
+			return toPosixRelative(fileDir, target);
+		}
+
+		// Si no tiene extensión => intenta .js
+		if (!ensureExtension(spec)) {
+			const candidateFile = `${target}.js`;
+			if (await pathExists(candidateFile)) {
+				target = candidateFile;
+			} else {
+				const candidateIndex = path.join(target, "index.js");
+				if (await pathExists(candidateIndex)) {
+					target = candidateIndex;
+				}
+			}
+		}
+
+		return toPosixRelative(fileDir, target);
 	}
+
 
 	return spec;
 }
