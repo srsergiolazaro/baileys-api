@@ -3,6 +3,7 @@ onlyBuiltDependencies:
   - '@prisma/engines'
   - '@scarf/scarf'
   - baileys
+  - esbuild
   - prisma
   - protobufjs
   - sharp
