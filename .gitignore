@@ -9,3 +9,4 @@ prisma/migrations/
 lumi
 lumipanel
 $HOME
+logs/
