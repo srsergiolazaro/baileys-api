@@ -46,12 +46,19 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 						// Transform the message data for Prisma
 						const data = transformPrisma(messageData) as MakeTransformedPrisma<Message>;
 
+						const ts = message.messageTimestamp;
+						const messageTimestampBigInt =
+							ts && typeof ts === "object" && "toString" in ts
+								? BigInt(ts.toString())
+								: ts ? BigInt(ts) : null;
+
 						// Only include fields that exist in the Prisma schema
 						const prismaData = {
 							...data,
 							remoteJid: jid,
 							id: message.key.id!,
 							sessionId,
+							messageTimestamp: messageTimestampBigInt,
 							messageStubParameters: [],
 							labels: [],
 							userReceipt: [],
