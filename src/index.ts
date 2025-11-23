@@ -52,22 +52,21 @@ app.all("*", (_: Request, res: Response) => {
 	return res.status(404).json({ error: "URL not found" });
 });
 
-import { startCluster } from "./cluster";
-
 const host = process.env.HOST || "0.0.0.0";
+const port = Number(process.env.PORT || 3000);
 
-console.log("🔧 Iniciando cluster...");
+console.log("🔧 Iniciando servidor...");
 
-startCluster(async (workerId, totalWorkers) => {
-	console.log(`🧵 [worker ${workerId}] iniciado. Total workers: ${totalWorkers}`);
+// Initialize WhatsApp sessions
+init().then(() => {
+	console.log("✔️ Inicialización de sesiones completada");
 
-	const port = Number(process.env.PORT);
-
-	console.log(`🔍 [worker ${workerId}] ejecutando init()...`);
-	await init(workerId, totalWorkers);
-	console.log(`✔️ [worker ${workerId}] init() terminado`);
-
-	app.listen(port, () => {
-		console.log(`✅ [worker ${workerId}]: Server running at http://${host}:${port}`);
+	// Start server
+	app.listen(port, host, () => {
+		console.log(`✅ Server running at http://${host}:${port}`);
+		console.log(`📚 API Docs available at http://${host}:${port}/api-docs`);
 	});
+}).catch((error) => {
+	console.error("❌ Error durante la inicialización:", error);
+	process.exit(1);
 });

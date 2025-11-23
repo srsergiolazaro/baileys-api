@@ -115,16 +115,9 @@ export function startCluster(appWorker: (workerId: number, totalWorkers: number)
         });
     } else {
         // Worker Process
-        // Support both PM2 cluster mode and custom cluster mode
-        const isPM2 = process.env.PM2_HOME !== undefined;
-        const workerId = isPM2
-            ? Number(process.env.NODE_APP_INSTANCE || 0)  // PM2 uses NODE_APP_INSTANCE
-            : Number(process.env.WORKER_ID || 0);
-        const totalWorkers = isPM2
-            ? Number(process.env.PM2_INSTANCES || 1)  // PM2 total instances
-            : Number(process.env.TOTAL_WORKERS || 1);
-
-        logger.info(`Worker ${process.pid} started (ID: ${workerId}, PM2: ${isPM2})`);
+        const workerId = Number(process.env.WORKER_ID);
+        const totalWorkers = Number(process.env.TOTAL_WORKERS);
+        logger.info(`Worker ${process.pid} started (ID: ${workerId})`);
 
         appWorker(workerId, totalWorkers);
     }

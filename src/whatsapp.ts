@@ -10,8 +10,8 @@ export {
     sessionExists,
 } from "./services/session";
 
-export async function init(workerId?: number, totalWorkers?: number) {
-    console.log("🚀 init: iniciando carga de sesiones", { workerId, totalWorkers });
+export async function init() {
+    console.log("🚀 init: iniciando carga de sesiones");
 
     const userSessions = await prisma.userSession.findMany({
         select: { sessionId: true, data: true, userId: true },
@@ -19,43 +19,17 @@ export async function init(workerId?: number, totalWorkers?: number) {
     });
 
     console.log("📦 init: sesiones activas obtenidas", {
-        count: userSessions.length,
-        workerId
+        count: userSessions.length
     });
 
     const processedUsers = new Set<string>();
 
     for (const { sessionId, data, userId } of userSessions) {
-        console.log("🔍 init: procesando sesión", { sessionId, userId, workerId });
+        console.log("🔍 init: procesando sesión", { sessionId, userId });
 
         if (!data) {
             console.log("⚠️ init: saltando sesión por falta de data", { sessionId, userId });
             continue;
-        }
-
-        // Sharding
-        if (workerId !== undefined && totalWorkers !== undefined) {
-            let hash = 0;
-            for (let i = 0; i < sessionId.length; i++) {
-                hash = sessionId.charCodeAt(i) + ((hash << 5) - hash);
-            }
-            const assignedWorker = Math.abs(hash) % totalWorkers;
-
-            console.log("🧮 init: sharding calculado", {
-                sessionId,
-                assignedWorker,
-                workerId
-            });
-
-            if (assignedWorker !== workerId) {
-                console.log("➡️ init: sesión asignada a otro worker, se omite", {
-                    sessionId,
-                    userId,
-                    assignedWorker,
-                    workerId
-                });
-                continue;
-            }
         }
 
         const { readIncomingMessages, ...socketConfig } = JSON.parse(data);
@@ -72,14 +46,13 @@ export async function init(workerId?: number, totalWorkers?: number) {
 
         console.log("🟢 init: creando sesión de WhatsApp", {
             sessionId,
-            userId,
-            workerId
+            userId
         });
 
         createSession({ sessionId, userId, readIncomingMessages, socketConfig });
     }
 
-    console.log("🏁 init: todas las sesiones han sido procesadas", { workerId });
+    console.log("🏁 init: todas las sesiones han sido procesadas");
 }
 
 //git pull && pm2 restart baileys-api && pm2 logs baileys-api
