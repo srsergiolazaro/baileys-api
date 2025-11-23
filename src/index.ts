@@ -26,9 +26,9 @@ const swaggerUiOptions = {
 
 // Serve Swagger UI
 app.use(
-    "/api-docs",
-    swaggerUi.serve,
-    swaggerUi.setup(swaggerSpec, swaggerUiOptions)
+	"/api-docs",
+	swaggerUi.serve,
+	swaggerUi.setup(swaggerSpec, swaggerUiOptions)
 );
 
 // Endpoint para obtener la especificación de Swagger en formato JSON
@@ -41,13 +41,19 @@ app.use("/", routes);
 
 app.all("*", (_: Request, res: Response) => res.status(404).json({ error: "URL not found" }));
 
-const host = process.env.HOST || "0.0.0.0";
-const port = Number(process.env.PORT || 3000);
+import { startCluster } from "./cluster";
 
-(async () => {
-	await init();
+const host = process.env.HOST || "0.0.0.0";
+// The PORT env var will be handled by the cluster manager for workers
+// For the master, it uses the initial PORT env var
+
+startCluster(async (workerId, totalWorkers) => {
+	// Worker logic
+	const port = Number(process.env.PORT);
+
+	await init(workerId, totalWorkers);
+
 	app.listen(port, () => {
-		console.log(`[server]: Server is running at http://${host}:${port}`);
-		console.log(`[docs]: API documentation available at http://${host}:${port}/api-docs`);
+		console.log(`[worker ${workerId}]: Server is running at http://${host}:${port}`);
 	});
-})();
+});
