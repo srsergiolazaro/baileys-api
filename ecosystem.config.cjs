@@ -7,8 +7,10 @@ module.exports = {
             exec_mode: "cluster",
             autorestart: true,
             watch: false,
+            instance_var: "NODE_APP_INSTANCE",  // PM2 will set this for each instance
             env: {
                 NODE_ENV: "production",
+                PM2_INSTANCES: 1,  // Should match 'instances' above
             },
             post_update: [
                 "npm install",
