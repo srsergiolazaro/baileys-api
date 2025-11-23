@@ -5,7 +5,7 @@ import makeWASocket, {
 	isJidBroadcast,
 	makeCacheableSignalKeyStore,
 } from "baileys";
-import type { ConnectionState, SocketConfig, WASocket, proto } from "baileys";
+import type { ConnectionState, GroupParticipant, ParticipantAction, SocketConfig } from "baileys";
 import { Store, useSession } from "../store";
 import { prisma } from "../db";
 import { logger } from "../shared";
@@ -75,27 +75,47 @@ export async function createSession(options: createSessionOptions) {
 	// Ensure one UserSession per user atomically (avoids race conditions)
 	const now = new Date();
 	try {
-		await prisma.userSession.upsert({
-			where: { userId },
-			update: {
-				sessionId,
-				status: "active",
-				deviceName: "WhatsApp User",
-				lastActive: now,
-				updatedAt: now,
-			},
-			create: {
-				id: sessionId,
-				sessionId,
-				userId,
-				status: "active",
-				phoneNumber: null,
-				deviceName: "WhatsApp User",
-				createdAt: now,
-				updatedAt: now,
-				lastActive: now,
+		// ----- LA SOLUCIÓN CORRECTA SIN MODIFICAR EL ESQUEMA -----
+		const now = new Date();
+		// Paso 1: Busca si ya existe una sesión con este sessionId.
+		// Usamos findFirst en lugar de findUnique por flexibilidad.
+		const session = await prisma.userSession.findFirst({
+			where: {
+				sessionId: sessionId,
 			},
 		});
+
+		if (session) {
+			// Paso 2a: Si la sesión ya existe, la actualizamos.
+			await prisma.userSession.update({
+				where: {
+					// Usamos el 'id' del registro que encontramos para actualizarlo.
+					id: session.id,
+				},
+				data: {
+					status: "active",
+					lastActive: now,
+					updatedAt: now,
+				},
+			});
+		} else {
+			// Paso 2b: Si no existe, la creamos.
+			// ¡IMPORTANTE! No pasamos el campo 'id' en la data.
+			// Dejamos que Prisma lo genere automáticamente con cuid().
+			await prisma.userSession.create({
+				data: {
+					// id: sessionId, <-- ESTA LÍNEA SE ELIMINA
+					sessionId,
+					userId,
+					status: "active",
+					deviceName: "WhatsApp User",
+					phoneNumber: null,
+					createdAt: now,
+					updatedAt: now,
+					lastActive: now,
+				},
+			});
+		}
 	} catch (error) {
 		if (error instanceof PrismaClientKnownRequestError) {
 			if (error.code === "P2025") {
@@ -150,7 +170,7 @@ export async function createSession(options: createSessionOptions) {
 				prisma.contact.deleteMany({ where: { sessionId } }),
 				prisma.message.deleteMany({ where: { sessionId } }),
 				prisma.groupMetadata.deleteMany({ where: { sessionId } }),
-				prisma.userSession.delete({ where: { sessionId } }),
+				prisma.userSession.deleteMany({ where: { sessionId } }),
 				prisma.webhook.deleteMany({ where: { sessionId } }),
 				prisma.session.deleteMany({ where: { sessionId } }),
 			]);
@@ -261,9 +281,6 @@ export async function createSession(options: createSessionOptions) {
 
 			if (res && !res.writableEnded) {
 				res.end();
-			}
-			if (connectionState.connection !== "open") {
-				await destroy();
 			} else {
 				logger.info("Session remains active after SSE completion", { sessionId });
 			}
@@ -323,7 +340,7 @@ export async function createSession(options: createSessionOptions) {
 			await originalSendRetryRequest(...args);
 		} catch (error) {
 			if (isConnectionClosedError(error)) {
-				logger.warn({ sessionId }, "sendRetryRequest skipped because connection already closed");
+				logger.warn({ sessionId }, "sendRetryRequest skipped (connection already closed)");
 				return;
 			}
 			throw error;
@@ -333,18 +350,35 @@ export async function createSession(options: createSessionOptions) {
 	socket.ev.on("creds.update", saveCreds);
 	socket.ev.on("connection.update", (update) => {
 		connectionState = update;
-		const { connection } = update;
-		logger.info("connection.update", { sessionId, connection, hasRes: !!res, SSE });
+		const { connection, lastDisconnect } = update;
+		const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
+
+		logger.info("connection.update", { sessionId, connection, statusCode, hasRes: !!res, SSE });
 
 		if (connection === "open") {
 			retries.delete(sessionId);
 			SSEQRGenerations.delete(sessionId);
+
 			if (res && !res.writableEnded) {
 				res.end();
 				return;
 			}
 		}
-		if (connection === "close") handleConnectionClose();
+
+		if (connection === "close") {
+			// ✅ Detección de cierre permanente (oficial)
+			if (statusCode === DisconnectReason.loggedOut) {
+				logger.warn("❌ Sesión cerrada permanentemente. No reconectar.", { sessionId });
+				// Limpieza completa y logout
+				destroy(true);
+				return;
+			}
+
+			// 🔁 Desconexión temporal → reintenta
+			logger.info("🔁 Desconexión temporal, reconectando...", { sessionId, statusCode });
+			handleConnectionClose();
+		}
+
 		handleConnectionUpdate();
 	});
 
@@ -352,9 +386,10 @@ export async function createSession(options: createSessionOptions) {
 		handleMessagesUpsert(socket, m, sessionId, readIncomingMessages),
 	);
 
-	socket.ev.on("group-participants.update", (c) =>
+	socket.ev.on("group-participants.update", (c: any) =>
 		handleGroupParticipantsUpdate(socket, c, sessionId),
 	);
+
 
 	try {
 		await prisma.userSession.update({
