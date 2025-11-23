@@ -72,6 +72,8 @@ model Contact {
   status        String?      @db.VarChar(128)
   userId        String?
   userSessionId String?
+  lid           String?      @db.VarChar(128)
+  phoneNumber   String?      @db.VarChar(128)
   UserSession   UserSession? @relation(fields: [userSessionId], references: [id])
 
   @@unique([sessionId, id], map: "unique_contact_id_per_session_id")
@@ -99,6 +101,11 @@ model GroupMetadata {
   addressingMode    String?      @db.VarChar(10)
   userId            String?
   userSessionId     String?
+  descOwnerPn       String?      @db.VarChar(128)
+  ownerPn           String?      @db.VarChar(128)
+  subjectOwnerPn    String?      @db.VarChar(128)
+  author            String?
+  authorPn          String?
   UserSession       UserSession? @relation(fields: [userSessionId], references: [id])
 
   @@unique([sessionId, id], map: "unique_groupmetadata_id_per_session_id")
@@ -157,6 +164,11 @@ model Message {
   statusAlreadyViewd              Boolean?
   userId                          String?
   userSessionId                   String?
+  addressingMode                  String?      @db.VarChar(10)
+  participantAlt                  String?      @db.VarChar(128)
+  remoteJidAlt                    String?      @db.VarChar(128)
+  statusMentionSources            Json[]       @default([])
+  supportAiCitations              Json[]       @default([])
   UserSession                     UserSession? @relation(fields: [userSessionId], references: [id])
 
   @@unique([sessionId, remoteJid, id], map: "unique_message_id_per_session_id")
@@ -164,11 +176,10 @@ model Message {
 }
 
 model Session {
-  pkId        Int          @id @default(autoincrement())
-  sessionId   String       @db.VarChar(128)
-  id          String       @db.VarChar(255)
-  data        String
-  userSession UserSession? @relation(fields: [sessionId], references: [id])
+  pkId      Int    @id @default(autoincrement())
+  sessionId String @db.VarChar(128)
+  id        String @db.VarChar(255)
+  data      String
 
   @@unique([sessionId, id], map: "unique_session_id_per_session_id")
   @@index([sessionId])
@@ -202,15 +213,13 @@ model Image {
 }
 
 model Webhook {
-  id            String       @id @default(cuid())
-  sessionId     String       @db.VarChar(128)
-  url           String
-  webhookType   String       @default("messages.upsert") @db.VarChar(128)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  userId        String?
-  userSessionId String?
-  UserSession   UserSession? @relation(fields: [userSessionId], references: [id])
+  id          String      @id @default(cuid())
+  sessionId   String      @db.VarChar(128)
+  url         String
+  webhookType String      @default("messages.upsert") @db.VarChar(128)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  UserSession UserSession @relation(fields: [sessionId], references: [sessionId])
 
   @@index([sessionId])
 }
@@ -239,7 +248,7 @@ model User {
   updatedAt     DateTime
   status        String        @default("active") @db.VarChar(50)
   ApiKey        ApiKey[]
-  UserSession   UserSession?
+  UserSession   UserSession[]
   user_sessions user_logins[]
 
   @@map("user")
@@ -290,22 +299,21 @@ model Verification {
 
 model UserSession {
   id            String          @id @default(cuid())
-  userId        String          @unique @db.VarChar(128)
+  userId        String          @db.VarChar(128)
   sessionId     String          @unique @db.VarChar(128)
   status        String          @default("active") @db.VarChar(50)
   phoneNumber   String?         @db.VarChar(50)
   deviceName    String?         @db.VarChar(128)
-  data          String?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime
   lastActive    DateTime        @default(now())
+  data          String?
   ApiKey        ApiKey[]
   Chat          Chat[]
   Contact       Contact[]
   GroupMetadata GroupMetadata[]
   Message       Message[]
   Product       Product[]
-  Session       Session[]
   user          User            @relation(fields: [userId], references: [id])
   Webhook       Webhook[]
 
