@@ -42,10 +42,10 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 						// Remove unsupported fields
 						const { statusMentions, messageAddOns, ...restOfMessage } = message;
 						const messageData = { ...restOfMessage };
-						
+
 						// Transform the message data for Prisma
 						const data = transformPrisma(messageData) as MakeTransformedPrisma<Message>;
-						
+
 						// Only include fields that exist in the Prisma schema
 						const prismaData = {
 							...data,
@@ -57,8 +57,9 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 							userReceipt: [],
 							reactions: [],
 							pollUpdates: [],
-							eventResponses: []
-							// Removed supportAiCitations as it's not in the schema
+							eventResponses: [],
+							statusMentionSources: [],
+							supportAiCitations: []
 						};
 
 						try {
@@ -66,18 +67,18 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 								select: { pkId: true },
 								create: prismaData,
 								update: data,
-								where: { 
-									sessionId_remoteJid_id: { 
-										remoteJid: jid, 
-										id: message.key.id!, 
-										sessionId 
-									} 
+								where: {
+									sessionId_remoteJid_id: {
+										remoteJid: jid,
+										id: message.key.id!,
+										sessionId
+									}
 								},
 							});
 						} catch (error) {
 							// Log the full error for debugging
-							logger.error({ 
-								error, 
+							logger.error({
+								error,
 								message: 'Failed to upsert message',
 								messageId: message.key.id,
 								remoteJid: jid,

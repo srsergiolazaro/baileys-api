@@ -17,13 +17,13 @@ export default function chatHandler(sessionId: string, event: BaileysEventEmitte
 				const existingIds = (
 					await tx.chat.findMany({
 						select: { id: true },
-						where: { id: { in: chats.map((c) => c.id) }, sessionId },
+						where: { id: { in: chats.map((c) => c.id).filter((id): id is string => !!id) }, sessionId },
 					})
 				).map((i) => i.id);
 				const chatsAdded = (
 					await tx.chat.createMany({
 						data: chats
-							.filter((c) => !existingIds.includes(c.id))
+							.filter((c) => c.id && !existingIds.includes(c.id))
 							.map((c) => ({
 								...(transformPrisma(c) as MakeTransformedPrisma<Chat>),
 								sessionId,
