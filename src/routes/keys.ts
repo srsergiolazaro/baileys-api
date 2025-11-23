@@ -5,47 +5,7 @@ import { apiKeyValidator } from "@/middlewares/api-key-validator";
 
 const router = Router();
 
-/**
- * @swagger
- * /keys/test:
- *   get:
- *     summary: Test API key authentication
- *     tags: [API Keys]
- *     security:
- *       - ApiKeyAuth: []
- *       - SessionId : []
- *     responses:
- *       200:
- *         description: API key is valid
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "API key is valid"
- *                 timestamp:
- *                   type: string
- *                   format: date-time
- *       400:
- *         description: Bad Request - Session ID is required
- *       401:
- *         description: Unauthorized - Invalid or missing API key
- *       500:
- *         description: Internal server error
- */
-router.get("/test", apiKeyValidator, (req, res) => {
-	console.log("Test");
-	res.status(200).json({
-		success: true,
-		message: "API key is valid",
-		timestamp: new Date().toISOString(),
-	});
-});
+
 
 /**
  *

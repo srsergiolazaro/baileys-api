@@ -18,7 +18,6 @@ export const list: RequestHandler = async (req, res) => {
 		if (!exists) return res.status(400).json({ error: "JID does not exist" });
 
 		const products = await session.getCatalog({ jid: formatJid });
-		console.log(products);
 		return res.status(200).json(products);
 	} catch (error) {
 		const message = "An error occurred during product list";
