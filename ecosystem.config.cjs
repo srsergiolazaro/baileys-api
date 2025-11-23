@@ -3,12 +3,17 @@ module.exports = {
         {
             name: "baileys-api",
             script: "dist/index.js",
-            exec_mode: "fork",
             instances: 1,
-            node_args: "--enable-source-maps",
+            exec_mode: "cluster",
+            autorestart: true,
+            watch: false,
             env: {
-                NODE_ENV: "production"
-            }
+                NODE_ENV: "production",
+            },
+            post_update: [
+                "npm install",
+                "npm run build"
+            ]
         }
     ]
-};
+}
