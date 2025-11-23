@@ -46,12 +46,7 @@ export async function handleMessagesUpsert(
 	} else if (messageContent && "text" in messageContent) {
 		text = messageContent.text ?? "";
 	}
-	console.log("key", message.key);
-	if (message.key) {
-		console.log("Mensaje enviado:", text);
-	} else {
-		console.log("Mensaje recibido:", text);
-	}
+
 
 	try {
 		const webhooks = await prisma.webhook.findMany({
