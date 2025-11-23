@@ -61,8 +61,8 @@ export async function createSession(options: createSessionOptions) {
 		readIncomingMessages = false,
 		socketConfig,
 	} = options;
-	if (res && !res.writableEnded) {
-		res.write("sessionId " + sessionId);
+	if (res && !res.writableEnded && SSE) {
+		res.write(`data: ${JSON.stringify({ sessionId })}\n\n`);
 	}
 
 	logger.info("createSession: start", {
@@ -287,7 +287,7 @@ export async function createSession(options: createSessionOptions) {
 			return;
 		}
 
-		const data = { ...connectionState, qr };
+		const data = { ...connectionState, qr, sessionId };
 		if (qr) {
 			SSEQRGenerations.set(sessionId, currentGenerations + 1);
 		}
