@@ -5,135 +5,93 @@ import { fileURLToPath } from "node:url";
 const currentFile = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(currentFile), "..");
 const distRoot = path.join(root, "dist");
-const aliasPattern = /(?<=from\s+['"])(@\/[^'"]+)(?=['"])/g;
-const dynamicAliasPattern = /(?<=import\s*\(\s*['"])(@\/[^'"]+)(?=['"]\s*\))/g;
-const relativePattern = /(?<=from\s+['"])(\.{1,2}\/[^'"]+)(?=['"])/g;
-const dynamicRelativePattern = /(?<=import\s*\(\s*['"])(\.{1,2}\/[^'"]+)(?=['"]\s*\))/g;
-const exportAliasPattern = /(?<=export\s+\*\s+from\s+['"])(@\/[^'"]+)(?=['"])/g;
-const exportRelativePattern = /(?<=export\s+\*\s+from\s+['"])(\.{1,2}\/[^'"]+)(?=['"])/g;
 
-async function pathExists(target) {
+async function pathExists(p) {
 	try {
-		await fs.access(target);
+		await fs.access(p);
 		return true;
 	} catch {
 		return false;
 	}
 }
 
-function toPosixRelative(fromDir, target) {
-	const relative = path.relative(fromDir, target).replace(/\\/g, "/");
-	if (relative.startsWith("../") || relative.startsWith("./")) {
-		return relative;
-	}
-	return `./${relative}`;
+function toPosix(p) {
+	return p.replace(/\\/g, "/");
 }
 
-function ensureExtension(spec) {
-	return /\.[a-z0-9]+$/i.test(spec);
-}
-
-async function resolveSpecifier(fileDir, spec) {
+async function resolveSpecifier(dir, spec) {
+	// ALIAS "@/..."
 	if (spec.startsWith("@/")) {
-		let target = path.join(distRoot, spec.slice(2));
-		if (!(await pathExists(target))) {
-			const candidateFile = `${target}.js`;
-			if (await pathExists(candidateFile)) {
-				target = candidateFile;
-			} else {
-				const candidateIndex = path.join(target, "index.js");
-				if (await pathExists(candidateIndex)) {
-					target = candidateIndex;
-				} else {
-					return spec;
-				}
-			}
-			return toPosixRelative(fileDir, target);
-		}
-		return toPosixRelative(fileDir, target);
+		const targetBase = path.join(distRoot, spec.replace("@/", ""));
+		return await resolveTarget(dir, targetBase);
 	}
 
+	// Relative imports "./" "../"
 	if (spec.startsWith("./") || spec.startsWith("../")) {
-		if (ensureExtension(spec)) {
-			return toPosixRelative(fileDir, path.join(fileDir, spec)).replace(/^\.\//, "./");
-		}
-
-		let target = path.join(fileDir, spec);
-		if (!(await pathExists(target))) {
-			const candidateFile = `${target}.js`;
-			if (await pathExists(candidateFile)) {
-				target = candidateFile;
-			} else {
-				const candidateIndex = path.join(target, "index.js");
-				if (await pathExists(candidateIndex)) {
-					target = candidateIndex;
-				} else {
-					return spec;
-				}
-			}
-		}
-
-		return toPosixRelative(fileDir, target);
+		const targetBase = path.join(dir, spec);
+		return await resolveTarget(dir, targetBase);
 	}
 
 	return spec;
 }
 
-async function transformFile(filePath) {
-	let content = await fs.readFile(filePath, "utf8");
-	const dir = path.dirname(filePath);
+async function resolveTarget(fromDir, targetBase) {
+	// 1. Si existe archivo exacto (con extensión)
+	if (await pathExists(targetBase)) {
+		return toPosix(path.relative(fromDir, targetBase).replace(/^([^\.])/, "./$1"));
+	}
 
-	const replaceUsingPattern = async (pattern) => {
-		const matches = [...content.matchAll(pattern)];
-		if (matches.length === 0) return;
-
-		const replacements = await Promise.all(
-			matches.map(async (match) => ({
-				index: match.index ?? 0,
-				length: match[0].length,
-				replacement: await resolveSpecifier(dir, match[0]),
-			})),
-		);
-
-		let offset = 0;
-		for (const { index, length, replacement } of replacements) {
-			content =
-				content.slice(0, index + offset) +
-				replacement +
-				content.slice(index + offset + length);
-			offset += replacement.length - length;
+	// 2. Si existe target.js
+	if (!(targetBase.endsWith(".js"))) {
+		const fileJs = targetBase + ".js";
+		if (await pathExists(fileJs)) {
+			return toPosix(path.relative(fromDir, fileJs).replace(/^([^\.])/, "./$1"));
 		}
-	};
+	}
 
-	await replaceUsingPattern(aliasPattern);
-	await replaceUsingPattern(dynamicAliasPattern);
-	await replaceUsingPattern(relativePattern);
-	await replaceUsingPattern(dynamicRelativePattern);
-	await replaceUsingPattern(exportAliasPattern);
-	await replaceUsingPattern(exportRelativePattern);
+	// 3. Si existe carpeta con index.js
+	const indexJs = path.join(targetBase, "index.js");
+	if (await pathExists(indexJs)) {
+		return toPosix(path.relative(fromDir, indexJs).replace(/^([^\.])/, "./$1"));
+	}
 
-	await fs.writeFile(filePath, content, "utf8");
+	// No encontrado — deja el spec original
+	return toPosix(path.relative(fromDir, targetBase).replace(/^([^\.])/, "./$1"));
+}
+
+async function transformFile(file) {
+	let code = await fs.readFile(file, "utf8");
+	const dir = path.dirname(file);
+	const regex = /(?<=from\s+['"])([^'"]+)(?=['"])|(?<=import\s*\(\s*['"])([^'"]+)(?=['"])/g;
+
+	const matches = [...code.matchAll(regex)];
+
+	for (const m of matches) {
+		const original = m[0];
+		const resolved = await resolveSpecifier(dir, original);
+
+		if (original !== resolved) {
+			code = code.replace(original, resolved);
+		}
+	}
+
+	await fs.writeFile(file, code, "utf8");
 }
 
 async function walk(dir) {
 	const entries = await fs.readdir(dir, { withFileTypes: true });
-	for (const entry of entries) {
-		const fullPath = path.join(dir, entry.name);
-		if (entry.isDirectory()) {
-			await walk(fullPath);
-		} else if (entry.isFile() && entry.name.endsWith(".js")) {
-			await transformFile(fullPath);
+
+	for (const e of entries) {
+		const full = path.join(dir, e.name);
+
+		if (e.isDirectory()) {
+			await walk(full);
+		}
+		if (e.isFile() && full.endsWith(".js")) {
+			await transformFile(full);
 		}
 	}
 }
 
-async function main() {
-	try {
-		await walk(distRoot);
-	} catch (error) {
-		console.error("Failed to rewrite ESM aliases", error);
-		process.exitCode = 1;
-	}
-}
-
-await main();
+await walk(distRoot);
+console.log("ESM path rewrite completed.");
