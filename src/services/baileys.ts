@@ -172,6 +172,7 @@ export async function createSession(options: createSessionOptions) {
 				prisma.groupMetadata.deleteMany({ where: { sessionId } }),
 				prisma.userSession.deleteMany({ where: { sessionId } }),
 				prisma.webhook.deleteMany({ where: { sessionId } }),
+				prisma.session.deleteMany({ where: { sessionId } }),
 			]);
 			logger.info("Session destroyed", { session: sessionId });
 		} catch (e) {
