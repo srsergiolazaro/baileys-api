@@ -10,17 +10,21 @@ export {
     sessionExists,
 } from "./services/session";
 
-const SESSION_CONFIG_ID = "session-config";
-
 export async function init(workerId?: number, totalWorkers?: number) {
-    const sessions = await prisma.session.findMany({
+    const userSessions = await prisma.userSession.findMany({
         select: { sessionId: true, data: true, userId: true },
-        where: { id: { startsWith: SESSION_CONFIG_ID } },
+        where: { status: "active" },
     });
-    logger.info("init: loaded session-config rows", { count: sessions.length, workerId });
+    logger.info("init: loaded UserSession records", { count: userSessions.length, workerId });
 
     const processedUsers = new Set<string>();
-    for (const { sessionId, data, userId } of sessions) {
+    for (const { sessionId, data, userId } of userSessions) {
+        // Skip if no session config data
+        if (!data) {
+            logger.warn("init: skipping session due to missing data", { sessionId, userId });
+            continue;
+        }
+
         // Sharding Logic
         if (workerId !== undefined && totalWorkers !== undefined) {
             let hash = 0;
@@ -34,25 +38,15 @@ export async function init(workerId?: number, totalWorkers?: number) {
         }
 
         const { readIncomingMessages, ...socketConfig } = JSON.parse(data);
-        let effectiveUserId: string | null = userId;
 
-        if (!userId) {
-            logger.warn(`init: skipping inactive or missing session ${sessionId}`);
-            continue;
-        }
-
-        if (!effectiveUserId) {
-            logger.warn("init: skipping session due to missing userId", { sessionId });
-            continue;
-        }
-        if (processedUsers.has(effectiveUserId)) {
+        if (processedUsers.has(userId)) {
             // Only one active session per user is supported; skip duplicates
-            logger.info("init: duplicate session for user skipped", { sessionId, userId: effectiveUserId });
+            logger.info("init: duplicate session for user skipped", { sessionId, userId });
             continue;
         }
-        processedUsers.add(effectiveUserId);
-        logger.info("init: creating session", { sessionId, userId: effectiveUserId, workerId });
-        createSession({ sessionId, userId: effectiveUserId, readIncomingMessages, socketConfig });
+        processedUsers.add(userId);
+        logger.info("init: creating session", { sessionId, userId, workerId });
+        createSession({ sessionId, userId, readIncomingMessages, socketConfig });
     }
 }
 //git pull && pm2 restart baileys-api && pm2 logs baileys-api
