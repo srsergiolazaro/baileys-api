@@ -164,13 +164,11 @@ model Message {
 }
 
 model Session {
-  pkId          Int          @id @default(autoincrement())
-  sessionId     String       @db.VarChar(128)
-  id            String       @db.VarChar(255)
-  data          String
-  userId        String?
-  userSessionId String?
-  UserSession   UserSession? @relation(fields: [userSessionId], references: [id])
+  pkId        Int          @id @default(autoincrement())
+  sessionId   String       @db.VarChar(128)
+  id          String       @db.VarChar(255)
+  data        String
+  userSession UserSession? @relation(fields: [sessionId], references: [id])
 
   @@unique([sessionId, id], map: "unique_session_id_per_session_id")
   @@index([sessionId])
