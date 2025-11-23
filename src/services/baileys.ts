@@ -22,7 +22,6 @@ const SSEQRGenerations = new Map<string, number>();
 const RECONNECT_INTERVAL = Number(process.env.RECONNECT_INTERVAL || 0);
 const MAX_RECONNECT_RETRIES = Number(process.env.MAX_RECONNECT_RETRIES || 5);
 const SSE_MAX_QR_GENERATION = Number(process.env.SSE_MAX_QR_GENERATION || 5);
-const SESSION_CONFIG_ID = "session-config";
 
 function isConnectionClosedError(error: unknown): error is Boom {
 	if (!error || typeof error !== "object") return false;
@@ -141,7 +140,6 @@ export async function createSession(options: createSessionOptions) {
 	}
 
 	logger.info("createSession: userSession upserted", { sessionId, userId });
-	const configID = `${SESSION_CONFIG_ID}-${sessionId}`;
 	let connectionState: Partial<ConnectionState> = { connection: "close" };
 
 	const destroy = async (logout = true) => {
@@ -358,27 +356,15 @@ export async function createSession(options: createSessionOptions) {
 	);
 
 	try {
-		await prisma.session.upsert({
-			create: {
-				sessionId,
-				id: configID,
+		await prisma.userSession.update({
+			where: { sessionId },
+			data: {
 				data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
-				userId,
-			},
-			update: {
-				data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
-				userId,
-			},
-			where: {
-				sessionId_id: {
-					sessionId,
-					id: configID,
-				},
 			},
 		});
-		logger.info("createSession: session-config upserted", { sessionId });
+		logger.info("createSession: session-config saved to UserSession", { sessionId });
 	} catch (e) {
-		logger.error("createSession: failed to upsert session-config", e);
+		logger.error("createSession: failed to save session-config to UserSession", e);
 		throw e;
 	}
 }
