@@ -35,6 +35,7 @@ export const list: RequestHandler = async (req, res) => {
 	}
 };
 
+
 export const send: RequestHandler = async (req, res) => {
 	try {
 		let { jid, type = "number", message, options } = req.body;
@@ -54,6 +55,7 @@ export const send: RequestHandler = async (req, res) => {
 				};
 			}
 		}
+		console.log("message", req.appData.sessionId);
 
 		const session = getSession(req.appData.sessionId);
 
