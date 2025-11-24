@@ -37,8 +37,6 @@ export const list: RequestHandler = async (req, res) => {
 
 
 export const send: RequestHandler = async (req, res) => {
-	console.log("message", req.appData.sessionId);
-	console.log("LIST SESSION", listSessions());
 
 	try {
 		let { jid, type = "number", message, options } = req.body;
