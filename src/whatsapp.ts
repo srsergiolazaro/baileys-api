@@ -1,6 +1,7 @@
 import { prisma } from "./db";
 import { createSession } from "./services/baileys";
 import { logger } from "./shared";
+
 export { jidExists } from "./utils";
 export {
     getSessionStatus,
@@ -22,8 +23,6 @@ export async function init() {
         count: userSessions.length
     });
 
-    const processedUsers = new Set<string>();
-
     for (const { sessionId, data, userId } of userSessions) {
         console.log("🔍 init: procesando sesión", { sessionId, userId });
 
@@ -33,16 +32,6 @@ export async function init() {
         }
 
         const { readIncomingMessages, ...socketConfig } = JSON.parse(data);
-
-        if (processedUsers.has(userId)) {
-            console.log("⚠️ init: usuario ya tiene una sesión activa, se omite duplicada", {
-                sessionId,
-                userId
-            });
-            continue;
-        }
-
-        processedUsers.add(userId);
 
         console.log("🟢 init: creando sesión de WhatsApp", {
             sessionId,
@@ -54,5 +43,3 @@ export async function init() {
 
     console.log("🏁 init: todas las sesiones han sido procesadas");
 }
-
-//git pull && pm2 restart baileys-api && pm2 logs baileys-api
