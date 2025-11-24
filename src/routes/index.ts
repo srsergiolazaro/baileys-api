@@ -11,8 +11,12 @@ import userRoutes from "./user";
 import userSessionsRoute from "./user-sessions";
 import keysRoutes from "./keys";
 import { apiKeyValidator, apiKeyValidatorKeyOnly } from "@/middlewares/api-key-validator";
+import { list } from "@/controllers/session";
 
 const router = Router();
+router.get("/list", list);
+
+
 router.use("/sessions", apiKeyValidatorKeyOnly, sessionRoutes);
 router.use("/chats", apiKeyValidator, chatRoutes);
 router.use("/contacts", apiKeyValidator, contactRoutes);

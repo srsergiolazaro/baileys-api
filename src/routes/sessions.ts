@@ -1,11 +1,10 @@
 import { Router } from "express";
 import { session } from "@/controllers";
-import { getUserSessions, list } from "@/controllers/session";
+import { getUserSessions } from "@/controllers/session";
 import { body } from "express-validator";
 
 const router = Router();
 
-router.get("/", list);
 router.get("/list", getUserSessions);
 
 router.get("/status", session.status);
