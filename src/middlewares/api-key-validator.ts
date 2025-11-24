@@ -75,6 +75,8 @@ export const apiKeyValidator: RequestHandler = async (req, res, next) => {
 		},
 	});
 
+	console.log("userSession", userSession);
+
 	if (!userSession) {
 		return res.status(404).json({ error: `Session not found: ${sessionId}` });
 	}
