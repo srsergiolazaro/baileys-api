@@ -15,13 +15,15 @@ export const prisma =
 			},
 		},
 	});
-/*
-// Set connection pool size and timeout
-prisma.$connect().then(() => {
-	// Set the connection pool size
-	prisma.$executeRaw`SET max_connections = 50;`;
-	// Set the connection timeout to 30 seconds
-	prisma.$executeRaw`SET idle_in_transaction_session_timeout = 30000;`;
+
+process.on("SIGTERM", async () => {
+	await prisma.$disconnect();
+	process.exit(0);
 });
-*/
+
+process.on("SIGINT", async () => {
+	await prisma.$disconnect();
+	process.exit(0);
+});
+
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
