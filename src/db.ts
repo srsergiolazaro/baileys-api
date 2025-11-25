@@ -15,7 +15,7 @@ export const prisma =
 			},
 		},
 	});
-
+/*
 // Set connection pool size and timeout
 prisma.$connect().then(() => {
 	// Set the connection pool size
@@ -23,5 +23,5 @@ prisma.$connect().then(() => {
 	// Set the connection timeout to 30 seconds
 	prisma.$executeRaw`SET idle_in_transaction_session_timeout = 30000;`;
 });
-
+*/
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
