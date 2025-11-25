@@ -83,7 +83,7 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 							await prisma.message.upsert({
 								select: { pkId: true },
 								create: prismaData,
-								update: data,
+								update: prismaData,
 								where: {
 									sessionId_remoteJid_id: {
 										remoteJid: jid,
