@@ -4,7 +4,7 @@ import { serializePrisma } from "@/utils";
 import type { RequestHandler } from "express";
 import { logger } from "@/shared";
 import { delay as delayMs } from "@/utils";
-import { getSession, jidExists } from "@/whatsapp";
+import { getSession, jidExists, listSessions } from "@/whatsapp";
 import { prisma } from "@/db";
 import type { Message } from "@prisma/client";
 
@@ -35,7 +35,9 @@ export const list: RequestHandler = async (req, res) => {
 	}
 };
 
+
 export const send: RequestHandler = async (req, res) => {
+
 	try {
 		let { jid, type = "number", message, options } = req.body;
 

@@ -5,31 +5,6 @@ import requestValidator from "@/middlewares/request-validator";
 
 const router = Router({ mergeParams: true });
 
-/**
- * @swagger
- * /groups:
- *   get:
- *     tags:
- *       - Grupos
- *     summary: Listar grupos
- *     description: Obtiene una lista paginada de grupos
- *     parameters:
- *       - in: query
- *         name: cursor
- *         schema:
- *           type: number
- *         description: Cursor para la paginación
- *       - in: query
- *         name: limit
- *         schema:
- *           type: number
- *         description: Límite de grupos a retornar
- *     responses:
- *       200:
- *         description: Lista de grupos obtenida exitosamente
- *       400:
- *         description: Parámetros de consulta inválidos
- */
 router.get(
 	"/",
 	query("cursor").isNumeric().optional(),
@@ -38,120 +13,12 @@ router.get(
 	group.list,
 );
 
-/**
- * @swagger
- * /groups/search:
- *   get:
- *     tags:
- *       - Grupos
- *     summary: Buscar grupos por nombre
- *     description: Busca grupos por nombre utilizando Fuse.js
- *     parameters:
- *       - in: query
- *         name: name
- *         schema:
- *           type: string
- *         description: Nombre del grupo a buscar
- *     responses:
- *       200:
- *         description: Búsqueda de grupos exitosa
- *       400:
- *         description: Parámetros de consulta inválidos
- */
 router.post("/search", body("name").isString().optional(), requestValidator, group.search);
 
-/**
- * @swagger
- * /groups/find:
- *   post:
- *     tags:
- *       - Grupos
- *     summary: Buscar grupo
- *     description: Busca un grupo específico por su JID
- *     security:
- *       - ApiKeyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - jid
- *             properties:
- *               jid:
- *                 type: string
- *                 description: ID del grupo (JID)
- *     responses:
- *       200:
- *         description: Grupo encontrado exitosamente
- *       404:
- *         description: Grupo no encontrado
- */
 router.post("/find", body("jid").isString().notEmpty(), requestValidator, group.find);
 
-/**
- * @swagger
- * /groups/{jid}/photo:
- *   get:
- *     tags:
- *       - Grupos
- *     summary: Obtener foto del grupo
- *     description: Obtiene la foto de perfil del grupo
- *     parameters:
- *       - in: path
- *         name: jid
- *         required: true
- *         schema:
- *           type: string
- *         description: ID del grupo (JID)
- *     responses:
- *       200:
- *         description: Foto del grupo obtenida exitosamente
- *         content:
- *           image/*:
- *             schema:
- *               type: string
- *               format: binary
- *       404:
- *         description: Foto no encontrada
- */
 router.get("/:jid/photo", group.photo);
 
-/**
- * @swagger
- * /groups:
- *   post:
- *     tags:
- *       - Grupos
- *     summary: Crear grupo
- *     description: Crea un nuevo grupo de WhatsApp
- *     security:
- *       - ApiKeyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - subject
- *               - participants
- *             properties:
- *               subject:
- *                 type: string
- *                 description: Nombre del grupo
- *               participants:
- *                 type: array
- *                 items:
- *                   type: string
- *                 description: Lista de números de teléfono de los participantes
- *     responses:
- *       201:
- *         description: Grupo creado exitosamente
- *       400:
- *         description: Datos de entrada inválidos
- */
 router.post(
 	"/",
 	body("subject").isString().notEmpty(),
@@ -160,39 +27,6 @@ router.post(
 	group.create,
 );
 
-/**
- * @swagger
- * /groups/update:
- *   put:
- *     tags:
- *       - Grupos
- *     summary: Actualizar grupo
- *     description: Actualiza la información de un grupo existente
- *     security:
- *       - ApiKeyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - jid
- *             properties:
- *               jid:
- *                 type: string
- *                 description: ID del grupo (JID)
- *               subject:
- *                 type: string
- *                 description: Nuevo nombre del grupo
- *     responses:
- *       200:
- *         description: Grupo actualizado exitosamente
- *       400:
- *         description: Datos de entrada inválidos
- *       404:
- *         description: Grupo no encontrado
- */
 router.put(
 	"/update",
 	body("jid").isString().notEmpty(),
@@ -201,79 +35,8 @@ router.put(
 	group.update,
 );
 
-/**
- * @swagger
- * /groups/delete:
- *   delete:
- *     tags:
- *       - Grupos
- *     summary: Eliminar grupo
- *     description: Elimina un grupo existente
- *     security:
- *       - ApiKeyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - jid
- *             properties:
- *               jid:
- *                 type: string
- *                 description: ID del grupo (JID)
- *     responses:
- *       200:
- *         description: Grupo eliminado exitosamente
- *       400:
- *         description: Datos de entrada inválidos
- *       404:
- *         description: Grupo no encontrado
- */
 router.delete("/delete", body("jid").isString().notEmpty(), requestValidator, group.deleteGroup);
 
-/**
- * @swagger
- * /groups/participants:
- *   post:
- *     tags:
- *       - Grupos
- *     summary: Gestionar participantes
- *     description: Añade, elimina, promueve o degrada participantes del grupo
- *     security:
- *       - ApiKeyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - jid
- *               - action
- *               - participants
- *             properties:
- *               jid:
- *                 type: string
- *                 description: ID del grupo (JID)
- *               action:
- *                 type: string
- *                 enum: [add, remove, promote, demote]
- *                 description: Acción a realizar con los participantes
- *               participants:
- *                 type: array
- *                 items:
- *                   type: string
- *                 description: Lista de números de teléfono de los participantes
- *     responses:
- *       200:
- *         description: Participantes actualizados exitosamente
- *       400:
- *         description: Datos de entrada inválidos
- *       404:
- *         description: Grupo no encontrado
- */
 router.post(
 	"/participants",
 	body("jid").isString().notEmpty(),
@@ -283,40 +46,6 @@ router.post(
 	group.updateParticipants,
 );
 
-/**
- * @swagger
- * /groups/settings:
- *   post:
- *     tags:
- *       - Grupos
- *     summary: Actualizar configuración del grupo
- *     description: Actualiza la configuración de un grupo existente
- *     security:
- *       - ApiKeyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - jid
- *               - settings
- *             properties:
- *               jid:
- *                 type: string
- *                 description: ID del grupo (JID)
- *               settings:
- *                 type: string
- *                 description: Configuración a actualizar
- *     responses:
- *       200:
- *         description: Configuración actualizada exitosamente
- *       400:
- *         description: Datos de entrada inválidos
- *       404:
- *         description: Grupo no encontrado
- */
 router.post(
 	"/settings",
 	body("jid").isString().notEmpty(),
@@ -325,74 +54,8 @@ router.post(
 	group.updateSettings,
 );
 
-/**
- * @swagger
- * /groups/leave:
- *   post:
- *     tags:
- *       - Grupos
- *     summary: Dejar un grupo
- *     description: Permite al bot salir de un grupo
- *     security:
- *       - ApiKeyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - jid
- *             properties:
- *               jid:
- *                 type: string
- *                 description: ID del grupo que se desea abandonar
- *     responses:
- *       200:
- *         description: Se ha abandonado el grupo exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   description: Indica si la operación fue exitosa
- */
 router.post("/leave", body("jid").isString().notEmpty(), requestValidator, group.leaveGroup);
 
-/**
- * @swagger
- * /groups/update-subject:
- *   post:
- *     tags:
- *       - Grupos
- *     summary: Actualizar asunto del grupo
- *     description: Actualiza el asunto (nombre) de un grupo
- *     security:
- *       - ApiKeyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - jid
- *               - subject
- *             properties:
- *               jid:
- *                 type: string
- *                 description: ID del grupo (JID)
- *               subject:
- *                 type: string
- *                 description: Nuevo asunto para el grupo
- *     responses:
- *       200:
- *         description: Asunto del grupo actualizado exitosamente
- *       400:
- *         description: Datos de entrada inválidos
- */
 router.post(
 	"/update-subject",
 	body("jid").isString().notEmpty(),
@@ -401,38 +64,6 @@ router.post(
 	group.updateSubject,
 );
 
-/**
- * @swagger
- * /groups/update-description:
- *   post:
- *     tags:
- *       - Grupos
- *     summary: Actualizar descripción del grupo
- *     description: Actualiza la descripción de un grupo
- *     security:
- *       - ApiKeyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - jid
- *               - description
- *             properties:
- *               jid:
- *                 type: string
- *                 description: ID del grupo (JID)
- *               description:
- *                 type: string
- *                 description: Nueva descripción para el grupo
- *     responses:
- *       200:
- *         description: Descripción del grupo actualizada exitosamente
- *       400:
- *         description: Datos de entrada inválidos
- */
 router.post(
 	"/update-description",
 	body("jid").isString().notEmpty(),

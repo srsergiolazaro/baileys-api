@@ -6,6 +6,18 @@ import { prisma } from "@/db";
 import { logger } from "@/shared";
 import type { Message } from "@prisma/client";
 
+function toBigIntTimestamp(ts: any): bigint | null {
+	if (!ts) return null;
+
+	// Baileys Long object
+	if (typeof ts === "object" && typeof ts.low === "number" && typeof ts.high === "number") {
+		return BigInt((ts.high * 2 ** 32) + ts.low);
+	}
+
+	// number or string
+	return BigInt(ts);
+}
+
 const getKeyAuthor = (key: WAMessageKey | undefined | null) =>
 	(key?.fromMe ? "me" : key?.participant || key?.remoteJid) || "";
 
@@ -47,10 +59,8 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 						const data = transformPrisma(messageData) as MakeTransformedPrisma<Message>;
 
 						const ts = message.messageTimestamp;
-						const messageTimestampBigInt =
-							ts && typeof ts === "object" && "toString" in ts
-								? BigInt(ts.toString())
-								: ts ? BigInt(ts) : null;
+						const messageTimestampBigInt = toBigIntTimestamp(ts);
+
 
 						// Only include fields that exist in the Prisma schema
 						const prismaData = {
