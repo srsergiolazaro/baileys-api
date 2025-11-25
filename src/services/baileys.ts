@@ -61,8 +61,32 @@ export async function createSession(options: createSessionOptions) {
 		readIncomingMessages = false,
 		socketConfig,
 	} = options;
-	if (res && !res.writableEnded && SSE) {
-		res.write(`data: ${JSON.stringify({ sessionId })}\n\n`);
+
+	// ============================================================
+	// 🔐 VALIDACIÓN SSE — SOLO EN MODO SSE
+	// Solo seguimos si el canal SSE funciona correctamente.
+	// Si falla, no creamos sesión en BD ni inicializamos socket.
+	// ============================================================
+	if (SSE) {
+		try {
+			if (!res || res.writableEnded) {
+				logger.error("SSE habilitado pero no hay response válido", { sessionId });
+				return { error: "SSE channel unavailable", sessionId: null };
+			}
+
+			// Primer mensaje SSE obligatorio
+			res.write(`data: ${JSON.stringify({ sessionId })}\n\n`);
+			logger.info("SSE inicial enviado correctamente", { sessionId });
+
+		} catch (e) {
+			logger.error("❌ Error inicial SSE. NO se creará la sesión.", {
+				sessionId,
+				error: (e as any)?.message,
+			});
+
+			if (res && !res.writableEnded) res.end();
+			return { error: "SSE initialization failed", sessionId: null };
+		}
 	}
 
 	logger.info("createSession: start", {
@@ -72,26 +96,20 @@ export async function createSession(options: createSessionOptions) {
 		readIncomingMessages,
 		hasSocketConfig: !!socketConfig,
 	});
-	// Ensure one UserSession per user atomically (avoids race conditions)
+
+	// ============================================================
+	// 🗄️ CREACIÓN / ACTUALIZACIÓN DE SESIÓN EN BD
+	// (Solo ocurre si SSE funcionó correctamente)
+	// ============================================================
 	const now = new Date();
 	try {
-		// ----- LA SOLUCIÓN CORRECTA SIN MODIFICAR EL ESQUEMA -----
-		const now = new Date();
-		// Paso 1: Busca si ya existe una sesión con este sessionId.
-		// Usamos findFirst en lugar de findUnique por flexibilidad.
 		const session = await prisma.userSession.findFirst({
-			where: {
-				sessionId: sessionId,
-			},
+			where: { sessionId },
 		});
 
 		if (session) {
-			// Paso 2a: Si la sesión ya existe, la actualizamos.
 			await prisma.userSession.update({
-				where: {
-					// Usamos el 'id' del registro que encontramos para actualizarlo.
-					id: session.id,
-				},
+				where: { id: session.id },
 				data: {
 					status: "active",
 					lastActive: now,
@@ -99,12 +117,8 @@ export async function createSession(options: createSessionOptions) {
 				},
 			});
 		} else {
-			// Paso 2b: Si no existe, la creamos.
-			// ¡IMPORTANTE! No pasamos el campo 'id' en la data.
-			// Dejamos que Prisma lo genere automáticamente con cuid().
 			await prisma.userSession.create({
 				data: {
-					// id: sessionId, <-- ESTA LÍNEA SE ELIMINA
 					sessionId,
 					userId,
 					status: "active",
@@ -119,28 +133,22 @@ export async function createSession(options: createSessionOptions) {
 	} catch (error) {
 		if (error instanceof PrismaClientKnownRequestError) {
 			if (error.code === "P2025") {
-				logger.warn("UserSession missing while upserting by userId; recreating", {
-					sessionId,
-					userId,
-				});
+				logger.warn("UserSession missing; recreating", { sessionId, userId });
 				await prisma.userSession.create({
 					data: {
 						id: sessionId,
 						sessionId,
 						userId,
 						status: "active",
-						phoneNumber: null,
 						deviceName: "WhatsApp User",
+						phoneNumber: null,
 						createdAt: now,
 						updatedAt: now,
 						lastActive: now,
 					},
 				});
 			} else if (error.code === "P2002") {
-				logger.warn(
-					"Unique constraint conflict while upserting user session; attempting direct update",
-					{ sessionId, userId },
-				);
+				logger.warn("Unique constraint conflict, updating directly", { sessionId, userId });
 				await prisma.userSession.update({
 					where: { sessionId },
 					data: {
@@ -160,6 +168,10 @@ export async function createSession(options: createSessionOptions) {
 	}
 
 	logger.info("createSession: userSession upserted", { sessionId, userId });
+
+	// ============================================================
+	// 🔥 DESTRUCCIÓN COMPLETA DE SESIÓN
+	// ============================================================
 	let connectionState: Partial<ConnectionState> = { connection: "close" };
 
 	const destroy = async (logout = true) => {
@@ -176,12 +188,15 @@ export async function createSession(options: createSessionOptions) {
 			]);
 			logger.info("Session destroyed", { session: sessionId });
 		} catch (e) {
-			logger.error("An error occurred during session destroy", e);
+			logger.error("Error during session destroy", e);
 		} finally {
 			sessionsMap.delete(sessionId);
 		}
 	};
 
+	// ============================================================
+	// 🔄 MANEJO DE CIERRE DE CONEXIÓN
+	// ============================================================
 	const handleConnectionClose = () => {
 		const lastErr = connectionState.lastDisconnect?.error as Boom | undefined;
 		const code = lastErr?.output?.statusCode;
@@ -197,15 +212,6 @@ export async function createSession(options: createSessionOptions) {
 			message: (lastErr as any)?.message,
 		});
 
-		if (code === DisconnectReason.connectionReplaced) {
-			logger.warn(
-				{ sessionId },
-				"Connection replaced. You have been logged out because another session has been started elsewhere.",
-			);
-		} else if (code === DisconnectReason.loggedOut) {
-			logger.warn("Connection logged out. You have been logged out.", { sessionId });
-		}
-
 		if (code === DisconnectReason.loggedOut || doNotReconnect) {
 			if (res) {
 				if (!SSE && !res.headersSent) {
@@ -220,96 +226,63 @@ export async function createSession(options: createSessionOptions) {
 		if (!restartRequired) {
 			logger.info("Reconnecting...", { attempts: retries.get(sessionId) ?? 1, sessionId });
 		}
+
 		setTimeout(
 			() => createSession({ ...options, sessionId }),
 			restartRequired ? 0 : RECONNECT_INTERVAL,
 		);
 	};
 
+	// ============================================================
+	// 🔔 HANDLERS PARA EVENTOS SSE O HTTP NORMAL
+	// ============================================================
 	const handleNormalConnectionUpdate = async () => {
-		if (!connectionState.qr?.length) {
-			return;
-		}
+		if (!connectionState.qr?.length) return;
 
 		if (res && !res.writableEnded) {
 			try {
 				const qr = await toDataURL(connectionState.qr);
 				res.status(200).json({ qr, sessionId });
 			} catch (e) {
-				logger.error("An error occurred during QR generation", e);
-				res.status(500).json({ error: "Unable to generate QR" });
+				logger.error("QR generation error", e);
+				res.status(500).json({ error: "QR generation failed" });
 			}
-			return;
 		}
-
-		logger.warn("QR generated but no HTTP response channel available", { sessionId });
 	};
 
 	const handleSSEConnectionUpdate = async () => {
-		logger.info("SSE Connection Update", {
-			sessionId,
-			connectionState,
-			hasResponse: !!res,
-			responseEnded: res?.writableEnded,
-			currentGenerations: SSEQRGenerations.get(sessionId) ?? 0,
-		});
+		let qr: string | undefined;
 
-		let qr: string | undefined = undefined;
 		if (connectionState.qr?.length) {
 			try {
 				qr = await toDataURL(connectionState.qr);
-				logger.info("QR code generated", {
-					sessionId,
-					qrLength: connectionState.qr.length,
-					qrGenerated: !!qr,
-				});
 			} catch (e) {
-				logger.error("An error occurred during QR generation", e);
+				logger.error("QR error", e);
 			}
 		}
 
-		const currentGenerations = SSEQRGenerations.get(sessionId) ?? 0;
-		if (!res || res.writableEnded || (qr && currentGenerations >= SSE_MAX_QR_GENERATION)) {
-			logger.info("SSE connection ending", {
-				sessionId,
-				hasResponse: !!res,
-				responseEnded: res?.writableEnded,
-				qrGenerated: !!qr,
-				currentGenerations,
-				maxGenerations: SSE_MAX_QR_GENERATION,
-			});
-
-			if (res && !res.writableEnded) {
-				res.end();
-			} else {
-				logger.info("Session remains active after SSE completion", { sessionId });
-			}
+		const current = SSEQRGenerations.get(sessionId) ?? 0;
+		if (!res || res.writableEnded || (qr && current >= SSE_MAX_QR_GENERATION)) {
+			if (res && !res.writableEnded) res.end();
 			return;
 		}
 
 		const data = { ...connectionState, qr, sessionId };
-		if (qr) {
-			SSEQRGenerations.set(sessionId, currentGenerations + 1);
-		}
+		if (qr) SSEQRGenerations.set(sessionId, current + 1);
 
 		try {
-			const message = `data: ${JSON.stringify(data)}\n\n`;
-			res.write(message);
-			logger.info("SSE message sent", {
-				sessionId,
-				messageLength: message.length,
-				hasQr: !!qr,
-			});
+			res.write(`data: ${JSON.stringify(data)}\n\n`);
 		} catch (e) {
-			logger.error("Error writing SSE message", e);
-			if (res && !res.writableEnded) {
-				res.end();
-			}
+			if (res && !res.writableEnded) res.end();
 			destroy();
 		}
 	};
 
 	const handleConnectionUpdate = SSE ? handleSSEConnectionUpdate : handleNormalConnectionUpdate;
+
+	// ============================================================
+	// 🔌 CREACIÓN DEL SOCKET Y SUSCRIPCIÓN A EVENTOS
+	// ============================================================
 	const { state, saveCreds } = await useSession(sessionId);
 	const socket = makeWASocket({
 		printQRInTerminal: false,
@@ -321,28 +294,16 @@ export async function createSession(options: createSessionOptions) {
 		},
 		logger,
 		shouldIgnoreJid: (jid) => isJidBroadcast(jid),
-		/*
-		getMessage: async (key) => {
-			const data = await prisma.message.findFirst({
-				where: { remoteJid: key.remoteJid!, id: key.id!, sessionId },
-			});
-			return (data?.message || undefined) as proto.IMessage | undefined;
-		},
-		*/
 	});
 
 	const store = new Store(sessionId, socket.ev);
 	sessionsMap.set(sessionId, { ...socket, destroy, store });
 
-	const originalSendRetryRequest = socket.sendRetryRequest.bind(socket);
 	socket.sendRetryRequest = async (...args) => {
 		try {
-			await originalSendRetryRequest(...args);
+			await socket.sendRetryRequest(...args);
 		} catch (error) {
-			if (isConnectionClosedError(error)) {
-				logger.warn({ sessionId }, "sendRetryRequest skipped (connection already closed)");
-				return;
-			}
+			if (isConnectionClosedError(error)) return;
 			throw error;
 		}
 	};
@@ -353,7 +314,7 @@ export async function createSession(options: createSessionOptions) {
 		const { connection, lastDisconnect } = update;
 		const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
 
-		logger.info("connection.update", { sessionId, connection, statusCode, hasRes: !!res, SSE });
+		logger.info("connection.update", { sessionId, connection, statusCode, SSE });
 
 		if (connection === "open") {
 			retries.delete(sessionId);
@@ -366,16 +327,11 @@ export async function createSession(options: createSessionOptions) {
 		}
 
 		if (connection === "close") {
-			// ✅ Detección de cierre permanente (oficial)
 			if (statusCode === DisconnectReason.loggedOut) {
-				logger.warn("❌ Sesión cerrada permanentemente. No reconectar.", { sessionId });
-				// Limpieza completa y logout
 				destroy(true);
 				return;
 			}
 
-			// 🔁 Desconexión temporal → reintenta
-			logger.info("🔁 Desconexión temporal, reconectando...", { sessionId, statusCode });
 			handleConnectionClose();
 		}
 
@@ -390,7 +346,9 @@ export async function createSession(options: createSessionOptions) {
 		handleGroupParticipantsUpdate(socket, c, sessionId),
 	);
 
-
+	// ============================================================
+	// 💾 GUARDAR CONFIGURACIÓN DE SESIÓN
+	// ============================================================
 	try {
 		await prisma.userSession.update({
 			where: { sessionId },
@@ -398,9 +356,9 @@ export async function createSession(options: createSessionOptions) {
 				data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
 			},
 		});
-		logger.info("createSession: session-config saved to UserSession", { sessionId });
 	} catch (e) {
-		logger.error("createSession: failed to save session-config to UserSession", e);
+		logger.error("Failed to save session config", e);
 		throw e;
 	}
 }
+
