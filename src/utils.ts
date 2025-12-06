@@ -26,27 +26,36 @@ function formatPhoneNumber(phoneNumber: string): string {
 	return parsedNumber.number.replace("+", "");
 }
 
+const detectJidType = (jid: string): "group" | "number" => {
+	const normalized = jid.toLowerCase();
+	if (normalized.includes("@g.us")) return "group";
+	if (normalized.includes("@s.whatsapp.net")) return "number";
+	return "number";
+};
+
 export async function jidExists(
 	session: Session | undefined,
 	jid: string,
-	type: "group" | "number" = "number",
 ): Promise<{ exists: boolean; formatJid: string; error?: string }> {
 	if (!session) {
 		return { exists: false, formatJid: jid, error: "Session not found or not connected" };
 	}
 
 	try {
-		const formatJid = (jid: string) =>
+		const resolvedType = detectJidType(jid);
+		const formatNumberJid = (jid: string) =>
 			jid.includes("@") ? jid : `${formatPhoneNumber(jid)}@s.whatsapp.net`;
+		const formatGroupJid = (jid: string) => (jid.includes("@") ? jid : `${jid}@g.us`);
 
-		if (type === "number") {
-			const formattedJid = formatJid(jid);
+		if (resolvedType === "number") {
+			const formattedJid = formatNumberJid(jid);
 			const results = await session.onWhatsApp(formattedJid);
 			const result = results?.[0];
 			return { exists: !!result?.exists, formatJid: formattedJid };
 		}
 
-		const groupMeta = await session.groupMetadata(jid);
+		const formattedGroupJid = formatGroupJid(jid);
+		const groupMeta = await session.groupMetadata(formattedGroupJid);
 		return { exists: !!groupMeta.id, formatJid: groupMeta.id };
 	} catch (e) {
 		logger.error(e, "Error in jidExists");

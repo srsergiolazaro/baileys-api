@@ -39,7 +39,7 @@ export const list: RequestHandler = async (req, res) => {
 export const send: RequestHandler = async (req, res) => {
 
 	try {
-		let { jid, type = "number", message, options } = req.body;
+		let { jid, message, options } = req.body;
 
 		// Procesa los datos de form-data si existen
 		if (req.is("multipart/form-data")) {
@@ -63,7 +63,7 @@ export const send: RequestHandler = async (req, res) => {
 			return res.status(400).json({ error: "Session not found or not connected" });
 		}
 
-		const { exists, formatJid, error } = await jidExists(session, jid, type);
+		const { exists, formatJid, error } = await jidExists(session, jid);
 		if (!exists) {
 			return res.status(400).json({
 				error: error || "JID does not exist",
@@ -120,7 +120,7 @@ export const sendBulk: RequestHandler = async (req, res) => {
 			}
 
 			// Verificar si el JID existe
-			const { exists, formatJid } = await jidExists(session, jid, type);
+			const { exists, formatJid } = await jidExists(session, jid);
 			if (!exists) {
 				errors.push({ index, error: "JID does not exist" });
 				continue;
@@ -177,7 +177,7 @@ export const deleteMessage: RequestHandler = async (req, res) => {
 		if (!session) {
 			return res.status(400).json({ error: "Session not found or not connected" });
 		}
-		const { exists, formatJid, error } = await jidExists(session, jid, type);
+		const { exists, formatJid, error } = await jidExists(session, jid);
 		if (!exists) {
 			return res.status(400).json({
 				error: error || "JID does not exist",

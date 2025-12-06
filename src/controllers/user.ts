@@ -4,22 +4,22 @@ import { getSession, jidExists } from "@/whatsapp";
 
 const updateBlockStatus =
 	(action: "block" | "unblock"): RequestHandler =>
-	async (req, res) => {
-		try {
-			const session = getSession(req.appData.sessionId)!;
-			const { jid } = req.body;
+		async (req, res) => {
+			try {
+				const session = getSession(req.appData.sessionId)!;
+				const { jid } = req.body;
 
-			const { exists, formatJid } = await jidExists(session, jid, "number");
-			if (!exists) return res.status(400).json({ error: "Jid does not exist" });
+				const { exists, formatJid } = await jidExists(session, jid);
+				if (!exists) return res.status(400).json({ error: "Jid does not exist" });
 
-			await session.updateBlockStatus(formatJid, action);
-			res.status(200).json({ message: `Contact ${action}ed` });
-		} catch (e) {
-			const message = `An error occured during contact ${action}`;
-			logger.error(e, message);
-			res.status(500).json({ error: message });
-		}
-	};
+				await session.updateBlockStatus(formatJid, action);
+				res.status(200).json({ message: `Contact ${action}ed` });
+			} catch (e) {
+				const message = `An error occured during contact ${action}`;
+				logger.error(e, message);
+				res.status(500).json({ error: message });
+			}
+		};
 
 export const block = updateBlockStatus("block");
 export const unblock = updateBlockStatus("unblock");
@@ -32,7 +32,7 @@ export const updateProfilePicture: RequestHandler = async (req, res) => {
 		if (!jid) {
 			return res.status(400).json({ error: "JID is required" });
 		}
-		const { exists, formatJid } = await jidExists(session, jid, "number");
+		const { exists, formatJid } = await jidExists(session, jid);
 
 		if (!exists) return res.status(400).json({ error: "Jid does not exist" });
 
