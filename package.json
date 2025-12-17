@@ -5,10 +5,9 @@
 	"type": "module",
 	"main": "dist/index.js",
 	"scripts": {
-		"build": "prisma generate && tsc --project tsconfig.json && node ./scripts/esm-fix-paths.mjs",
+		"build": "tsc --project tsconfig.json && node ./scripts/esm-fix-paths.mjs",
 		"start": "node ./dist/index.js",
-		"dev": "prisma generate && nodemon --watch src --ext ts --exec \"tsx\" src/index.ts",
-		"postinstall": "prisma generate",
+		"dev": "nodemon --watch src --ext ts --exec \"tsx\" src/index.ts",
 		"changelog:preview": "conventional-changelog -p angular -u",
 		"changelog:last": "conventional-changelog -p angular -i CHANGELOG.md -s -r 0",
 		"lint": "eslint \"src/**/*.ts\" --quiet",
