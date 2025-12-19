@@ -52,19 +52,23 @@ function normalizePhoneNumber(input: string): string {
 	throw new Error("Invalid phone number format");
 }
 
-
 export async function jidExists(
 	session: Session | undefined,
 	jid: string,
 ): Promise<{ exists: boolean; formatJid: string; error?: string }> {
+	logger.debug({ jid }, "[jidExists] input received");
+
 	if (!session) {
+		logger.error("[jidExists] session not found or not connected");
 		return { exists: false, formatJid: jid, error: "Session not found or not connected" };
 	}
 
 	const cleanInput = jid.trim();
+	logger.debug({ cleanInput }, "[jidExists] clean input");
 
 	try {
 		const resolvedType = detectJidType(cleanInput);
+		logger.debug({ resolvedType }, "[jidExists] resolved JID type");
 
 		// ======================
 		// NUMBER
@@ -74,11 +78,22 @@ export async function jidExists(
 				? cleanInput.split("@")[0]
 				: cleanInput;
 
+			logger.debug({ rawNumber }, "[jidExists] raw number extracted");
+
 			const normalizedNumber = normalizePhoneNumber(rawNumber);
+			logger.debug(
+				{ normalizedNumber },
+				"[jidExists] normalized phone number",
+			);
+
 			const formattedJid = `${normalizedNumber}@s.whatsapp.net`;
+			logger.debug({ formattedJid }, "[jidExists] formatted number JID");
 
 			const results = await session.onWhatsApp(formattedJid);
+			logger.debug({ results }, "[jidExists] onWhatsApp raw results");
+
 			const result = results?.[0];
+			logger.debug({ result }, "[jidExists] onWhatsApp first result");
 
 			return {
 				exists: Boolean(result?.exists),
@@ -93,14 +108,30 @@ export async function jidExists(
 			? cleanInput
 			: `${cleanInput}@g.us`;
 
+		logger.debug(
+			{ formattedGroupJid },
+			"[jidExists] formatted group JID",
+		);
+
 		const groupMeta = await session.groupMetadata(formattedGroupJid);
+		logger.debug(
+			{ groupMeta },
+			"[jidExists] group metadata result",
+		);
 
 		return {
 			exists: Boolean(groupMeta?.id),
 			formatJid: groupMeta.id,
 		};
 	} catch (e) {
-		logger.error(e, "Error in jidExists");
+		logger.error(
+			{
+				error: e,
+				jid: cleanInput,
+			},
+			"[jidExists] unhandled error",
+		);
+
 		return {
 			exists: false,
 			formatJid: cleanInput,
