@@ -1,4 +1,3 @@
-import parsePhoneNumber from "libphonenumber-js";
 import type { Session } from "./types";
 import { logger } from "./shared";
 
@@ -18,26 +17,7 @@ export function delay(ms: number) {
 }
 
 
-function sanitizeInput(value: string): string {
-	return value.trim().replace(/\s+/g, "");
-}
 
-function sanitizePhoneNumber(value: string): string {
-	// deja SOLO dígitos
-	return value.replace(/\D+/g, "");
-}
-
-function formatPhoneNumber(phoneNumber: string): string {
-	const defaultCountry = "PE"; // Perú
-	const parsedNumber = parsePhoneNumber(phoneNumber, defaultCountry);
-
-	if (!parsedNumber || !parsedNumber.isValid()) {
-		throw new Error("Invalid phone number format");
-	}
-
-	// E.164 sin "+"
-	return parsedNumber.number.replace("+", "");
-}
 
 const detectJidType = (jid: string): "group" | "number" => {
 	const normalized = jid.toLowerCase();
@@ -45,6 +25,33 @@ const detectJidType = (jid: string): "group" | "number" => {
 	if (normalized.endsWith("@s.whatsapp.net")) return "number";
 	return "number";
 };
+
+function normalizePhoneNumber(input: string): string {
+	// 1. Quitar espacios y símbolos comunes
+	const cleaned = input.replace(/[\s()-]/g, "");
+
+	// 2. Si empieza con '+', eliminarlo
+	const withoutPlus = cleaned.startsWith("+")
+		? cleaned.slice(1)
+		: cleaned;
+
+	// 3. Dejar solo dígitos
+	const digits = withoutPlus.replace(/\D+/g, "");
+
+	// 4. Validación básica (Perú)
+	// Números móviles PE: 9 dígitos
+	// Con código país: 51 + 9 dígitos = 11
+	if (digits.length === 9) {
+		return `51${digits}`;
+	}
+
+	if (digits.length === 11 && digits.startsWith("51")) {
+		return digits;
+	}
+
+	throw new Error("Invalid phone number format");
+}
+
 
 export async function jidExists(
 	session: Session | undefined,
@@ -54,7 +61,7 @@ export async function jidExists(
 		return { exists: false, formatJid: jid, error: "Session not found or not connected" };
 	}
 
-	const cleanInput = sanitizeInput(jid);
+	const cleanInput = jid.trim();
 
 	try {
 		const resolvedType = detectJidType(cleanInput);
@@ -63,13 +70,12 @@ export async function jidExists(
 		// NUMBER
 		// ======================
 		if (resolvedType === "number") {
-			// Si ya viene como JID, no tocar el número
 			const rawNumber = cleanInput.includes("@")
 				? cleanInput.split("@")[0]
-				: sanitizePhoneNumber(cleanInput);
+				: cleanInput;
 
-			const formattedNumber = formatPhoneNumber(rawNumber);
-			const formattedJid = `${formattedNumber}@s.whatsapp.net`;
+			const normalizedNumber = normalizePhoneNumber(rawNumber);
+			const formattedJid = `${normalizedNumber}@s.whatsapp.net`;
 
 			const results = await session.onWhatsApp(formattedJid);
 			const result = results?.[0];
