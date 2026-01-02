@@ -48,6 +48,9 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 		switch (type) {
 			case "append":
 			case "notify":
+				// Cache para evitar consultar la existencia del chat múltiples veces en la misma ráfaga
+				const verifiedChats = new Set<string>();
+
 				for (const message of messages) {
 					try {
 						const jid = jidNormalizedUser(message.key.remoteJid!);
@@ -60,7 +63,6 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 
 						const ts = message.messageTimestamp;
 						const messageTimestampBigInt = toBigIntTimestamp(ts);
-
 
 						// Only include fields that exist in the Prisma schema
 						const prismaData = {
@@ -79,40 +81,32 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 							supportAiCitations: []
 						};
 
-						try {
-							await prisma.message.upsert({
-								select: { pkId: true },
-								create: prismaData,
-								update: prismaData,
-								where: {
-									sessionId_remoteJid_id: {
-										remoteJid: jid,
-										id: message.key.id!,
-										sessionId
-									}
-								},
-							});
-						} catch (error) {
-							// Log the full error for debugging
-							logger.error({
-								error,
-								message: 'Failed to upsert message',
-								messageId: message.key.id,
-								remoteJid: jid,
-								sessionId
-							});
-							// Don't throw the error to prevent crashing the handler
-						}
+						await prisma.message.upsert({
+							select: { pkId: true },
+							create: prismaData,
+							update: prismaData,
+							where: {
+								sessionId_remoteJid_id: {
+									remoteJid: jid,
+									id: message.key.id!,
+									sessionId
+								}
+							},
+						});
 
-						const chatExists = (await prisma.chat.count({ where: { id: jid, sessionId } })) > 0;
-						if (type === "notify" && !chatExists) {
-							event.emit("chats.upsert", [
-								{
-									id: jid,
-									conversationTimestamp: toNumber(message.messageTimestamp),
-									unreadCount: 1,
-								},
-							]);
+						// Solo verificamos si el chat existe si es una notificación y no lo hemos verificado ya en esta ráfaga
+						if (type === "notify" && !verifiedChats.has(jid)) {
+							const chatExists = (await prisma.chat.count({ where: { id: jid, sessionId } })) > 0;
+							if (!chatExists) {
+								event.emit("chats.upsert", [
+									{
+										id: jid,
+										conversationTimestamp: toNumber(message.messageTimestamp),
+										unreadCount: 1,
+									},
+								]);
+							}
+							verifiedChats.add(jid);
 						}
 					} catch (e) {
 						logger.error(e, "An error occured during message upsert");

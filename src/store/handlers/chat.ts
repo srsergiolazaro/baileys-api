@@ -40,7 +40,7 @@ export default function chatHandler(sessionId: string, event: BaileysEventEmitte
 
 	const upsert: BaileysEventHandler<"chats.upsert"> = async (chats) => {
 		try {
-			await Promise.any(
+			await prisma.$transaction(
 				chats
 					.map((c) => transformPrisma(c) as MakeTransformedPrisma<Chat>)
 					.map((data) =>
@@ -58,31 +58,14 @@ export default function chatHandler(sessionId: string, event: BaileysEventEmitte
 	};
 
 	const update: BaileysEventHandler<"chats.update"> = async (updates) => {
+		// Agrupamos actualizaciones por ID de chat para evitar colisiones si hay múltiples en el mismo lote
 		for (const update of updates) {
 			try {
-				// Only include properties that exist in the update object
-				const chatData: Partial<{
-					conversationTimestamp?: number | Long | null;
-					unreadCount?: number | null;
-					readOnly?: boolean | null;
-					ephemeralExpiration?: number | null;
-					ephemeralSettingTimestamp?: number | Long | null;
-					name?: string | null;
-					notSpam?: boolean | null;
-					archived?: boolean | null;
-					disappearingMode?: any;
-					lastMsgTimestamp?: number | Long | null;
-					mediaVisibility?: any; // MediaVisibility type from baileys
-				}> = {};
-
-				// Only assign properties that exist in the update object and are not null/undefined
-				const safeAssign = <T>(key: string, value: T | null | undefined) => {
-					if (value !== null && value !== undefined) {
-						chatData[key as keyof typeof chatData] = value as any;
-					}
+				const chatData: any = {};
+				const safeAssign = (key: string, value: any) => {
+					if (value !== null && value !== undefined) chatData[key] = value;
 				};
 
-				// Assign each property if it exists in the update
 				if ('conversationTimestamp' in update) safeAssign('conversationTimestamp', update.conversationTimestamp);
 				if ('unreadCount' in update) safeAssign('unreadCount', update.unreadCount);
 				if ('readOnly' in update) safeAssign('readOnly', update.readOnly);
@@ -96,16 +79,6 @@ export default function chatHandler(sessionId: string, event: BaileysEventEmitte
 				if ('mediaVisibility' in update) safeAssign('mediaVisibility', update.mediaVisibility);
 
 				const data = transformPrisma(chatData);
-
-				// Check if chat exists before updating
-				const chatExists = await prisma.chat.findUnique({
-					where: { sessionId_id: { id: update.id!, sessionId } }
-				});
-
-				if (!chatExists) {
-					logger.warn({ chatId: update.id }, 'Attempted to update non-existent chat');
-					return;
-				}
 
 				await prisma.chat.update({
 					select: { pkId: true },
@@ -122,7 +95,8 @@ export default function chatHandler(sessionId: string, event: BaileysEventEmitte
 				});
 			} catch (e) {
 				if (e instanceof PrismaClientKnownRequestError && e.code === "P2025") {
-					return logger.info({ update }, "Got update for non existent chat");
+					// Silent failure if chat doesn't exist
+					return;
 				}
 				logger.error(e, "An error occured during chat update");
 			}

@@ -10,32 +10,37 @@ export default function contactHandler(sessionId: string, event: BaileysEventEmi
 
 	const set: BaileysEventHandler<"messaging-history.set"> = async ({ contacts }) => {
 		try {
-			const contactIds = contacts.map((c) => c.id);
-			const deletedOldContactIds = (
-				await prisma.contact.findMany({
+			await prisma.$transaction(async (tx) => {
+				const contactIds = contacts.map((c) => c.id);
+
+				// Obtenemos los contactos que ya no están en la lista para borrarlos
+				const oldContacts = await tx.contact.findMany({
 					select: { id: true },
 					where: { id: { notIn: contactIds }, sessionId },
-				})
-			).map((c) => c.id);
+				});
+				const deletedOldContactIds = oldContacts.map((c) => c.id);
 
-			const upsertPromises = contacts
-				.map((c) => transformPrisma(c))
-				.map((data) =>
-					prisma.contact.upsert({
+				// Ejecutamos upserts para todos los contactos nuevos/actualizados
+				for (const contact of contacts) {
+					const data = transformPrisma(contact);
+					await tx.contact.upsert({
 						select: { pkId: true },
 						create: { ...data, sessionId },
 						update: data,
 						where: { sessionId_id: { id: data.id, sessionId } },
-					}),
-				);
+					});
+				}
 
-			await Promise.any([
-				...upsertPromises,
-				prisma.contact.deleteMany({ where: { id: { in: deletedOldContactIds }, sessionId } }),
-			]);
+				if (deletedOldContactIds.length > 0) {
+					await tx.contact.deleteMany({
+						where: { id: { in: deletedOldContactIds }, sessionId }
+					});
+				}
+			});
+
 			logger.info(
-				{ deletedContacts: deletedOldContactIds.length, newContacts: contacts.length },
-				"Synced contacts",
+				{ contactsCount: contacts.length },
+				"Synced contacts successfully",
 			);
 		} catch (e) {
 			logger.error(e, "An error occured during contacts set");
@@ -44,7 +49,7 @@ export default function contactHandler(sessionId: string, event: BaileysEventEmi
 
 	const upsert: BaileysEventHandler<"contacts.upsert"> = async (contacts) => {
 		try {
-			await Promise.any(
+			await prisma.$transaction(
 				contacts
 					.map((c) => transformPrisma(c))
 					.map((data) =>
@@ -62,26 +67,20 @@ export default function contactHandler(sessionId: string, event: BaileysEventEmi
 	};
 
 	const update: BaileysEventHandler<"contacts.update"> = async (updates) => {
-		for (const update of updates) {
-			try {
-				await prisma.contact.upsert({
-					select: { pkId: true },
-					where: {
-						sessionId_id: { id: update.id!, sessionId },
-					},
-					update: transformPrisma(update),
-					create: transformPrisma({
-						id: update.id!,
-						sessionId,
-						...update,
-					}),
-				});
-			} catch (e) {
-				if (e instanceof PrismaClientKnownRequestError && e.code === "P2025") {
-					return logger.info({ update }, "Got update for non existent contact");
-				}
-				logger.error(e, "An error occured during contact update");
-			}
+		try {
+			await prisma.$transaction(
+				updates.map((u) => {
+					const data = transformPrisma(u);
+					return prisma.contact.upsert({
+						select: { pkId: true },
+						where: { sessionId_id: { id: u.id!, sessionId } },
+						update: data,
+						create: { ...data, id: u.id!, sessionId } as any,
+					});
+				})
+			);
+		} catch (e) {
+			logger.error(e, "An error occured during contact update");
 		}
 	};
 

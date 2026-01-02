@@ -1,4 +1,4 @@
- 
+
 import type { AuthenticationCreds, AuthenticationState, SignalDataTypeMap } from "baileys";
 import { proto } from "baileys";
 import { BufferJSON, initAuthCreds } from "baileys";
@@ -93,16 +93,41 @@ export async function useSession(sessionId: string): Promise<{
 					return data;
 				},
 				set: async (data: any): Promise<void> => {
-					const tasks: Promise<void>[] = [];
+					const operations: any[] = [];
 
 					for (const category in data) {
 						for (const id in data[category]) {
 							const value = data[category][id];
-							const sId = `${category}-${id}`;
-							tasks.push(value ? write(value, sId) : del(sId));
+							const sId = fixId(`${category}-${id}`);
+
+							if (value) {
+								const serializedData = JSON.stringify(value, BufferJSON.replacer);
+								operations.push(
+									prisma.session.upsert({
+										select: { pkId: true },
+										create: { data: serializedData, id: sId, sessionId },
+										update: { data: serializedData },
+										where: { sessionId_id: { id: sId, sessionId } },
+									})
+								);
+							} else {
+								operations.push(
+									prisma.session.delete({
+										select: { pkId: true },
+										where: { sessionId_id: { id: sId, sessionId } },
+									}).catch(() => { /* ignore delete errors if not found */ })
+								);
+							}
 						}
 					}
-					await Promise.allSettled(tasks);
+
+					if (operations.length > 0) {
+						try {
+							await prisma.$transaction(operations);
+						} catch (e) {
+							logger.error(e, "An error occured during session transaction write");
+						}
+					}
 				},
 			},
 		},
