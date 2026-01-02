@@ -11,5 +11,4 @@ Dockerfile
 docker-compose.yml
 README.md
 LICENSE
-pnpm-lock.yaml
 .github
