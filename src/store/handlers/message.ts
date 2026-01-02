@@ -26,11 +26,21 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 
 	const set: BaileysEventHandler<"messaging-history.set"> = async ({ messages, isLatest }) => {
 		try {
+			// Filtrar mensajes innecesarios antes de guardar historia
+			const filteredMessages = messages.filter(msg => {
+				const jid = msg.key.remoteJid || "";
+				// 1. Ignorar estados (historias)
+				if (jid.endsWith("@status")) return false;
+				// 2. Ignorar mensajes de protocolo (configuraciones internas)
+				if (msg.message?.protocolMessage) return false;
+				return true;
+			});
+
 			await prisma.$transaction(async (tx) => {
 				if (isLatest) await tx.message.deleteMany({ where: { sessionId } });
 
 				await tx.message.createMany({
-					data: messages.map((message) => ({
+					data: filteredMessages.map((message) => ({
 						...(transformPrisma(message) as MakeTransformedPrisma<Message>),
 						remoteJid: message.key.remoteJid!,
 						id: message.key.id!,
@@ -38,7 +48,7 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 					})),
 				});
 			});
-			logger.info({ messages: messages.length }, "Synced messages");
+			logger.info({ messages: filteredMessages.length, skipped: messages.length - filteredMessages.length }, "Synced filtered messages");
 		} catch (e) {
 			logger.error(e, "An error occured during messages set");
 		}
@@ -48,23 +58,27 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 		switch (type) {
 			case "append":
 			case "notify":
-				// Cache para evitar consultar la existencia del chat múltiples veces en la misma ráfaga
 				const verifiedChats = new Set<string>();
 
 				for (const message of messages) {
 					try {
 						const jid = jidNormalizedUser(message.key.remoteJid!);
+
+						// --- FILTROS DE ELIMINACIÓN ---
+						// 1. No guardar estados
+						if (jid.endsWith("@status")) continue;
+						// 2. No guardar mensajes de protocolo
+						if (message.message?.protocolMessage) continue;
+						// 3. Opcional: Ignorar mensajes vacíos o técnicos (Reaction, Poll Update, etc si no los usas)
+						// ------------------------------
+
 						// Remove unsupported fields
 						const { statusMentions, messageAddOns, ...restOfMessage } = message;
 						const messageData = { ...restOfMessage };
-
-						// Transform the message data for Prisma
 						const data = transformPrisma(messageData) as MakeTransformedPrisma<Message>;
-
 						const ts = message.messageTimestamp;
 						const messageTimestampBigInt = toBigIntTimestamp(ts);
 
-						// Only include fields that exist in the Prisma schema
 						const prismaData = {
 							...data,
 							remoteJid: jid,
@@ -94,7 +108,6 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 							},
 						});
 
-						// Solo verificamos si el chat existe si es una notificación y no lo hemos verificado ya en esta ráfaga
 						if (type === "notify" && !verifiedChats.has(jid)) {
 							const chatExists = (await prisma.chat.count({ where: { id: jid, sessionId } })) > 0;
 							if (!chatExists) {
