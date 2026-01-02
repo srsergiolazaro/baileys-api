@@ -2,3 +2,14 @@ node_modules
 dist
 .git
 .github
+.vscode
+.env
+*.log
+pm2_log.txt
+pm2_logs_completos.txt
+Dockerfile
+docker-compose.yml
+README.md
+LICENSE
+pnpm-lock.yaml
+.github

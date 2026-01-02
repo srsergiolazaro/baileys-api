@@ -1,29 +1,49 @@
-# Use an official Node.js runtime as a parent image
-FROM node:20-slim
+# Stage 1: Build
+FROM node:20-alpine AS builder
 
-# Set the working directory in the container
-WORKDIR /usr/src/app
+# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
+RUN apk add --no-cache libc6-compat
 
-# Copy package.json and pnpm-lock.yaml to the working directory
-COPY package.json pnpm-lock.yaml ./
-
-# Copy prisma schema
-COPY prisma ./prisma
+WORKDIR /app
 
 # Install pnpm
 RUN npm install -g pnpm
 
-# Install dependencies
+# Copy configuration files
+COPY package.json pnpm-lock.yaml ./
+COPY prisma ./prisma/
+
+# Install all dependencies (including devDependencies for build)
 RUN pnpm install --frozen-lockfile
 
-# Copy the rest of the application's source code from the host to the image's filesystem
+# Copy source code
 COPY . .
 
-# Build the project
+# Generate Prisma client and Build the project
+RUN pnpm prisma generate
 RUN pnpm run build
 
-# Make port 3000 available to the world outside this container
+# Stage 2: Production
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+# Install pnpm for production install
+RUN npm install -g pnpm
+
+# Set environment to production
+ENV NODE_ENV=production
+
+# Copy built assets and necessary files
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package.json /app/pnpm-lock.yaml ./
+COPY --from=builder /app/prisma ./prisma
+
+# Install ONLY production dependencies
+RUN pnpm install --prod --frozen-lockfile
+
+# Expose the API port
 EXPOSE 3000
 
-# Define the command to run the app
-CMD [ "pnpm", "start" ]
+# Start the application
+CMD ["pnpm", "start"]
