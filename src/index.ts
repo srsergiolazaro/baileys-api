@@ -59,7 +59,7 @@ import { startCleanupTask } from "./cleanup";
 
 console.log("🔧 Iniciando servidor...");
 
-// Iniciar tarea de limpieza automática
+// Iniciar tarea de limpieza automática (Mensajes de solo los últimos 4 días)
 startCleanupTask();
 
 // Initialize WhatsApp sessions
