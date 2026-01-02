@@ -47,6 +47,11 @@ app.get("/swagger.json", (_: Request, res: Response) => {
 app.use("/", routes);
 console.log("✔️  Rutas principales cargadas");
 
+// Health check endpoint for Coolify Watch Paths
+app.get("/health", (_: Request, res: Response) => {
+	res.status(200).send("OK");
+});
+
 app.all("*", (_: Request, res: Response) => {
 	console.warn("⚠️ Ruta no encontrada");
 	return res.status(404).json({ error: "URL not found" });
