@@ -1,4 +1,4 @@
- 
+
 import type { BaileysEventEmitter } from "baileys";
 import type { BaileysEventHandler } from "@/store/types";
 import { transformPrisma } from "@/store/utils";
@@ -11,22 +11,18 @@ export default function groupMetadataHandler(sessionId: string, event: BaileysEv
 	let listening = false;
 
 	const upsert: BaileysEventHandler<"groups.upsert"> = async (groups) => {
-		const promises: Promise<any>[] = [];
-
-		for (const group of groups) {
-			const data = transformPrisma(group);
-			promises.push(
-				model.upsert({
-					select: { pkId: true },
-					create: { ...data, sessionId },
-					update: data,
-					where: { sessionId_id: { id: group.id, sessionId } },
-				}),
-			);
-		}
-
 		try {
-			await Promise.allSettled(promises);
+			await prisma.$transaction(
+				groups.map((group) => {
+					const data = transformPrisma(group);
+					return model.upsert({
+						select: { pkId: true },
+						create: { ...data, sessionId },
+						update: data,
+						where: { sessionId_id: { id: group.id, sessionId } },
+					});
+				})
+			);
 		} catch (e) {
 			logger.error(e, "An error occured during groups upsert");
 		}
@@ -41,8 +37,7 @@ export default function groupMetadataHandler(sessionId: string, event: BaileysEv
 					where: { sessionId_id: { id: update.id!, sessionId } },
 				});
 			} catch (e) {
-				if (e instanceof PrismaClientKnownRequestError && e.code === "P2025")
-					return logger.info({ update }, "Got metadata update for non existent group");
+				if (e instanceof PrismaClientKnownRequestError && e.code === "P2025") continue;
 				logger.error(e, "An error occured during group metadata update");
 			}
 		}
@@ -54,41 +49,41 @@ export default function groupMetadataHandler(sessionId: string, event: BaileysEv
 		participants,
 	}) => {
 		try {
-			const metadata = ((await model.findFirst({
-				select: { participants: true },
-				where: { id, sessionId },
-			})) || []) as { participants: any[] } | null;
+			// Usamos una transacción para asegurar que la lectura y escritura sean consistentes
+			await prisma.$transaction(async (tx) => {
+				const group = await tx.groupMetadata.findUnique({
+					select: { participants: true },
+					where: { sessionId_id: { id, sessionId } },
+				});
 
-			if (!metadata) {
-				return logger.info(
-					{ update: { id, action, participants } },
-					"Got participants update for non existent group",
-				);
-			}
+				if (!group) return;
 
-			switch (action) {
-				case "add":
-					metadata.participants.push(
-						participants.map((id) => ({ id, isAdmin: false, isSuperAdmin: false })),
-					);
-					break;
-				case "demote":
-				case "promote":
-					for (const participant of metadata.participants) {
-						if (participants.includes(participant.id)) {
-							participant.isAdmin = action === "promote";
+				let metadataParticipants = (group.participants || []) as any[];
+
+				switch (action) {
+					case "add":
+						metadataParticipants.push(
+							...participants.map((p) => ({ id: p, isAdmin: false, isSuperAdmin: false })),
+						);
+						break;
+					case "demote":
+					case "promote":
+						for (const participant of metadataParticipants) {
+							if (participants.includes(participant.id)) {
+								participant.isAdmin = action === "promote";
+							}
 						}
-					}
-					break;
-				case "remove":
-					metadata.participants = metadata.participants.filter((p) => !participants.includes(p.id));
-					break;
-			}
+						break;
+					case "remove":
+						metadataParticipants = metadataParticipants.filter((p) => !participants.includes(p.id));
+						break;
+				}
 
-			await model.update({
-				select: { pkId: true },
-				data: transformPrisma({ participants: metadata.participants }),
-				where: { sessionId_id: { id, sessionId } },
+				await tx.groupMetadata.update({
+					select: { pkId: true },
+					data: { participants: metadataParticipants },
+					where: { sessionId_id: { id, sessionId } },
+				});
 			});
 		} catch (e) {
 			logger.error(e, "An error occured during group participants update");

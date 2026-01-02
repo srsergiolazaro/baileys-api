@@ -1,6 +1,6 @@
-import type { ParticipantAction, GroupParticipant } from "baileys";
-import { downloadMediaMessage, type WASocket, type WAMessage } from "baileys";
-import { prisma } from "@/db";
+import type { ParticipantAction, WAMessage, WASocket } from "baileys";
+import { downloadMediaMessage } from "baileys";
+import { webhookCache } from "@/webhook-cache";
 import { logger } from "@/shared";
 import { callWebHook, callWebHookFile } from "@/fetch";
 
@@ -38,7 +38,6 @@ export async function handleMessagesUpsert(
 	if (!messageType) return;
 
 	const messageContent = message.message[messageType];
-
 	let text = "";
 
 	if (typeof messageContent === "string") {
@@ -47,11 +46,24 @@ export async function handleMessagesUpsert(
 		text = messageContent.text ?? "";
 	}
 
-
 	try {
-		const webhooks = await prisma.webhook.findMany({
-			where: { sessionId, webhookType: "messages.upsert" },
-		});
+		// Usar el caché en lugar de consultar la DB siempre
+		const webhooks = await webhookCache.getWebhooks(sessionId, "messages.upsert");
+		if (webhooks.length === 0) return;
+
+		// Si hay media, descargarla UNA SOLA VEZ fuera del bucle de webhooks
+		let mediaBuffer: Buffer | undefined;
+		if (documentMessageTypes.includes(messageType)) {
+			mediaBuffer = await downloadMediaMessage(
+				message,
+				"buffer",
+				{},
+				{
+					logger,
+					reuploadRequest: socket.updateMediaMessage,
+				},
+			);
+		}
 
 		const webhookPromises = webhooks.map(async (webhook) => {
 			if (textMessageTypes.includes(messageType)) {
@@ -63,16 +75,7 @@ export async function handleMessagesUpsert(
 					type: "text",
 					text,
 				});
-			} else if (documentMessageTypes.includes(messageType)) {
-				const buffer = await downloadMediaMessage(
-					message,
-					"buffer",
-					{},
-					{
-						logger,
-						reuploadRequest: socket.updateMediaMessage,
-					},
-				);
+			} else if (mediaBuffer) {
 				return callWebHookFile(
 					webhook.url,
 					{
@@ -83,15 +86,14 @@ export async function handleMessagesUpsert(
 						type: "file",
 						text,
 					},
-					buffer,
+					mediaBuffer,
 				);
 			}
 		});
 
 		await Promise.allSettled(webhookPromises);
-		logger.info("Message sent to webhooks");
 	} catch (error) {
-		logger.error(error, "Failed to send message to webhooks");
+		logger.error(error, "Failed to process webhooks for message");
 	}
 }
 
@@ -101,9 +103,8 @@ export async function handleGroupParticipantsUpdate(
 	sessionId: string,
 ) {
 	try {
-		const webhooks = await prisma.webhook.findMany({
-			where: { sessionId, webhookType: "group-participants.update" },
-		});
+		const webhooks = await webhookCache.getWebhooks(sessionId, "group-participants.update");
+		if (webhooks.length === 0) return;
 
 		const webhookPromises = webhooks.map((webhook) =>
 			callWebHook(webhook.url, {
@@ -113,7 +114,6 @@ export async function handleGroupParticipantsUpdate(
 		);
 
 		await Promise.allSettled(webhookPromises);
-		logger.info({ update }, "Group participants update sent to webhooks");
 	} catch (error) {
 		logger.error(error, "Failed to send group participants update to webhooks");
 	}
