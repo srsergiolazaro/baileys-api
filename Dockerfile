@@ -42,6 +42,9 @@ COPY --from=builder /app/prisma ./prisma
 # Install ONLY production dependencies
 RUN pnpm install --prod --frozen-lockfile
 
+# Generate Prisma client again to ensure it's available in node_modules
+RUN pnpm prisma generate
+
 # Expose the API port
 EXPOSE 3000
 
