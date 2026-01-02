@@ -1,9 +1,7 @@
 import { RequestHandler } from "express";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/db";
 import crypto from "crypto";
 import { logger } from "@/shared";
-
-const prisma = new PrismaClient();
 // Helper to generate a random API key
 const generateApiKey = () => {
 	return crypto.randomBytes(32).toString("hex"); // 64 character hex string

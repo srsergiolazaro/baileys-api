@@ -1,9 +1,5 @@
 import { RequestHandler } from "express";
-import { PrismaClient } from "@prisma/client";
-import { logger } from "@/shared";
-import { sessionExists } from "@/whatsapp";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/db";
 
 /**
  * Middleware that only validates the API key without checking the session
