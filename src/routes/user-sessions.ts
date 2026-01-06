@@ -7,7 +7,41 @@ import { createSession } from "@/services/baileys";
 
 const router = Router();
 
-// Crear o actualizar una sesión de usuario
+/**
+ * @swagger
+ * /user-sessions:
+ *   post:
+ *     tags:
+ *       - User Sessions
+ *     summary: Crear o actualizar sesión
+ *     description: Crea o actualiza una sesión de usuario
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - sessionId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: ID del usuario
+ *               sessionId:
+ *                 type: string
+ *                 description: ID de la sesión
+ *               deviceName:
+ *                 type: string
+ *                 description: Nombre del dispositivo
+ *     responses:
+ *       200:
+ *         description: Sesión creada/actualizada exitosamente
+ *       400:
+ *         description: Datos de entrada inválidos
+ */
 router.post("/", async (req, res) => {
 	try {
 		logger.info("Recibida petición POST /user-sessions", { body: req.body });
@@ -81,7 +115,32 @@ router.post("/", async (req, res) => {
 	}
 });
 
-// Obtener sesiones de un usuario
+/**
+ * @swagger
+ * /user-sessions/user/{userId}:
+ *   get:
+ *     tags:
+ *       - User Sessions
+ *     summary: Obtener sesiones de usuario
+ *     description: Obtiene las sesiones activas de un usuario
+ *     security:
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID del usuario
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *         description: Filtrar por estado
+ *     responses:
+ *       200:
+ *         description: Lista de sesiones obtenida exitosamente
+ */
 router.get("/user/:userId", async (req, res) => {
 	try {
 		logger.info("Recibida petición GET /user-sessions/user/:userId", { userId: req.params.userId });
@@ -125,7 +184,29 @@ router.get("/user/:userId", async (req, res) => {
 	}
 });
 
-// Obtener información de una sesión específica
+/**
+ * @swagger
+ * /user-sessions/{sessionId}:
+ *   get:
+ *     tags:
+ *       - User Sessions
+ *     summary: Obtener sesión
+ *     description: Obtiene la información de una sesión específica
+ *     security:
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de la sesión
+ *     responses:
+ *       200:
+ *         description: Información de la sesión obtenida exitosamente
+ *       404:
+ *         description: Sesión no encontrada
+ */
 router.get("/:sessionId", async (req, res) => {
 	try {
 		const { sessionId } = req.params;
@@ -152,7 +233,42 @@ router.get("/:sessionId", async (req, res) => {
 	}
 });
 
-// Actualizar estado de una sesión
+/**
+ * @swagger
+ * /user-sessions/{sessionId}/status:
+ *   patch:
+ *     tags:
+ *       - User Sessions
+ *     summary: Actualizar estado
+ *     description: Actualiza el estado de una sesión
+ *     security:
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de la sesión
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [active, inactive, expired]
+ *                 description: Nuevo estado
+ *     responses:
+ *       200:
+ *         description: Estado actualizado exitosamente
+ *       400:
+ *         description: Estado inválido
+ */
 router.patch("/:sessionId/status", async (req, res) => {
 	try {
 		const { sessionId } = req.params;
@@ -220,7 +336,27 @@ router.patch("/:sessionId/status", async (req, res) => {
 	}
 });
 
-// Eliminar una sesión
+/**
+ * @swagger
+ * /user-sessions/{sessionId}:
+ *   delete:
+ *     tags:
+ *       - User Sessions
+ *     summary: Eliminar sesión
+ *     description: Elimina una sesión y cierra la conexión de WhatsApp
+ *     security:
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de la sesión a eliminar
+ *     responses:
+ *       200:
+ *         description: Sesión eliminada exitosamente
+ */
 router.delete("/:sessionId", async (req, res) => {
 	try {
 		const { sessionId } = req.params;
@@ -249,7 +385,27 @@ router.delete("/:sessionId", async (req, res) => {
 	}
 });
 
-// Actualizar última actividad de una sesión
+/**
+ * @swagger
+ * /user-sessions/{sessionId}/heartbeat:
+ *   patch:
+ *     tags:
+ *       - User Sessions
+ *     summary: Actualizar heartbeat
+ *     description: Actualiza la última actividad de una sesión
+ *     security:
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de la sesión
+ *     responses:
+ *       200:
+ *         description: Heartbeat actualizado exitosamente
+ */
 router.patch("/:sessionId/heartbeat", async (req, res) => {
 	try {
 		const { sessionId } = req.params;
