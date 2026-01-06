@@ -1,118 +1,191 @@
 # Baileys API
 
-Baileys is a simple, fast and easy to use WhatsApp Web API written in TypeScript. It is designed to be simple to use and is optimized for usage in Node.js.
+**Baileys API** is a robust and easy-to-use REST API wrapper for the [Baileys](https://github.com/WhiskeySockets/Baileys) library. Built with **TypeScript**, **Express**, and **Prisma**, it enables you to interact with WhatsApp programmatically. It supports multiple sessions, Server-Sent Events (SSE) for QR code updates, and includes a comprehensive Swagger documentation interface.
 
-An implementation of [baileys](https://github.com/WhiskeySockets/Baileys) as a simple REST API with multiple device support
+This project is a continuation and enhancement of [@ookamiiixd/baileys-api](https://github.com/ookamiiixd/baileys-api/).
 
-Project continued from [@ookamiiixd/baileys-api](https://github.com/ookamiiixd/baileys-api/)
+## 🚀 Features
 
-## Requirements
+- **Multi-Session Support**: Manage multiple WhatsApp accounts simultaneously.
+- **RESTful API**: Clean and standard API endpoints for all operations.
+- **Server-Sent Events (SSE)**: Real-time updates for authentication (QR codes).
+- **Database Integration**: Uses Prisma ORM with support for MySQL and PostgreSQL to persist session data.
+- **Swagger Documentation**: Built-in interactive API documentation for testing and exploration.
+- **Docker Ready**: Includes Dockerfile and ecosystem configuration for easy containerization and deployment.
+- **Group Management**: Create, update, and manage WhatsApp groups.
+- **Media Handling**: Send images, videos, documents, and audio files.
 
-- NodeJS version 18.19.0 or higher
-- Prisma [supported databases](https://www.prisma.io/docs/reference/database-reference/supported-databases). Tested on MySQL and PostgreSQL
+## 📋 Requirements
 
-## Installation
+Before you begin, ensure you have the following installed:
 
-1. Download or clone this repo. If you want to skip the build step, you can download the release (file with the `baileys-api.tgz` name pattern) from the release page
-2. Enter to the project directory
-3. Install the dependencies
+- **Node.js**: Version 18.19.0 or higher (v20 Recommended).
+- **pnpm**: The project uses pnpm for dependency management (recommended), though npm can also be used.
+- **Database**: MySQL or PostgreSQL instance.
 
-```sh
+## 🛠️ Installation & Setup
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/your-username/baileys-api.git
+cd baileys-api
+```
+
+### 2. Install Dependencies
+
+We recommend using `pnpm`:
+
+```bash
+npm install -g pnpm
+pnpm install
+```
+
+If you prefer `npm`:
+
+```bash
 npm install
-npm run postinstall
 ```
 
-4. Build the project using the `build` script
+### 3. Environment Configuration
 
-```sh
-npm run build
-```
+1.  Copy the example environment file:
+    ```bash
+    cp .env.example .env
+    ```
+2.  Open `.env` and configure the variables:
 
-You can skip this part if you're using the prebuilt one from the release page
+    ```env
+    # Application Settings
+    HOST="0.0.0.0"          # Host to bind the server to
+    PORT="3000"             # Port to run the server on
+    NODE_ENV="development"  # 'development' or 'production'
 
-## Setup
+    # Security
+    API_KEY="secret_api_key" # Optional: Secure your API endpoints
 
-1. Copy the `.env.example` file and rename it into `.env`, then update your [connection url](https://www.prisma.io/docs/reference/database-reference/connection-urls) in the `DATABASE_URL` field
-1. Update your [provider](https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#fields) in the `prisma/schema.prisma` file if you're using database other than MySQL
-1. Run your [migration](https://www.prisma.io/docs/reference/api-reference/command-reference#prisma-migrate)
+    # Database
+    # Replace with your actual connection string (MySQL/PostgreSQL)
+    DATABASE_URL="mysql://user:password@localhost:3306/baileys_api"
 
-```sh
-npx prisma migrate (dev|deploy)
-```
+    # WhatsApp Configuration
+    NAME_BOT_BROWSER="WhatsApp API" # Browser name shown in WhatsApp Linked Devices
+    RECONNECT_INTERVAL="5000"       # Reconnection delay in ms
+    MAX_RECONNECT_RETRIES="5"       # Max retries before stopping
+    SSE_MAX_QR_GENERATION="10"      # Max QR codes generated before timeout
 
-or push the schema
+    # Logging
+    LOG_LEVEL="info"
+    ```
 
-```sh
+### 4. Database Setup
+
+Ensure your database server is running, then apply the Prisma schema:
+
+```bash
+# For development (updates schema and generates client)
+npx prisma migrate dev --name init
+
+# Or just push the schema (good for quick prototyping)
 npx prisma db push
 ```
 
-Don't forget to always re-run those whenever there's a change on the `prisma/schema.prisma` file
+## 🚀 Running the Application
 
-## `.env` Configurations
+### Development Mode
 
-```env
-# Listening Host
-HOST="localhost"
+Starts the server with hot-reloading:
 
-# Listening Port
-PORT="3000"
-
-# API Key (for Authorization Header)
-API_KEY="" # Leave it empty if you don't want
-
-# Name browser bot
-NAME_BOT_BROWSER="Whatsapp Bot"
-
-# Project Mode (development|production)
-NODE_ENV="development"
-
-# Database Connection URL
-DATABASE_URL="mysql://root:12345@localhost:3306/baileys_api"
-
-# Reconnect Interval (in Milliseconds)
-RECONNECT_INTERVAL="5000"
-
-# Maximum Reconnect Attempts
-MAX_RECONNECT_RETRIES="5"
-
-# Maximum SSE QR Generation Attempts
-SSE_MAX_QR_GENERATION="10"
-
-# Pino Logger Level
-LOG_LEVEL="warn"
-```
-
-## Usage
-
-1. Make sure you have completed the **Installation** and **Setup** step
-1. You can then start the app using the `dev` for development and `start` script for production
-
-```sh
-# Development
+```bash
 npm run dev
-
-# Production
-npm run start
+# or
+pnpm dev
 ```
 
-1. Now the endpoint should be available according to your environment variables configuration. Default is at `http://localhost:3000`
+### Production Mode
 
-## API Docs
+1.  Build the project:
+    ```bash
+    npm run build
+    # or
+    pnpm run build
+    ```
+2.  Start the compiled application:
+    ```bash
+    npm start
+    # or
+    pnpm start
+    ```
 
-The API Documentation can fork **Postman Collection** in your workspace Postman
+### Using PM2
+
+A `ecosystem.config.cjs` file is included for process management with PM2.
+
+```bash
+# Start with PM2
+pm2 start ecosystem.config.cjs
+
+# Monitor logs
+pm2 logs baileys-api
+```
+
+## 🐳 Docker Deployment
+
+You can deploy the application using Docker to ensure a consistent environment.
+
+### 1. Build the Image
+
+```bash
+docker build -t baileys-api .
+```
+
+### 2. Run the Container
+
+Make sure to provide the necessary environment variables, especially the `DATABASE_URL`.
+
+```bash
+docker run -d \
+  -p 3000:3000 \
+  --name baileys-api \
+  -e DATABASE_URL="mysql://user:password@host.docker.internal:3306/baileys_api" \
+  -e API_KEY="your_secret_key" \
+  baileys-api
+```
+
+_Note: If your database is running on the host machine, use `host.docker.internal` (Mac/Windows) or `--network="host"` (Linux) to allow the container to access it._
+
+## 📚 API Documentation & Testing
+
+This project comes with integrated **Swagger UI** documentation, making it incredibly easy to understand and test the API endpoints.
+
+### Accessing Swagger UI
+
+Once the application is running, navigate to:
+
+👉 **http://localhost:3000/api-docs**
+
+### How to Test with Swagger
+
+1.  **Authorize**: If you set an `API_KEY` in your `.env`, click the **Authorize** button in Swagger UI and enter your key in the `ApiKeyAuth` section.
+2.  **Create a Session**:
+    - Go to the `Sessions` section.
+    - Use `/sessions/add` (POST) to create a session ID.
+    - Or use `/sessions/add-sse` (GET) to get a stream of QR codes for scanning.
+3.  **Scan QR**: Use your WhatsApp mobile app to scan the QR code generated.
+4.  **Use Endpoints**: Once connected, you can use other endpoints like `/messages/send`, `/groups`, etc.
+
+### Postman
+
+You can also use Postman to test the API. A collection is available (link preserved from original project, verify if valid):
 
 [<img src="https://run.pstmn.io/button.svg" alt="Run In Postman" style="width: 128px; height: 32px;">](https://app.getpostman.com/run-collection/14456337-fb3349c5-de0e-40ec-b909-3922f4a95b7a?action=collection%2Ffork&source=rip_markdown&collection-url=entityId%3D14456337-fb3349c5-de0e-40ec-b909-3922f4a95b7a%26entityType%3Dcollection%26workspaceId%3Dfbd81f05-e0e1-42cb-b893-60063cf8bcd1)
 
-## Notes
+## ⚠️ Important Notes
 
-- I only provide a simple authentication method, please modify according to your own needs.
+- **Responsibility**: This project is for educational and internal tool purposes. Do not use it for spamming or violating WhatsApp's Terms of Service.
+- **Security**: Always secure your API with an `API_KEY` when deploying to a public server.
+- **Sessions**: Session data is stored in the database. Ensure your database is persistent and backed up.
 
-## TODO
+## 📄 License
 
-- [ ] Move ExpressJS to HonoJS
-- [ ] Add endpoint for connecting native mobile API
-- [ ] Add endpoint for Groups (such as create, change information groups, etc)
-
-## Notice
-
-This project is intended for learning purpose only, don't use it for spamming or any activities that's prohibited by **WhatsApp**
+MIT License
