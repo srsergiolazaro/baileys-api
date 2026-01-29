@@ -263,24 +263,24 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 	const listen = () => {
 		if (listening) return;
 
-		event.on("messaging-history.set", set);
-		event.on("messages.upsert", upsert);
-		event.on("messages.update", update);
-		event.on("messages.delete", del);
-		event.on("message-receipt.update", updateReceipt);
-		event.on("messages.reaction", updateReaction);
+		// event.on("messaging-history.set", set);
+		// event.on("messages.upsert", upsert);
+		// event.on("messages.update", update);
+		// event.on("messages.delete", del);
+		// event.on("message-receipt.update", updateReceipt);
+		// event.on("messages.reaction", updateReaction);
 		listening = true;
 	};
 
 	const unlisten = () => {
 		if (!listening) return;
 
-		event.off("messaging-history.set", set);
-		event.off("messages.upsert", upsert);
-		event.off("messages.update", update);
-		event.off("messages.delete", del);
-		event.off("message-receipt.update", updateReceipt);
-		event.off("messages.reaction", updateReaction);
+		// event.off("messaging-history.set", set);
+		// event.off("messages.upsert", upsert);
+		// event.off("messages.update", update);
+		// event.off("messages.delete", del);
+		// event.off("message-receipt.update", updateReceipt);
+		// event.off("messages.reaction", updateReaction);
 		listening = false;
 	};
 

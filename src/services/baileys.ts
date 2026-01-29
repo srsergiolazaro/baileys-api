@@ -50,6 +50,7 @@ type createSessionOptions = {
 	SSE?: boolean;
 	readIncomingMessages?: boolean;
 	socketConfig?: SocketConfig;
+	deviceName?: string;
 };
 
 export async function createSession(options: createSessionOptions) {
@@ -60,6 +61,7 @@ export async function createSession(options: createSessionOptions) {
 		SSE = false,
 		readIncomingMessages = false,
 		socketConfig,
+		deviceName = "WhatsApp User",
 	} = options;
 
 	// ============================================================
@@ -98,8 +100,7 @@ export async function createSession(options: createSessionOptions) {
 	});
 
 	// ============================================================
-	// 🗄️ CREACIÓN / ACTUALIZACIÓN DE SESIÓN EN BD
-	// (Solo ocurre si SSE funcionó correctamente)
+	// 🗄️ ACTUALIZACIÓN DE SESIÓN EXISTENTE EN BD
 	// ============================================================
 	const now = new Date();
 	try {
@@ -116,58 +117,11 @@ export async function createSession(options: createSessionOptions) {
 					updatedAt: now,
 				},
 			});
-		} else {
-			await prisma.userSession.create({
-				data: {
-					sessionId,
-					userId,
-					status: "active",
-					deviceName: "WhatsApp User",
-					phoneNumber: null,
-					createdAt: now,
-					updatedAt: now,
-					lastActive: now,
-				},
-			});
+			logger.info("createSession: existing userSession marked as active", { sessionId });
 		}
 	} catch (error) {
-		if (error instanceof PrismaClientKnownRequestError) {
-			if (error.code === "P2025") {
-				logger.warn("UserSession missing; recreating", { sessionId, userId });
-				await prisma.userSession.create({
-					data: {
-						id: sessionId,
-						sessionId,
-						userId,
-						status: "active",
-						deviceName: "WhatsApp User",
-						phoneNumber: null,
-						createdAt: now,
-						updatedAt: now,
-						lastActive: now,
-					},
-				});
-			} else if (error.code === "P2002") {
-				logger.warn("Unique constraint conflict, updating directly", { sessionId, userId });
-				await prisma.userSession.update({
-					where: { sessionId },
-					data: {
-						userId,
-						status: "active",
-						deviceName: "WhatsApp User",
-						lastActive: now,
-						updatedAt: now,
-					},
-				});
-			} else {
-				throw error;
-			}
-		} else {
-			throw error;
-		}
+		logger.error("Error updating existing session status", { sessionId, error });
 	}
-
-	logger.info("createSession: userSession upserted", { sessionId, userId });
 
 	// ============================================================
 	// 🔥 DESTRUCCIÓN COMPLETA DE SESIÓN
@@ -176,17 +130,25 @@ export async function createSession(options: createSessionOptions) {
 
 	const destroy = async (logout = true) => {
 		try {
-			await Promise.allSettled([
-				logout && socket.logout(),
-				prisma.chat.deleteMany({ where: { sessionId } }),
-				prisma.contact.deleteMany({ where: { sessionId } }),
-				prisma.message.deleteMany({ where: { sessionId } }),
-				prisma.groupMetadata.deleteMany({ where: { sessionId } }),
-				prisma.userSession.deleteMany({ where: { sessionId } }),
-				prisma.webhook.deleteMany({ where: { sessionId } }),
-				prisma.session.deleteMany({ where: { sessionId } }),
-			]);
-			logger.info("Session destroyed", { session: sessionId });
+			if (logout) {
+				await Promise.allSettled([
+					socket.logout(),
+					prisma.chat.deleteMany({ where: { sessionId } }),
+					prisma.contact.deleteMany({ where: { sessionId } }),
+					prisma.message.deleteMany({ where: { sessionId } }),
+					prisma.groupMetadata.deleteMany({ where: { sessionId } }),
+					prisma.userSession.deleteMany({ where: { sessionId } }),
+					prisma.webhook.deleteMany({ where: { sessionId } }),
+					prisma.session.deleteMany({ where: { sessionId } }),
+				]);
+				logger.info("Session and data destroyed (logged out)", { session: sessionId });
+			} else {
+				await prisma.userSession.update({
+					where: { sessionId },
+					data: { status: "inactive" },
+				});
+				logger.info("Session marked as inactive (not logged out)", { session: sessionId });
+			}
 		} catch (e) {
 			logger.error("Error during session destroy", e);
 		} finally {
@@ -219,7 +181,7 @@ export async function createSession(options: createSessionOptions) {
 				}
 				res.end();
 			}
-			destroy(doNotReconnect);
+			destroy(code === DisconnectReason.loggedOut);
 			return;
 		}
 
@@ -274,7 +236,7 @@ export async function createSession(options: createSessionOptions) {
 			res.write(`data: ${JSON.stringify(data)}\n\n`);
 		} catch (e) {
 			if (res && !res.writableEnded) res.end();
-			destroy();
+			destroy(false);
 		}
 	};
 
@@ -309,7 +271,7 @@ export async function createSession(options: createSessionOptions) {
 	};
 
 	socket.ev.on("creds.update", saveCreds);
-	socket.ev.on("connection.update", (update) => {
+	socket.ev.on("connection.update", async (update) => {
 		connectionState = update;
 		const { connection, lastDisconnect } = update;
 		const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
@@ -319,6 +281,38 @@ export async function createSession(options: createSessionOptions) {
 		if (connection === "open") {
 			retries.delete(sessionId);
 			SSEQRGenerations.delete(sessionId);
+
+			// ============================================================
+			// 💾 GUARDAR / ACTUALIZAR SESIÓN EN BD AL CONECTAR
+			// ============================================================
+			const now = new Date();
+			try {
+				await prisma.userSession.upsert({
+					where: { sessionId },
+					update: {
+						status: "active",
+						lastActive: now,
+						updatedAt: now,
+						deviceName,
+						data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
+					},
+					create: {
+						id: sessionId,
+						sessionId,
+						userId,
+						status: "active",
+						deviceName,
+						phoneNumber: null,
+						createdAt: now,
+						updatedAt: now,
+						lastActive: now,
+						data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
+					},
+				});
+				logger.info("UserSession synced to database on connection open", { sessionId });
+			} catch (e) {
+				logger.error("Failed to sync UserSession on connection open", { sessionId, error: e });
+			}
 
 			if (res && !res.writableEnded) {
 				res.end();
@@ -346,19 +340,7 @@ export async function createSession(options: createSessionOptions) {
 		handleGroupParticipantsUpdate(socket, c, sessionId),
 	);
 
-	// ============================================================
-	// 💾 GUARDAR CONFIGURACIÓN DE SESIÓN
-	// ============================================================
-	try {
-		await prisma.userSession.update({
-			where: { sessionId },
-			data: {
-				data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
-			},
-		});
-	} catch (e) {
-		logger.error("Failed to save session config", e);
-		throw e;
-	}
+	// Sesión inicializada correctamente en memoria
+	logger.info("createSession: session initialized in memory", { sessionId });
 }
 

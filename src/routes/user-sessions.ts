@@ -156,25 +156,21 @@ router.get("/user/:userId", async (req, res) => {
 			where: whereClause,
 			orderBy: { lastActive: "desc" },
 		});
-		// Recorrer las sesiones y eliminar las que no tienen conexión activa
-		const activeSessions = []; // Nueva lista para sesiones activas
-		for (const userSession of sessions) {
-			const sessionConnection = getSession(userSession.sessionId);
-			if (!sessionConnection) {
-				logger.info("Eliminando sesión sin conexión", { sessionId: userSession.sessionId });
-				await prisma.userSession.delete({
-					where: { sessionId: userSession.sessionId },
-				});
-			} else {
-				activeSessions.push(userSession); // Añadir sesión activa a la nueva lista
-			}
-		}
 
-		logger.info("Sesiones encontradas", { count: activeSessions.length, userId }); // Modificado para contar sesiones activas
+		// Mapear las sesiones para incluir su estado real en memoria
+		const sessionsWithStatus = sessions.map((userSession) => {
+			const sessionConnection = getSession(userSession.sessionId);
+			return {
+				...userSession,
+				memoryStatus: sessionConnection ? "online" : "offline",
+			};
+		});
+
+		logger.info("Sesiones encontradas", { count: sessionsWithStatus.length, userId });
 
 		res.json({
 			success: true,
-			data: activeSessions, // Devolver solo las sesiones activas
+			data: sessionsWithStatus,
 		});
 	} catch (error) {
 		logger.error("Error al obtener sesiones del usuario:", error);
@@ -301,7 +297,7 @@ router.patch("/:sessionId/status", async (req, res) => {
 			// Si el estado cambia a inactivo, detener la conexión de WhatsApp sin borrar datos
 			const session = getSession(sessionId);
 			if (session) {
-				session.end(undefined); // Usar destroy() para desconectar sin borrar
+				await session.destroy(false);
 				logger.info("Sesión de WhatsApp desconectada debido al cambio de estado a inactivo", {
 					sessionId,
 				});

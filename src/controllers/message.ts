@@ -168,29 +168,4 @@ export const download: RequestHandler = async (req, res) => {
 	}
 };
 
-export const deleteMessage: RequestHandler = async (req, res) => {
-	try {
-		const { sessionId } = req.appData;
-		const { jid, key, type = "number" } = req.body;
-		const session = getSession(sessionId)!;
 
-		if (!session) {
-			return res.status(400).json({ error: "Session not found or not connected" });
-		}
-		const { exists, formatJid, error } = await jidExists(session, jid);
-		if (!exists) {
-			return res.status(400).json({
-				error: error || "JID does not exist",
-				details: `Failed to verify JID: ${jid}`,
-			});
-		}
-		await session.sendMessage(formatJid, {
-			delete: key,
-		});
-		res.status(200).json({ message: "Message deleted successfully" });
-	} catch (e) {
-		const message = "An error occurred during message deletion";
-		logger.error(e, message);
-		res.status(500).json({ error: message });
-	}
-};

@@ -88,34 +88,15 @@ export const add: RequestHandler = async (req, res) => {
 	}
 
 	try {
-		// Create or update UserSession
-		await prisma.userSession.upsert({
-			where: { sessionId },
-			update: {
-				status: "active",
-				deviceName: deviceName || "WhatsApp User",
-				lastActive: new Date(),
-				updatedAt: new Date(),
-			},
-			create: {
-				id: sessionId, // Add required id field
-				userId,
-				sessionId,
-				status: "active",
-				deviceName: deviceName || "WhatsApp User",
-				phoneNumber: null,
-				createdAt: new Date(),
-				updatedAt: new Date(),
-				lastActive: new Date(),
-			},
-		});
-
 		// Create the WhatsApp session
+		// UserSession will be created/updated inside createSession only when connection is 'open'
 		await createSession({
 			userId,
+			sessionId,
 			res,
 			readIncomingMessages,
 			socketConfig,
+			deviceName,
 		});
 	} catch (error) {
 		logger.error("Error creating session:", error);
