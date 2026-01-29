@@ -60,12 +60,10 @@ app.all("*", (_: Request, res: Response) => {
 const host = process.env.HOST || "0.0.0.0";
 const port = Number(process.env.PORT || 3000);
 
-import { startCleanupTask } from "./cleanup";
 
 console.log("🔧 Iniciando servidor...");
 
 // Iniciar tarea de limpieza automática (Mensajes de solo los últimos 4 días)
-startCleanupTask();
 
 // Initialize WhatsApp sessions
 init().then(() => {
