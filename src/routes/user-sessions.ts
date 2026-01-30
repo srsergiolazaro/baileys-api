@@ -76,10 +76,7 @@ router.post("/", async (req, res) => {
 			userSession = await prisma.userSession.update({
 				where: { sessionId },
 				data: {
-					userId,
 					status: "active",
-					phoneNumber,
-					deviceName,
 					lastActive: new Date(),
 					updatedAt: new Date(),
 				},
