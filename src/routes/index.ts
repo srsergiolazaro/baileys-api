@@ -8,7 +8,6 @@ import webhookRoutes from "./webhooks";
 import productRoutes from "./product";
 import userRoutes from "./user";
 
-import userSessionsRoute from "./user-sessions";
 import keysRoutes from "./keys";
 import { apiKeyValidator, apiKeyValidatorKeyOnly } from "@/middlewares/api-key-validator";
 
@@ -22,7 +21,6 @@ router.use("/messages", apiKeyValidator, messageRoutes);
 router.use("/webhooks", apiKeyValidator, webhookRoutes);
 router.use("/user", apiKeyValidator, userRoutes);
 
-router.use("/user-sessions", userSessionsRoute);
 router.use("/keys", keysRoutes);
 
 export default router;
