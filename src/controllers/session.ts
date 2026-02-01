@@ -55,14 +55,23 @@ export const find: RequestHandler = (req, res) =>
 
 export const status: RequestHandler = (req, res) => {
 	try {
-		const session = getSession(req.appData.sessionId);
+		const sessionId =
+			req.appData?.sessionId ||
+			(req.headers["x-session-id"] as string) ||
+			(req.query.sessionId as string);
+
+		if (!sessionId) {
+			return res.status(400).json({ error: "Session ID es requerido" });
+		}
+
+		const session = getSession(sessionId);
 		if (!session) {
 			return res.status(404).json({ error: "Sesión no encontrada" });
 		}
 		const currentStatus = getSessionStatus(session);
 		res.status(200).json({
 			status: currentStatus,
-			sessionId: req.appData.sessionId,
+			sessionId: sessionId,
 			isConnected: currentStatus === "CONNECTED" || currentStatus === "CONNECTING",
 		});
 	} catch (error) {
