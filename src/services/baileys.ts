@@ -4,6 +4,7 @@ import makeWASocket, {
 	DisconnectReason,
 	isJidBroadcast,
 	makeCacheableSignalKeyStore,
+	jidDecode,
 } from "baileys";
 import type { ConnectionState, GroupParticipant, ParticipantAction, SocketConfig } from "baileys";
 import { Store, useSession } from "../store";
@@ -286,6 +287,18 @@ export async function createSession(options: createSessionOptions) {
 			// 💾 GUARDAR / ACTUALIZAR SESIÓN EN BD AL CONECTAR
 			// ============================================================
 			const now = new Date();
+
+			// Obtener número de teléfono y nombre del usuario conectado
+			const me = socket.user;
+			let phoneNumber: string | null = null;
+			let userName: string | null = deviceName;
+
+			if (me?.id) {
+				const decoded = jidDecode(me.id);
+				phoneNumber = decoded?.user || null;
+				userName = me.name || me.notify || deviceName;
+			}
+
 			try {
 				await prisma.userSession.upsert({
 					where: { sessionId },
@@ -293,7 +306,8 @@ export async function createSession(options: createSessionOptions) {
 						status: "active",
 						lastActive: now,
 						updatedAt: now,
-						deviceName,
+						deviceName: userName,
+						phoneNumber,
 						data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
 					},
 					create: {
@@ -301,15 +315,15 @@ export async function createSession(options: createSessionOptions) {
 						sessionId,
 						userId,
 						status: "active",
-						deviceName,
-						phoneNumber: null,
+						deviceName: userName,
+						phoneNumber,
 						createdAt: now,
 						updatedAt: now,
 						lastActive: now,
 						data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
 					},
 				});
-				logger.info("UserSession synced to database on connection open", { sessionId });
+				logger.info("UserSession synced to database on connection open", { sessionId, phoneNumber, userName });
 			} catch (e) {
 				logger.error("Failed to sync UserSession on connection open", { sessionId, error: e });
 			}
