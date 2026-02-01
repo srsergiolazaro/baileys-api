@@ -1,118 +1,180 @@
 # Baileys API
 
-Baileys is a simple, fast and easy to use WhatsApp Web API written in TypeScript. It is designed to be simple to use and is optimized for usage in Node.js.
+REST API wrapper para WhatsApp basada en la librería [Baileys](https://github.com/WhiskeySockets/Baileys). Permite la interacción programática con WhatsApp con soporte para múltiples dispositivos y sesiones.
 
-An implementation of [baileys](https://github.com/WhiskeySockets/Baileys) as a simple REST API with multiple device support
+## Características
 
-Project continued from [@ookamiiixd/baileys-api](https://github.com/ookamiiixd/baileys-api/)
+- **Multi-sesión**: Gestiona múltiples cuentas de WhatsApp simultáneamente
+- **Webhooks**: Envía eventos a URLs externas (mensajes, cambios de estado, etc.)
+- **Gestión de mensajes**: Envío/recepción de texto, imágenes, videos, documentos
+- **Gestión de grupos**: Control completo (crear, actualizar, miembros, configuración)
+- **Gestión de contactos**: Administra contactos y listas de bloqueo
+- **Manejo de media**: Descarga y subida de archivos multimedia
+- **Persistencia de sesiones**: Almacena y restaura sesiones desde base de datos
+- **Documentación API**: Swagger UI integrado en `/api-docs`
+- **Autenticación**: Sistema de API keys con expiración y control de acceso
 
-## Requirements
+## Tecnologías
 
-- NodeJS version 18.19.0 or higher
-- Prisma [supported databases](https://www.prisma.io/docs/reference/database-reference/supported-databases). Tested on MySQL and PostgreSQL
+- **Runtime**: Node.js (v20+)
+- **Lenguaje**: TypeScript
+- **Framework**: Express.js
+- **WhatsApp**: Baileys
+- **Base de datos**: PostgreSQL con Prisma ORM
+- **Documentación**: Swagger UI
 
-## Installation
+## Requisitos
 
-1. Download or clone this repo. If you want to skip the build step, you can download the release (file with the `baileys-api.tgz` name pattern) from the release page
-2. Enter to the project directory
-3. Install the dependencies
+- Node.js v20 o superior
+- PostgreSQL
+- pnpm (recomendado)
 
-```sh
-npm install
-npm run postinstall
+## Instalación
+
+```bash
+# Clonar el repositorio
+git clone <repository-url>
+cd baileys-api
+
+# Instalar pnpm si no lo tienes
+npm install -g pnpm
+
+# Instalar dependencias
+pnpm install
+
+# Generar cliente Prisma
+pnpm prisma generate
+
+# Configurar base de datos
+pnpm prisma migrate deploy
 ```
 
-4. Build the project using the `build` script
+## Configuración
 
-```sh
-npm run build
-```
-
-You can skip this part if you're using the prebuilt one from the release page
-
-## Setup
-
-1. Copy the `.env.example` file and rename it into `.env`, then update your [connection url](https://www.prisma.io/docs/reference/database-reference/connection-urls) in the `DATABASE_URL` field
-1. Update your [provider](https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#fields) in the `prisma/schema.prisma` file if you're using database other than MySQL
-1. Run your [migration](https://www.prisma.io/docs/reference/api-reference/command-reference#prisma-migrate)
-
-```sh
-npx prisma migrate (dev|deploy)
-```
-
-or push the schema
-
-```sh
-npx prisma db push
-```
-
-Don't forget to always re-run those whenever there's a change on the `prisma/schema.prisma` file
-
-## `.env` Configurations
+Crea un archivo `.env` en la raíz del proyecto:
 
 ```env
-# Listening Host
-HOST="localhost"
-
-# Listening Port
-PORT="3000"
-
-# API Key (for Authorization Header)
-API_KEY="" # Leave it empty if you don't want
-
-# Name browser bot
-NAME_BOT_BROWSER="Whatsapp Bot"
-
-# Project Mode (development|production)
-NODE_ENV="development"
-
-# Database Connection URL
-DATABASE_URL="mysql://root:12345@localhost:3306/baileys_api"
-
-# Reconnect Interval (in Milliseconds)
-RECONNECT_INTERVAL="5000"
-
-# Maximum Reconnect Attempts
-MAX_RECONNECT_RETRIES="5"
-
-# Maximum SSE QR Generation Attempts
-SSE_MAX_QR_GENERATION="10"
-
-# Pino Logger Level
-LOG_LEVEL="warn"
+PORT=3000
+HOST=0.0.0.0
+NODE_ENV=development
+DATABASE_URL=postgresql://usuario:password@localhost:5432/baileys_api
 ```
 
-## Usage
+## Ejecución
 
-1. Make sure you have completed the **Installation** and **Setup** step
-1. You can then start the app using the `dev` for development and `start` script for production
+```bash
+# Desarrollo (con hot reload)
+pnpm dev
 
-```sh
-# Development
-npm run dev
-
-# Production
-npm run start
+# Producción
+pnpm build
+pnpm start
 ```
 
-1. Now the endpoint should be available according to your environment variables configuration. Default is at `http://localhost:3000`
+## Docker
 
-## API Docs
+```bash
+# Construir y ejecutar con Docker Compose
+docker-compose up -d
+```
 
-The API Documentation can fork **Postman Collection** in your workspace Postman
+## Endpoints Principales
 
-[<img src="https://run.pstmn.io/button.svg" alt="Run In Postman" style="width: 128px; height: 32px;">](https://app.getpostman.com/run-collection/14456337-fb3349c5-de0e-40ec-b909-3922f4a95b7a?action=collection%2Ffork&source=rip_markdown&collection-url=entityId%3D14456337-fb3349c5-de0e-40ec-b909-3922f4a95b7a%26entityType%3Dcollection%26workspaceId%3Dfbd81f05-e0e1-42cb-b893-60063cf8bcd1)
+### Sesiones (`/sessions`)
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/sessions/list` | Listar todas las sesiones |
+| GET | `/sessions/status` | Estado de la sesión |
+| POST | `/sessions/add` | Crear nueva sesión |
+| GET | `/sessions/add-sse` | Crear sesión con Server-Sent Events |
+| DELETE | `/sessions` | Eliminar sesión |
 
-## Notes
+### Mensajes (`/messages`)
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/messages` | Listar mensajes (paginado) |
+| POST | `/messages/send` | Enviar mensaje |
+| POST | `/messages/send/bulk` | Enviar múltiples mensajes |
+| POST | `/messages/download` | Descargar media de mensaje |
 
-- I only provide a simple authentication method, please modify according to your own needs.
+### Chats (`/chats`)
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/chats` | Listar chats |
+| GET | `/chats/{jid}` | Obtener chat específico |
+| POST | `/chats/mute` | Silenciar chat |
+| POST | `/chats/read` | Marcar como leído |
 
-## TODO
+### Contactos (`/contacts`)
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/contacts` | Listar contactos |
+| GET | `/contacts/blocklist` | Lista de bloqueados |
+| GET | `/contacts/{jid}/photo` | Foto de perfil |
+| POST | `/contacts/blocklist/update` | Bloquear/desbloquear |
 
-- [ ] Move ExpressJS to HonoJS
-- [ ] Add endpoint for connecting native mobile API
-- [ ] Add endpoint for Groups (such as create, change information groups, etc)
+### Grupos (`/groups`)
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/groups` | Listar grupos |
+| POST | `/groups` | Crear grupo |
+| PUT | `/groups/update` | Actualizar grupo |
+| POST | `/groups/participants` | Gestionar participantes |
+| POST | `/groups/leave` | Salir del grupo |
 
-## Notice
+### Webhooks (`/webhooks`)
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/webhooks` | Listar webhooks |
+| POST | `/webhooks` | Crear webhook |
+| PUT | `/webhooks/{id}` | Actualizar webhook |
+| DELETE | `/webhooks/{id}` | Eliminar webhook |
 
-This project is intended for learning purpose only, don't use it for spamming or any activities that's prohibited by **WhatsApp**
+## Autenticación
+
+La API utiliza autenticación mediante API keys. Incluye el header `x-api-key` en todas las peticiones:
+
+```bash
+curl -X GET "http://localhost:3000/chats" \
+  -H "x-api-key: tu-api-key" \
+  -H "x-session-id: tu-session-id"
+```
+
+## Documentación
+
+Accede a la documentación interactiva de la API en:
+
+```
+http://localhost:3000/api-docs
+```
+
+## Estructura del Proyecto
+
+```
+src/
+├── controllers/     # Manejadores de peticiones
+├── routes/          # Definición de endpoints
+├── middlewares/     # Middleware de Express
+├── services/        # Lógica de negocio
+├── store/           # Almacenamiento de datos WhatsApp
+├── index.ts         # Punto de entrada
+├── whatsapp.ts      # Inicialización de sesiones
+└── swagger.ts       # Configuración de Swagger
+
+prisma/
+└── schema.prisma    # Esquema de base de datos
+```
+
+## Scripts Disponibles
+
+| Script | Descripción |
+|--------|-------------|
+| `pnpm dev` | Ejecutar en modo desarrollo |
+| `pnpm build` | Compilar TypeScript |
+| `pnpm start` | Ejecutar build de producción |
+| `pnpm lint` | Ejecutar ESLint |
+| `pnpm format` | Formatear código con Prettier |
+
+## Licencia
+
+MIT
