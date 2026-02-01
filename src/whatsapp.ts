@@ -9,6 +9,10 @@ export {
     getSession,
     deleteSession,
     sessionExists,
+    stopSession,
+    isRestarting,
+    setRestartingLock,
+    clearRestartingLock,
 } from "./services/session";
 
 export async function init() {

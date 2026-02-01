@@ -134,4 +134,73 @@ router.get("/add-sse", session.addSSE);
  */
 router.delete("/", session.del);
 
+/**
+ * @swagger
+ * /sessions/restart:
+ *   post:
+ *     tags:
+ *       - Sesiones
+ *     summary: Reiniciar sesión
+ *     description: |
+ *       Reinicia una sesión de WhatsApp de forma segura.
+ *
+ *       **Protecciones implementadas:**
+ *       - Lock de reinicio: previene múltiples reinicios simultáneos
+ *       - Cierre suave: desconecta sin hacer logout (preserva credenciales)
+ *       - Espera de desconexión: asegura cierre completo antes de reconectar
+ *       - Verificación: confirma que no hay sesión activa duplicada
+ *
+ *       **ADVERTENCIA:** Si se ejecutan dos sesiones con las mismas credenciales
+ *       simultáneamente, WhatsApp eliminará la sesión. Este endpoint tiene
+ *       protecciones contra esto.
+ *     security:
+ *       - ApiKeyAuth: []
+ *       - SessionId: []
+ *     parameters:
+ *       - in: header
+ *         name: x-session-id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de la sesión a reiniciar
+ *     responses:
+ *       200:
+ *         description: Sesión reiniciada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Sesión reiniciada correctamente"
+ *                 sessionId:
+ *                   type: string
+ *       400:
+ *         description: Se requiere el ID de la sesión
+ *       401:
+ *         description: Usuario no autenticado
+ *       404:
+ *         description: Sesión no encontrada para este usuario
+ *       409:
+ *         description: La sesión ya está en proceso de reinicio
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "La sesión ya está en proceso de reinicio"
+ *                 code:
+ *                   type: string
+ *                   example: "RESTART_IN_PROGRESS"
+ *       500:
+ *         description: Error al reiniciar la sesión
+ */
+router.post("/restart", session.restart);
+
 export default router;

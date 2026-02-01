@@ -7,6 +7,10 @@ import {
 	getSessionStatus,
 	listSessions,
 	sessionExists,
+	stopSession,
+	isRestarting,
+	setRestartingLock,
+	clearRestartingLock,
 } from "@/whatsapp";
 import { createSession } from "@/services/baileys";
 
@@ -167,5 +171,143 @@ export const del: RequestHandler = async (req, res) => {
 			error: "Error al eliminar la sesión",
 			details: error instanceof Error ? error.message : "Error desconocido",
 		});
+	}
+};
+
+/**
+ * Reinicia una sesión de WhatsApp de forma segura.
+ *
+ * IMPORTANTE: Este endpoint tiene protecciones contra conexiones duplicadas:
+ * 1. Lock de reinicio - previene múltiples reinicios simultáneos
+ * 2. Cierre suave - desconecta sin hacer logout (preserva credenciales)
+ * 3. Espera de desconexión - asegura cierre completo antes de reconectar
+ * 4. Verificación - confirma que no hay sesión activa antes de crear nueva
+ */
+export const restart: RequestHandler = async (req, res) => {
+	const sessionId = req.appData?.sessionId || req.body?.sessionId;
+	const userId = req.appData?.userId;
+
+	if (!sessionId) {
+		return res.status(400).json({ error: "Se requiere el ID de la sesión" });
+	}
+
+	if (!userId) {
+		return res.status(401).json({ error: "Usuario no autenticado" });
+	}
+
+	// Verificar que la sesión pertenece al usuario
+	const userSession = await prisma.userSession.findFirst({
+		where: { sessionId, userId },
+	});
+
+	if (!userSession) {
+		return res.status(404).json({ error: "Sesión no encontrada para este usuario" });
+	}
+
+	// ============================================================
+	// 🔒 LOCK: Prevenir reinicios simultáneos
+	// ============================================================
+	if (isRestarting(sessionId)) {
+		logger.warn({ sessionId }, "restart: sesión ya está reiniciando");
+		return res.status(409).json({
+			error: "La sesión ya está en proceso de reinicio",
+			code: "RESTART_IN_PROGRESS"
+		});
+	}
+
+	if (!setRestartingLock(sessionId)) {
+		logger.warn({ sessionId }, "restart: no se pudo obtener lock");
+		return res.status(409).json({
+			error: "La sesión ya está en proceso de reinicio",
+			code: "RESTART_IN_PROGRESS"
+		});
+	}
+
+	logger.info({ sessionId, userId }, "restart: iniciando reinicio de sesión");
+
+	try {
+		// ============================================================
+		// 🛑 PASO 1: Detener sesión actual (sin logout)
+		// ============================================================
+		const wasActive = sessionExists(sessionId);
+
+		if (wasActive) {
+			logger.info({ sessionId }, "restart: deteniendo sesión activa");
+			await stopSession(sessionId);
+
+			// Esperar a que se cierre completamente
+			// Baileys necesita tiempo para limpiar recursos
+			await new Promise(resolve => setTimeout(resolve, 2000));
+
+			// Verificación de seguridad: asegurarse de que ya no existe
+			if (sessionExists(sessionId)) {
+				logger.error({ sessionId }, "restart: sesión aún existe después de stopSession");
+				clearRestartingLock(sessionId);
+				return res.status(500).json({
+					error: "No se pudo detener la sesión correctamente",
+					code: "STOP_FAILED"
+				});
+			}
+		} else {
+			logger.info({ sessionId }, "restart: sesión no estaba activa en memoria");
+		}
+
+		// ============================================================
+		// 🔄 PASO 2: Obtener configuración guardada
+		// ============================================================
+		let readIncomingMessages = false;
+		let deviceName = userSession.deviceName || "WhatsApp User";
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		let socketConfig: any = undefined;
+
+		if (userSession.data) {
+			try {
+				const parsedData = JSON.parse(userSession.data);
+				readIncomingMessages = parsedData.readIncomingMessages || false;
+				const { readIncomingMessages: _, ...rest } = parsedData;
+				if (Object.keys(rest).length > 0) {
+					socketConfig = rest;
+				}
+			} catch (e) {
+				logger.warn({ sessionId }, "restart: no se pudo parsear data de sesión");
+			}
+		}
+
+		// ============================================================
+		// 🚀 PASO 3: Crear nueva sesión
+		// ============================================================
+		logger.info({ sessionId }, "restart: creando nueva conexión");
+
+		await createSession({
+			sessionId,
+			userId,
+			readIncomingMessages,
+			deviceName,
+			...(socketConfig && { socketConfig }),
+		});
+
+		// Esperar un momento para que la conexión se establezca
+		await new Promise(resolve => setTimeout(resolve, 1000));
+
+		logger.info({ sessionId }, "restart: reinicio completado exitosamente");
+
+		res.status(200).json({
+			success: true,
+			message: "Sesión reiniciada correctamente",
+			sessionId,
+		});
+
+	} catch (error) {
+		logger.error({ sessionId, error }, "restart: error durante el reinicio");
+		res.status(500).json({
+			error: "Error al reiniciar la sesión",
+			details: error instanceof Error ? error.message : "Error desconocido",
+		});
+	} finally {
+		// ============================================================
+		// 🔓 SIEMPRE liberar el lock
+		// ============================================================
+		clearRestartingLock(sessionId);
+		logger.info({ sessionId }, "restart: lock liberado");
 	}
 };
