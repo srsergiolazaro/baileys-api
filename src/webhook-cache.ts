@@ -6,7 +6,7 @@ import { prisma } from "./db";
  */
 class WebhookCache {
     private cache: Map<string, { urls: any[], expires: number }> = new Map();
-    private TTL = 60 * 1000; // 1 minuto
+    private TTL = 24 * 60 * 60 * 1000; // 24 horas - reducir queries a DB
 
     async getWebhooks(sessionId: string, type: string) {
         const cacheKey = `${sessionId}_${type}`;

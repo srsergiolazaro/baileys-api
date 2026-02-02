@@ -14,7 +14,8 @@ import type { Boom } from "@hapi/boom";
 import type { Response } from "express";
 import { toDataURL } from "qrcode";
 import { sessionsMap } from "./session";
-import { handleMessagesUpsert, handleGroupParticipantsUpdate } from "./handlers";
+// DESHABILITADO: Handlers de webhooks desactivados para reducir queries a DB
+// import { handleMessagesUpsert, handleGroupParticipantsUpdate } from "./handlers";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
 const retries = new Map<string, number>();
@@ -346,13 +347,15 @@ export async function createSession(options: createSessionOptions) {
 		handleConnectionUpdate();
 	});
 
-	socket.ev.on("messages.upsert", (m) =>
-		handleMessagesUpsert(socket, m, sessionId, readIncomingMessages),
-	);
+	// DESHABILITADO: Estos handlers causan queries constantes a la DB
+	// Si necesitas webhooks, descomenta estas líneas
+	// socket.ev.on("messages.upsert", (m) =>
+	// 	handleMessagesUpsert(socket, m, sessionId, readIncomingMessages),
+	// );
 
-	socket.ev.on("group-participants.update", (c: any) =>
-		handleGroupParticipantsUpdate(socket, c, sessionId),
-	);
+	// socket.ev.on("group-participants.update", (c: any) =>
+	// 	handleGroupParticipantsUpdate(socket, c, sessionId),
+	// );
 
 	// Sesión inicializada correctamente en memoria
 	logger.info("createSession: session initialized in memory", { sessionId });
