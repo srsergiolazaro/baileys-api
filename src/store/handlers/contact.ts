@@ -87,18 +87,18 @@ export default function contactHandler(sessionId: string, event: BaileysEventEmi
 	const listen = () => {
 		if (listening) return;
 
-		event.on("messaging-history.set", set);
-		event.on("contacts.upsert", upsert);
-		event.on("contacts.update", update);
+		// event.on("messaging-history.set", set);
+		// event.on("contacts.upsert", upsert);
+		// event.on("contacts.update", update);
 		listening = true;
 	};
 
 	const unlisten = () => {
 		if (!listening) return;
 
-		event.off("messaging-history.set", set);
-		event.off("contacts.upsert", upsert);
-		event.off("contacts.update", update);
+		// event.off("messaging-history.set", set);
+		// event.off("contacts.upsert", upsert);
+		// event.off("contacts.update", update);
 		listening = false;
 	};
 

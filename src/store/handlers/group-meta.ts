@@ -93,18 +93,18 @@ export default function groupMetadataHandler(sessionId: string, event: BaileysEv
 	const listen = () => {
 		if (listening) return;
 
-		event.on("groups.upsert", upsert);
-		event.on("groups.update", update);
-		event.on("group-participants.update", updateParticipant);
+		// event.on("groups.upsert", upsert);
+		// event.on("groups.update", update);
+		// event.on("group-participants.update", updateParticipant);
 		listening = true;
 	};
 
 	const unlisten = () => {
 		if (!listening) return;
 
-		event.off("groups.upsert", upsert);
-		event.off("groups.update", update);
-		event.off("group-participants.update", updateParticipant);
+		// event.off("groups.upsert", upsert);
+		// event.off("groups.update", update);
+		// event.off("group-participants.update", updateParticipant);
 		listening = false;
 	};
 

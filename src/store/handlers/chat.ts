@@ -116,20 +116,20 @@ export default function chatHandler(sessionId: string, event: BaileysEventEmitte
 	const listen = () => {
 		if (listening) return;
 
-		event.on("messaging-history.set", set);
-		event.on("chats.upsert", upsert);
-		event.on("chats.update", update);
-		event.on("chats.delete", del);
+		// event.on("messaging-history.set", set);
+		// event.on("chats.upsert", upsert);
+		// event.on("chats.update", update);
+		// event.on("chats.delete", del);
 		listening = true;
 	};
 
 	const unlisten = () => {
 		if (!listening) return;
 
-		event.off("messaging-history.set", set);
-		event.off("chats.upsert", upsert);
-		event.off("chats.update", update);
-		event.off("chats.delete", del);
+		// event.off("messaging-history.set", set);
+		// event.off("chats.upsert", upsert);
+		// event.off("chats.update", update);
+		// event.off("chats.delete", del);
 		listening = false;
 	};
 
