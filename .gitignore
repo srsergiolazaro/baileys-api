@@ -10,3 +10,4 @@ lumi
 lumipanel
 $HOME
 logs/
+.claude/settings.local.json

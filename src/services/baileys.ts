@@ -17,7 +17,6 @@ import { toDataURL } from "qrcode";
 import { sessionsMap } from "./session";
 // DESHABILITADO: Handlers de webhooks desactivados para reducir queries a DB
 // import { handleMessagesUpsert, handleGroupParticipantsUpdate } from "./handlers";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
 const retries = new Map<string, number>();
 const SSEQRGenerations = new Map<string, number>();
@@ -25,6 +24,23 @@ const SSEQRGenerations = new Map<string, number>();
 const RECONNECT_INTERVAL = Number(process.env.RECONNECT_INTERVAL || 0);
 const MAX_RECONNECT_RETRIES = Number(process.env.MAX_RECONNECT_RETRIES || 5);
 const SSE_MAX_QR_GENERATION = Number(process.env.SSE_MAX_QR_GENERATION || 5);
+
+// Pre-key management: prevent excessive generation
+// Signal protocol typically needs ~100 pre-keys, having 300+ means we don't need more
+const PRE_KEY_SUFFICIENT_THRESHOLD = 300;
+
+/**
+ * Count existing pre-keys for a session
+ */
+async function countPreKeys(sessionId: string): Promise<number> {
+	const result = await prisma.session.count({
+		where: {
+			sessionId,
+			id: { startsWith: "pre-key-" },
+		},
+	});
+	return result;
+}
 
 function isConnectionClosedError(error: unknown): error is Boom {
 	if (!error || typeof error !== "object") return false;
@@ -103,30 +119,6 @@ export async function createSession(options: createSessionOptions) {
 	});
 
 	// ============================================================
-	// 🗄️ ACTUALIZACIÓN DE SESIÓN EXISTENTE EN BD
-	// ============================================================
-	const now = new Date();
-	try {
-		const session = await prisma.userSession.findFirst({
-			where: { sessionId },
-		});
-
-		if (session) {
-			await prisma.userSession.update({
-				where: { id: session.id },
-				data: {
-					status: "active",
-					lastActive: now,
-					updatedAt: now,
-				},
-			});
-			logger.info("createSession: existing userSession marked as active", { sessionId });
-		}
-	} catch (error) {
-		logger.error("Error updating existing session status", { sessionId, error });
-	}
-
-	// ============================================================
 	// 🔥 DESTRUCCIÓN COMPLETA DE SESIÓN
 	// ============================================================
 	let connectionState: Partial<ConnectionState> = { connection: "close" };
@@ -146,7 +138,7 @@ export async function createSession(options: createSessionOptions) {
 				]);
 				logger.info("Session and data destroyed (logged out)", { session: sessionId });
 			} else {
-				await prisma.userSession.update({
+				await prisma.userSession.updateMany({
 					where: { sessionId },
 					data: { status: "inactive" },
 				});
@@ -264,9 +256,10 @@ export async function createSession(options: createSessionOptions) {
 	const store = new Store(sessionId, socket.ev);
 	sessionsMap.set(sessionId, { ...socket, destroy, store });
 
+	const originalSendRetryRequest = socket.sendRetryRequest.bind(socket);
 	socket.sendRetryRequest = async (...args) => {
 		try {
-			await socket.sendRetryRequest(...args);
+			await originalSendRetryRequest(...args);
 		} catch (error) {
 			if (isConnectionClosedError(error)) return;
 			throw error;
@@ -285,12 +278,21 @@ export async function createSession(options: createSessionOptions) {
 			retries.delete(sessionId);
 			SSEQRGenerations.delete(sessionId);
 
-			// Verificar y subir pre-keys si es necesario
+			// Verificar y subir pre-keys solo si realmente es necesario
 			try {
-				await socket.uploadPreKeysToServerIfRequired();
-				logger.info("Pre-keys verified/uploaded successfully", { sessionId });
+				const preKeyCount = await countPreKeys(sessionId);
+				logger.info("Current pre-key count", { sessionId, preKeyCount });
+
+				// Solo subir nuevas pre-keys si hay menos del umbral suficiente
+				// Esto previene la generación excesiva que causa el colapso de la DB
+				if (preKeyCount < PRE_KEY_SUFFICIENT_THRESHOLD) {
+					await socket.uploadPreKeysToServerIfRequired();
+					logger.info("Pre-keys uploaded", { sessionId, previousCount: preKeyCount });
+				} else {
+					logger.info("Skipping pre-key upload, sufficient keys exist", { sessionId, preKeyCount });
+				}
 			} catch (e) {
-				logger.error("Failed to verify/upload pre-keys", { sessionId, error: e });
+				logger.error("Failed to manage pre-keys", { sessionId, error: e });
 			}
 
 			// ============================================================
