@@ -112,10 +112,9 @@ export async function useSession(sessionId: string): Promise<{
 								);
 							} else {
 								operations.push(
-									prisma.session.delete({
-										select: { pkId: true },
-										where: { sessionId_id: { id: sId, sessionId } },
-									}).catch(() => { /* ignore delete errors if not found */ })
+									prisma.session.deleteMany({
+										where: { id: sId, sessionId },
+									})
 								);
 							}
 						}
