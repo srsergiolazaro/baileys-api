@@ -8,6 +8,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum AccountType {
+  personal
+  business
+}
+
 model Chat {
   pkId                      Int          @id @default(autoincrement())
   sessionId                 String       @db.VarChar(128)
@@ -226,51 +231,39 @@ model Webhook {
 }
 
 model ApiKey {
-  id            String       @id @default(cuid())
-  key           String       @unique
-  userId        String       @db.VarChar(128)
-  createdAt     DateTime     @default(now())
-  expiresAt     DateTime?
-  enabled       Boolean      @default(true)
-  userSessionId String?
-  user          User         @relation(fields: [userId], references: [id])
-  UserSession   UserSession? @relation(fields: [userSessionId], references: [id])
+  id        String    @id @default(cuid())
+  key       String    @unique
+  userId    String?   @db.VarChar(128)
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
+  enabled   Boolean   @default(true)
+}
 
+model UserSession {
+  id            String          @id @default(cuid())
+  userId        String          @db.VarChar(128)
+  sessionId     String          @unique @db.VarChar(128)
+  status        String          @default("active") @db.VarChar(50)
+  phoneNumber   String?         @db.VarChar(50)
+  deviceName    String?         @db.VarChar(128)
+  accountType   AccountType     @default(personal)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime
+  lastActive    DateTime        @default(now())
+  data          String?
+  Chat          Chat[]
+  Contact       Contact[]
+  GroupMetadata GroupMetadata[]
+  Message       Message[]
+  Product       Product[]
+  Webhook       Webhook[]
+
+  @@index([sessionId])
   @@index([userId])
 }
 
-model User {
-  id            String        @id @default(cuid())
-  name          String
-  email         String        @unique
-  emailVerified Boolean
-  image         String?
-  createdAt     DateTime
-  updatedAt     DateTime
-  status        String        @default("active") @db.VarChar(50)
-  ApiKey        ApiKey[]
-  UserSession   UserSession[]
-  user_sessions user_logins[]
-
-  @@map("user")
-}
-
-model user_logins {
-  id        String   @id @default(cuid())
-  expiresAt DateTime
-  token     String   @unique
-  createdAt DateTime
-  updatedAt DateTime
-  ipAddress String?
-  userAgent String?
-  user_id   String   @map("userId")
-  user      User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@map("user_logins")
-}
-
 model Account {
-  id                    String    @id @default(cuid())
+  id                    String    @id
   accountId             String
   providerId            String
   userId                String
@@ -281,49 +274,46 @@ model Account {
   refreshTokenExpiresAt DateTime?
   scope                 String?
   password              String?
-  createdAt             DateTime
+  createdAt             DateTime  @default(now())
   updatedAt             DateTime
+  User                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("account")
+  @@index([userId])
+}
+
+model User {
+  id            String        @id
+  name          String
+  email         String        @unique
+  emailVerified Boolean       @default(false)
+  image         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime
+  Account       Account[]
+  User_logins   User_logins[]
+}
+
+model User_logins {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Verification {
-  id         String    @id @default(cuid())
+  id         String   @id
   identifier String
   value      String
   expiresAt  DateTime
-  createdAt  DateTime?
-  updatedAt  DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime
 
-  @@map("verification")
-}
-
-enum AccountType {
-  personal
-  business
-}
-
-model UserSession {
-  id            String          @id @default(cuid())
-  userId        String          @db.VarChar(128)
-  sessionId     String          @unique @db.VarChar(128)
-  status        String          @default("active") @db.VarChar(50)
-  phoneNumber   String?         @db.VarChar(50)
-  deviceName    String?         @db.VarChar(128)
-  accountType   AccountType?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime
-  lastActive    DateTime        @default(now())
-  data          String?
-  ApiKey        ApiKey[]
-  Chat          Chat[]
-  Contact       Contact[]
-  GroupMetadata GroupMetadata[]
-  Message       Message[]
-  Product       Product[]
-  user          User            @relation(fields: [userId], references: [id])
-  Webhook       Webhook[]
-
-  @@index([sessionId])
-  @@index([userId])
+  @@index([identifier])
 }

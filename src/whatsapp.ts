@@ -42,7 +42,7 @@ export async function init() {
             userId
         });
 
-        createSession({ sessionId, userId, readIncomingMessages, socketConfig });
+        createSession({ sessionId, userId: userId ?? "", readIncomingMessages, socketConfig });
     }
 
     console.log("🏁 init: todas las sesiones han sido procesadas");

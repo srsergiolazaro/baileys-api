@@ -9,3 +9,4 @@ export * as webhook from "./webhook";
 export * as user from "./user";
 
 export * as key from "./key";
+export * as newsletter from "./newsletter";

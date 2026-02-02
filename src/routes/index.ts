@@ -7,6 +7,7 @@ import contactRoutes from "./contacts";
 import webhookRoutes from "./webhooks";
 import productRoutes from "./product";
 import userRoutes from "./user";
+import newsletterRoutes from "./newsletters";
 
 import keysRoutes from "./keys";
 import { apiKeyValidator, apiKeyValidatorKeyOnly } from "@/middlewares/api-key-validator";
@@ -20,6 +21,7 @@ router.use("/product", apiKeyValidator, productRoutes);
 router.use("/messages", apiKeyValidator, messageRoutes);
 router.use("/webhooks", apiKeyValidator, webhookRoutes);
 router.use("/user", apiKeyValidator, userRoutes);
+router.use("/newsletters", apiKeyValidator, newsletterRoutes);
 
 router.use("/keys", keysRoutes);
 
