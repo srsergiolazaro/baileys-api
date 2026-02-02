@@ -298,6 +298,11 @@ model Verification {
   @@map("verification")
 }
 
+enum AccountType {
+  personal
+  business
+}
+
 model UserSession {
   id            String          @id @default(cuid())
   userId        String          @db.VarChar(128)
@@ -305,6 +310,7 @@ model UserSession {
   status        String          @default("active") @db.VarChar(50)
   phoneNumber   String?         @db.VarChar(50)
   deviceName    String?         @db.VarChar(128)
+  accountType   AccountType?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime
   lastActive    DateTime        @default(now())

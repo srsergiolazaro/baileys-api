@@ -9,6 +9,7 @@ import makeWASocket, {
 import type { ConnectionState, GroupParticipant, ParticipantAction, SocketConfig } from "baileys";
 import { Store, useSession } from "../store";
 import { prisma } from "../db";
+import { AccountType } from "@prisma/client";
 import { logger } from "../shared";
 import type { Boom } from "@hapi/boom";
 import type { Response } from "express";
@@ -300,6 +301,20 @@ export async function createSession(options: createSessionOptions) {
 				userName = me.name || me.notify || deviceName;
 			}
 
+			// Detectar tipo de cuenta (personal o business)
+			let accountType: AccountType = AccountType.personal;
+			if (me?.id) {
+				try {
+					const businessProfile = await socket.getBusinessProfile(me.id);
+					if (businessProfile) {
+						accountType = AccountType.business;
+						logger.info("Business account detected", { sessionId, category: businessProfile.category });
+					}
+				} catch (e) {
+					logger.debug("Could not fetch business profile, assuming personal account", { sessionId });
+				}
+			}
+
 			try {
 				await prisma.userSession.upsert({
 					where: { sessionId },
@@ -309,6 +324,7 @@ export async function createSession(options: createSessionOptions) {
 						updatedAt: now,
 						deviceName: userName,
 						phoneNumber,
+						accountType,
 						data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
 					},
 					create: {
@@ -318,6 +334,7 @@ export async function createSession(options: createSessionOptions) {
 						status: "active",
 						deviceName: userName,
 						phoneNumber,
+						accountType,
 						createdAt: now,
 						updatedAt: now,
 						lastActive: now,
