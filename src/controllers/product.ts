@@ -4,6 +4,32 @@ import type { RequestHandler } from "express";
 import { logger } from "@/shared";
 import { getSession, jidExists } from "@/whatsapp";
 
+// Tipos para el perfil de negocio (basados en Baileys Types/Bussines.d.ts)
+type DayOfWeekBusiness = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
+
+type HoursDay =
+	| {
+			day: DayOfWeekBusiness;
+			mode: "specific_hours";
+			openTimeInMinutes: string;
+			closeTimeInMinutes: string;
+	  }
+	| {
+			day: DayOfWeekBusiness;
+			mode: "open_24h" | "appointment_only";
+	  };
+
+interface UpdateBusinessProfileProps {
+	address?: string;
+	websites?: string[];
+	email?: string;
+	description?: string;
+	hours?: {
+		timezone: string;
+		days: HoursDay[];
+	};
+}
+
 export const list: RequestHandler = async (req, res) => {
 	try {
 		const { jid } = req.body;
@@ -218,6 +244,62 @@ export const sendProductMessage: RequestHandler = async (req, res) => {
 		return res.status(200).json({ message: "Product message sent", details: message });
 	} catch (error) {
 		const message = "An error occurred while sending product message";
+		logger.error(error, message);
+		return res.status(500).json({ error: message });
+	}
+};
+
+// ==================== Business Profile Functions ====================
+
+export const updateBusinessProfile: RequestHandler = async (req, res) => {
+	try {
+		const profileData = req.body as UpdateBusinessProfileProps;
+		const session = getSession(req.appData.sessionId);
+
+		if (!session) {
+			return res.status(404).json({ error: "Session not found" });
+		}
+
+		const result = await session.updateBussinesProfile(profileData);
+		return res.status(200).json({ message: "Business profile updated", result });
+	} catch (error) {
+		const message = "An error occurred while updating business profile";
+		logger.error(error, message);
+		return res.status(500).json({ error: message });
+	}
+};
+
+export const updateCoverPhoto: RequestHandler = async (req, res) => {
+	try {
+		const { photo } = req.body as { photo: string };
+		const session = getSession(req.appData.sessionId);
+
+		if (!session) {
+			return res.status(404).json({ error: "Session not found" });
+		}
+
+		const fbid = await session.updateCoverPhoto({ url: photo });
+		return res.status(200).json({ message: "Cover photo updated", fbid });
+	} catch (error) {
+		const message = "An error occurred while updating cover photo";
+		logger.error(error, message);
+		return res.status(500).json({ error: message });
+	}
+};
+
+export const removeCoverPhoto: RequestHandler = async (req, res) => {
+	try {
+		const { id } = req.body as { id: string };
+		const session = getSession(req.appData.sessionId);
+
+		if (!session) {
+			return res.status(404).json({ error: "Session not found" });
+		}
+
+		await session.removeCoverPhoto(id);
+		return res.status(200).json({ message: "Cover photo removed" });
+	} catch (error) {
+		const message = "An error occurred while removing cover photo";
 		logger.error(error, message);
 		return res.status(500).json({ error: message });
 	}
