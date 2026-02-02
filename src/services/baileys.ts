@@ -285,6 +285,14 @@ export async function createSession(options: createSessionOptions) {
 			retries.delete(sessionId);
 			SSEQRGenerations.delete(sessionId);
 
+			// Verificar y subir pre-keys si es necesario
+			try {
+				await socket.uploadPreKeysToServerIfRequired();
+				logger.info("Pre-keys verified/uploaded successfully", { sessionId });
+			} catch (e) {
+				logger.error("Failed to verify/upload pre-keys", { sessionId, error: e });
+			}
+
 			// ============================================================
 			// 💾 GUARDAR / ACTUALIZAR SESIÓN EN BD AL CONECTAR
 			// ============================================================

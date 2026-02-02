@@ -10,7 +10,7 @@ const fixId = (id: string) => id.replace(/\//g, "__").replace(/:/g, "-");
 
 export async function useSession(sessionId: string): Promise<{
 	state: AuthenticationState;
-	saveCreds: () => Promise<void>;
+	saveCreds: (update?: Partial<AuthenticationCreds>) => Promise<void>;
 }> {
 	const model = prisma.session;
 
@@ -69,6 +69,13 @@ export async function useSession(sessionId: string): Promise<{
 	};
 
 	const creds: AuthenticationCreds = (await read("creds")) || initAuthCreds();
+
+	const saveCreds = async (update?: Partial<AuthenticationCreds>) => {
+		if (update) {
+			Object.assign(creds, update);
+		}
+		await write(creds, "creds");
+	};
 
 	return {
 		state: {
@@ -130,6 +137,6 @@ export async function useSession(sessionId: string): Promise<{
 				},
 			},
 		},
-		saveCreds: () => write(creds, "creds"),
+		saveCreds,
 	};
 }
