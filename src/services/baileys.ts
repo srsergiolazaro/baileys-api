@@ -357,6 +357,13 @@ export async function createSession(options: createSessionOptions) {
 			}
 
 			if (res && !res.writableEnded) {
+				if (SSE) {
+					try {
+						res.write(`data: ${JSON.stringify({ connection: "open", sessionId, phoneNumber, deviceName: userName, accountType })}\n\n`);
+					} catch (e) {
+						logger.error("Failed to send SSE open event", { sessionId, error: e });
+					}
+				}
 				res.end();
 				return;
 			}
