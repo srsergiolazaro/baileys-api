@@ -171,6 +171,18 @@ export async function createSession(options: createSessionOptions) {
 
 		if (code === DisconnectReason.loggedOut || doNotReconnect) {
 			if (res) {
+				if (SSE && !res.writableEnded) {
+					try {
+						res.write(`data: ${JSON.stringify({
+							connection: "close",
+							sessionId,
+							reason: code === DisconnectReason.loggedOut ? "logged_out" : "max_retries_reached",
+							statusCode: code,
+						})}\n\n`);
+					} catch (e) {
+						logger.error("Failed to send SSE close event", { sessionId, error: e });
+					}
+				}
 				if (!SSE && !res.headersSent) {
 					res.status(500).json({ error: "Unable to create session" });
 				}
@@ -220,7 +232,21 @@ export async function createSession(options: createSessionOptions) {
 
 		const current = SSEQRGenerations.get(sessionId) ?? 0;
 		if (!res || res.writableEnded || (qr && current >= SSE_MAX_QR_GENERATION)) {
-			if (res && !res.writableEnded) res.end();
+			if (res && !res.writableEnded) {
+				if (qr && current >= SSE_MAX_QR_GENERATION) {
+					try {
+						res.write(`data: ${JSON.stringify({
+							connection: "close",
+							sessionId,
+							reason: "qr_expired",
+							maxQrReached: true,
+						})}\n\n`);
+					} catch (e) {
+						logger.error("Failed to send SSE qr_expired event", { sessionId, error: e });
+					}
+				}
+				res.end();
+			}
 			return;
 		}
 
@@ -370,11 +396,6 @@ export async function createSession(options: createSessionOptions) {
 		}
 
 		if (connection === "close") {
-			if (statusCode === DisconnectReason.loggedOut) {
-				destroy(true);
-				return;
-			}
-
 			handleConnectionClose();
 		}
 
