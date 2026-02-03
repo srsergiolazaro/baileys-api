@@ -15,41 +15,6 @@ export const apiKeyValidatorKeyOnly: RequestHandler = async (req, res, next) => 
 	req.appData.userId = userId;
 
 	return next();
-	/*
-	try {
-		const apiKeyHeader = req.headers["x-api-key"];
-
-		if (!apiKeyHeader) {
-			return res.status(401).json({ error: "Unauthorized: API Key missing" });
-		}
-
-		// Initialize appData if it doesn't exist
-		if (!req.appData) {
-			req.appData = { sessionId: "" };
-		}
-
-		const plainApiKey = Array.isArray(apiKeyHeader) ? apiKeyHeader[0] : apiKeyHeader;
-
-		// Find the API key
-		const apiKey = await prisma.apiKey.findFirst({
-			where: {
-				key: plainApiKey,
-				enabled: true,
-				OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-			},
-		});
-
-		if (!apiKey) {
-			return res.status(401).json({ error: "Invalid or expired API key" });
-		}
-		req.appData.userId = apiKey.userId;
-
-		next();
-	} catch (error) {
-		logger.error(error, "Error in apiKeyValidatorKeyOnly middleware");
-		return res.status(500).json({ error: "Internal server error" });
-	}
-	*/
 };
 
 const sessionCache = new Map<string, { userId: string, expires: number }>();
