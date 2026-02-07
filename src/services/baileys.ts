@@ -7,14 +7,14 @@ import makeWASocket, {
 	jidDecode,
 } from "baileys";
 import type { ConnectionState, GroupParticipant, ParticipantAction, SocketConfig } from "baileys";
-import { Store, useSession } from "../store";
+import { Store, useSession, clearSessionCache } from "../store";
 import { prisma } from "../db";
 import { AccountType } from "@prisma/client";
 import { logger } from "../shared";
 import type { Boom } from "@hapi/boom";
 import type { Response } from "express";
 import { toDataURL } from "qrcode";
-import { sessionsMap } from "./session";
+import { sessionsMap, setRestartingLock, clearRestartingLock, sessionExists } from "./session";
 // DESHABILITADO: Handlers de webhooks desactivados para reducir queries a DB
 // import { handleMessagesUpsert, handleGroupParticipantsUpdate } from "./handlers";
 
@@ -84,14 +84,32 @@ export async function createSession(options: createSessionOptions) {
 	} = options;
 
 	// ============================================================
+	// 🛡️ PREVENCIÓN DE SESIONES DUPLICADAS
+	// ============================================================
+	if (sessionExists(sessionId)) {
+		logger.warn("createSession: Session already exists, skipping", { sessionId });
+		if (res && !res.headersSent && !SSE) {
+			return res.status(409).json({ error: "Session already exists", sessionId });
+		}
+		return { error: "Session already exists", sessionId };
+	}
+
+	if (!setRestartingLock(sessionId)) {
+		logger.warn("createSession: Session is already initializing, skipping", { sessionId });
+		if (res && !res.headersSent && !SSE) {
+			return res.status(429).json({ error: "Session is already initializing", sessionId });
+		}
+		return { error: "Session is already initializing", sessionId };
+	}
+
+	// ============================================================
 	// 🔐 VALIDACIÓN SSE — SOLO EN MODO SSE
-	// Solo seguimos si el canal SSE funciona correctamente.
-	// Si falla, no creamos sesión en BD ni inicializamos socket.
 	// ============================================================
 	if (SSE) {
 		try {
 			if (!res || res.writableEnded) {
 				logger.error("SSE habilitado pero no hay response válido", { sessionId });
+				clearRestartingLock(sessionId);
 				return { error: "SSE channel unavailable", sessionId: null };
 			}
 
@@ -106,6 +124,7 @@ export async function createSession(options: createSessionOptions) {
 			});
 
 			if (res && !res.writableEnded) res.end();
+			clearRestartingLock(sessionId);
 			return { error: "SSE initialization failed", sessionId: null };
 		}
 	}
@@ -122,10 +141,13 @@ export async function createSession(options: createSessionOptions) {
 	// 🔥 DESTRUCCIÓN COMPLETA DE SESIÓN
 	// ============================================================
 	let connectionState: Partial<ConnectionState> = { connection: "close" };
+	let socket: any;
 
 	const destroy = async (logout = true) => {
 		try {
-			if (logout) {
+			if (logout && socket) {
+				// Limpiar caché de sesión al hacer logout completo
+				clearSessionCache(sessionId);
 				await Promise.allSettled([
 					socket.logout(),
 					prisma.chat.deleteMany({ where: { sessionId } }),
@@ -138,11 +160,12 @@ export async function createSession(options: createSessionOptions) {
 				]);
 				logger.info("Session and data destroyed (logged out)", { session: sessionId });
 			} else {
+				// NO limpiar caché - mantener para reconexión
 				await prisma.userSession.updateMany({
 					where: { sessionId },
 					data: { status: "inactive" },
 				});
-				logger.info("Session marked as inactive (not logged out)", { session: sessionId });
+				logger.info("Session marked as inactive (cache preserved for reconnection)", { session: sessionId });
 			}
 		} catch (e) {
 			logger.error("Error during session destroy", e);
@@ -189,6 +212,7 @@ export async function createSession(options: createSessionOptions) {
 				res.end();
 			}
 			destroy(code === DisconnectReason.loggedOut);
+			clearRestartingLock(sessionId); // Asegurar liberar lock
 			return;
 		}
 
@@ -197,7 +221,10 @@ export async function createSession(options: createSessionOptions) {
 		}
 
 		setTimeout(
-			() => createSession({ ...options, sessionId }),
+			() => {
+				clearRestartingLock(sessionId); // Liberar JUSTO antes de re-intentar
+				createSession({ ...options, sessionId });
+			},
 			restartRequired ? 0 : RECONNECT_INTERVAL,
 		);
 	};
@@ -266,153 +293,149 @@ export async function createSession(options: createSessionOptions) {
 	// ============================================================
 	// 🔌 CREACIÓN DEL SOCKET Y SUSCRIPCIÓN A EVENTOS
 	// ============================================================
-	const { state, saveCreds } = await useSession(sessionId);
-	const socket = makeWASocket({
-		printQRInTerminal: false,
-		generateHighQualityLinkPreview: false,
-		...socketConfig,
-		auth: {
-			creds: state.creds,
-			keys: makeCacheableSignalKeyStore(state.keys, logger),
-		},
-		logger,
-		shouldIgnoreJid: (jid) => isJidBroadcast(jid),
-	});
+	try {
+		const { state, saveCreds } = await useSession(sessionId);
+		socket = makeWASocket({
+			printQRInTerminal: false,
+			generateHighQualityLinkPreview: false,
+			...socketConfig,
+			auth: {
+				creds: state.creds,
+				keys: makeCacheableSignalKeyStore(state.keys, logger),
+			},
+			logger,
+			shouldIgnoreJid: (jid) => isJidBroadcast(jid),
+		});
 
-	const store = new Store(sessionId, socket.ev);
-	sessionsMap.set(sessionId, { ...socket, destroy, store });
+		const store = new Store(sessionId, socket.ev);
+		sessionsMap.set(sessionId, { ...socket, destroy, store });
 
-	const originalSendRetryRequest = socket.sendRetryRequest.bind(socket);
-	socket.sendRetryRequest = async (...args) => {
-		try {
-			await originalSendRetryRequest(...args);
-		} catch (error) {
-			if (isConnectionClosedError(error)) return;
-			throw error;
-		}
-	};
-
-	socket.ev.on("creds.update", saveCreds);
-	socket.ev.on("connection.update", async (update) => {
-		connectionState = update;
-		const { connection, lastDisconnect } = update;
-		const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
-
-		logger.info("connection.update", { sessionId, connection, statusCode, SSE });
-
-		if (connection === "open") {
-			retries.delete(sessionId);
-			SSEQRGenerations.delete(sessionId);
-
-			// Verificar y subir pre-keys solo si realmente es necesario
+		const originalSendRetryRequest = socket.sendRetryRequest.bind(socket);
+		socket.sendRetryRequest = async (...args: any[]) => {
 			try {
-				const preKeyCount = await countPreKeys(sessionId);
-				logger.info("Current pre-key count", { sessionId, preKeyCount });
-
-				// Solo subir nuevas pre-keys si hay menos del umbral suficiente
-				// Esto previene la generación excesiva que causa el colapso de la DB
-				if (preKeyCount < PRE_KEY_SUFFICIENT_THRESHOLD) {
-					await socket.uploadPreKeysToServerIfRequired();
-					logger.info("Pre-keys uploaded", { sessionId, previousCount: preKeyCount });
-				} else {
-					logger.info("Skipping pre-key upload, sufficient keys exist", { sessionId, preKeyCount });
-				}
-			} catch (e) {
-				logger.error("Failed to manage pre-keys", { sessionId, error: e });
+				await originalSendRetryRequest(...args);
+			} catch (error) {
+				if (isConnectionClosedError(error)) return;
+				throw error;
 			}
+		};
 
-			// ============================================================
-			// 💾 GUARDAR / ACTUALIZAR SESIÓN EN BD AL CONECTAR
-			// ============================================================
-			const now = new Date();
+		socket.ev.on("creds.update", saveCreds);
+		socket.ev.on("connection.update", async (update: Partial<ConnectionState>) => {
+			connectionState = update;
+			const { connection, lastDisconnect } = update;
+			const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
 
-			// Obtener número de teléfono y nombre del usuario conectado
-			const me = socket.user;
-			let phoneNumber: string | null = null;
-			let userName: string | null = deviceName;
+			logger.info("connection.update", { sessionId, connection, statusCode, SSE });
 
-			if (me?.id) {
-				const decoded = jidDecode(me.id);
-				phoneNumber = decoded?.user || null;
-				userName = me.name || me.notify || deviceName;
-			}
+			if (connection === "open") {
+				retries.delete(sessionId);
+				SSEQRGenerations.delete(sessionId);
 
-			// Detectar tipo de cuenta (personal o business)
-			let accountType: AccountType = AccountType.personal;
-			if (me?.id) {
+				// Verificar y subir pre-keys solo si realmente es necesario
 				try {
-					const businessProfile = await socket.getBusinessProfile(me.id);
-					if (businessProfile) {
-						accountType = AccountType.business;
-						logger.info("Business account detected", { sessionId, category: businessProfile.category });
+					const preKeyCount = await countPreKeys(sessionId);
+					logger.info("Current pre-key count", { sessionId, preKeyCount });
+
+					if (preKeyCount < PRE_KEY_SUFFICIENT_THRESHOLD) {
+						await socket.uploadPreKeysToServerIfRequired();
+						logger.info("Pre-keys uploaded", { sessionId, previousCount: preKeyCount });
+					} else {
+						logger.info("Skipping pre-key upload, sufficient keys exist", { sessionId, preKeyCount });
 					}
 				} catch (e) {
-					logger.debug("Could not fetch business profile, assuming personal account", { sessionId });
+					logger.error("Failed to manage pre-keys", { sessionId, error: e });
 				}
-			}
 
-			try {
-				await prisma.userSession.upsert({
-					where: { sessionId },
-					update: {
-						status: "active",
-						lastActive: now,
-						updatedAt: now,
-						deviceName: userName,
-						phoneNumber,
-						accountType,
-						data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
-					},
-					create: {
-						id: sessionId,
-						sessionId,
-						userId,
-						status: "active",
-						deviceName: userName,
-						phoneNumber,
-						accountType,
-						createdAt: now,
-						updatedAt: now,
-						lastActive: now,
-						data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
-					},
-				});
-				logger.info("UserSession synced to database on connection open", { sessionId, phoneNumber, userName });
-			} catch (e) {
-				logger.error("Failed to sync UserSession on connection open", { sessionId, error: e });
-			}
+				// ============================================================
+				// 💾 GUARDAR / ACTUALIZAR SESIÓN EN BD AL CONECTAR
+				// ============================================================
+				const now = new Date();
+				const me = socket.user;
+				let phoneNumber: string | null = null;
+				let userName: string | null = deviceName;
 
-			if (res && !res.writableEnded) {
-				if (SSE) {
+				if (me?.id) {
+					const decoded = jidDecode(me.id);
+					phoneNumber = decoded?.user || null;
+					userName = me.name || me.notify || deviceName;
+				}
+
+				let accountType: AccountType = AccountType.personal;
+				if (me?.id) {
 					try {
-						res.write(`data: ${JSON.stringify({ connection: "open", sessionId, phoneNumber, deviceName: userName, accountType })}\n\n`);
+						const businessProfile = await socket.getBusinessProfile(me.id);
+						if (businessProfile) {
+							accountType = AccountType.business;
+							logger.info("Business account detected", { sessionId, category: businessProfile.category });
+						}
 					} catch (e) {
-						logger.error("Failed to send SSE open event", { sessionId, error: e });
+						logger.debug("Could not fetch business profile, assuming personal account", { sessionId });
 					}
 				}
-				res.end();
-				return;
+
+				try {
+					await prisma.userSession.upsert({
+						where: { sessionId },
+						update: {
+							status: "active",
+							lastActive: now,
+							updatedAt: now,
+							deviceName: userName,
+							phoneNumber,
+							accountType,
+							data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
+						},
+						create: {
+							id: sessionId,
+							sessionId,
+							userId,
+							status: "active",
+							deviceName: userName,
+							phoneNumber,
+							accountType,
+							createdAt: now,
+							updatedAt: now,
+							lastActive: now,
+							data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
+						},
+					});
+					logger.info("UserSession synced to database on connection open", { sessionId, phoneNumber, userName });
+				} catch (e) {
+					logger.error("Failed to sync UserSession on connection open", { sessionId, error: e });
+				}
+
+				if (res && !res.writableEnded) {
+					if (SSE) {
+						try {
+							res.write(`data: ${JSON.stringify({ connection: "open", sessionId, phoneNumber, deviceName: userName, accountType })}\n\n`);
+						} catch (e) {
+							logger.error("Failed to send SSE open event", { sessionId, error: e });
+						}
+					}
+					res.end();
+					clearRestartingLock(sessionId); // Carga exitosa, liberamos lock
+					return;
+				}
+				clearRestartingLock(sessionId); // Carga exitosa, liberamos lock
 			}
+
+			if (connection === "close") {
+				handleConnectionClose();
+			}
+
+			handleConnectionUpdate();
+		});
+
+		// Sesión inicializada correctamente en memoria
+		logger.info("createSession: session initialized in memory", { sessionId });
+
+	} catch (error) {
+		logger.error("createSession: Critical error during initialization", { sessionId, error });
+		clearRestartingLock(sessionId);
+		if (res && !res.headersSent && !SSE) {
+			res.status(500).json({ error: "Failed to initialize session", sessionId });
 		}
-
-		if (connection === "close") {
-			handleConnectionClose();
-		}
-
-		handleConnectionUpdate();
-	});
-
-	// DESHABILITADO: Estos handlers causan queries constantes a la DB
-	// Si necesitas webhooks, descomenta estas líneas
-	// socket.ev.on("messages.upsert", (m) =>
-	// 	handleMessagesUpsert(socket, m, sessionId, readIncomingMessages),
-	// );
-
-	// socket.ev.on("group-participants.update", (c: any) =>
-	// 	handleGroupParticipantsUpdate(socket, c, sessionId),
-	// );
-
-	// Sesión inicializada correctamente en memoria
-	logger.info("createSession: session initialized in memory", { sessionId });
+	}
 }
 
