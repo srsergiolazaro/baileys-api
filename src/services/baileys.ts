@@ -21,9 +21,21 @@ import { sessionsMap, setRestartingLock, clearRestartingLock, sessionExists } fr
 const retries = new Map<string, number>();
 const SSEQRGenerations = new Map<string, number>();
 
-const RECONNECT_INTERVAL = Number(process.env.RECONNECT_INTERVAL || 0);
+// Intervalo base de reconexión (mínimo 2 segundos para evitar loops rápidos)
+const RECONNECT_INTERVAL_BASE = Math.max(Number(process.env.RECONNECT_INTERVAL || 2000), 2000);
 const MAX_RECONNECT_RETRIES = Number(process.env.MAX_RECONNECT_RETRIES || 5);
 const SSE_MAX_QR_GENERATION = Number(process.env.SSE_MAX_QR_GENERATION || 5);
+
+/**
+ * Calculate exponential backoff delay for reconnection
+ * Starts at RECONNECT_INTERVAL_BASE and doubles with each attempt, capped at 30 seconds
+ */
+function getReconnectDelay(sessionId: string): number {
+	const attempts = retries.get(sessionId) ?? 0;
+	// Exponential backoff: base * 2^(attempts-1), capped at 30 seconds
+	const delay = Math.min(RECONNECT_INTERVAL_BASE * Math.pow(2, attempts), 30000);
+	return delay;
+}
 
 // Pre-key management: prevent excessive generation
 // Signal protocol typically needs ~100 pre-keys, having 300+ means we don't need more
@@ -224,9 +236,13 @@ export async function createSession(options: createSessionOptions) {
 		// IMPORTANTE: Eliminar de sessionsMap para permitir que la reconexión proceda
 		sessionsMap.delete(sessionId);
 
-		if (!restartRequired) {
-			logger.info("Reconnecting in " + RECONNECT_INTERVAL + "ms...", { attempts: retries.get(sessionId) ?? 1, sessionId });
-		}
+		// Calcular delay con exponential backoff (siempre hay delay mínimo para evitar loops)
+		const reconnectDelay = restartRequired ? RECONNECT_INTERVAL_BASE : getReconnectDelay(sessionId);
+		logger.info(`Reconnecting in ${reconnectDelay}ms...`, {
+			attempts: retries.get(sessionId) ?? 1,
+			sessionId,
+			restartRequired
+		});
 
 		setTimeout(
 			() => {
@@ -234,7 +250,7 @@ export async function createSession(options: createSessionOptions) {
 				// Solo nos aseguramos de que createSession sepa que es una reconexión legítima
 				createSession({ ...options, sessionId, isReconnecting: true });
 			},
-			restartRequired ? 0 : RECONNECT_INTERVAL,
+			reconnectDelay,
 		);
 	};
 
