@@ -216,6 +216,10 @@ export async function createSession(options: createSessionOptions) {
 			return;
 		}
 
+		// IMPORTANTE: Eliminar de sessionsMap para permitir que la reconexión proceda
+		// de lo contrario, createSession bloqueará el intento por "Session already exists"
+		sessionsMap.delete(sessionId);
+
 		if (!restartRequired) {
 			logger.info("Reconnecting...", { attempts: retries.get(sessionId) ?? 1, sessionId });
 		}

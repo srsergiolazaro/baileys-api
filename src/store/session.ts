@@ -26,7 +26,7 @@ const globalSessionCache = new Map<string, SessionCache>();
 
 // Configuración de persistencia
 const FLUSH_INTERVAL_MS = 60000; // Flush cada 60 segundos si hay cambios
-const CRITICAL_KEY_PREFIXES = ["pre-key-", "sender-key-", "session-"]; // Keys importantes para persistir
+const CRITICAL_KEY_PREFIXES = ["pre-key-", "sender-key-", "session-", "app-state-"]; // Keys importantes para persistir
 
 // Timers de flush por sesión
 const flushTimers = new Map<string, NodeJS.Timeout>();
@@ -256,11 +256,13 @@ export async function useSession(sessionId: string): Promise<{
 
 							if (value !== null) {
 								cache.keys.set(cacheKey, value);
+								data[id] = value;
+							} else {
+								data[id] = undefined as any; // Baileys prefiere undefined para llaves no encontradas
 							}
-							data[id] = value;
 						} catch (e) {
 							logger.error({ sessionId, cacheKey, error: e }, "Error reading key");
-							data[id] = null as any;
+							data[id] = undefined as any;
 						}
 					}
 
