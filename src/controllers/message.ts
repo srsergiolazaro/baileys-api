@@ -44,8 +44,16 @@ export const send: RequestHandler = async (req, res) => {
 		// Procesa los datos de form-data si existen
 		if (req.is("multipart/form-data")) {
 			jid = req.body.jid;
-			message = req.body.message ? JSON.parse(req.body.message) : undefined;
-			options = req.body.options ? JSON.parse(req.body.options) : undefined;
+			try {
+				message = req.body.message ? JSON.parse(req.body.message) : undefined;
+			} catch (e) {
+				logger.error("Error parsing message JSON in multipart request", e);
+			}
+			try {
+				options = req.body.options ? JSON.parse(req.body.options) : undefined;
+			} catch (e) {
+				logger.error("Error parsing options JSON in multipart request", e);
+			}
 
 			// Si se envía un archivo, ajusta el mensaje para que sea compatible con Buffer
 			if (req.file) {
@@ -106,8 +114,16 @@ export const sendBulk: RequestHandler = async (req, res) => {
 			if (req.is("multipart/form-data")) {
 				jid = data.jid;
 				type = data.type || "number";
-				message = data.message ? JSON.parse(data.message) : undefined;
-				options = data.options ? JSON.parse(data.options) : undefined;
+				try {
+					message = data.message ? JSON.parse(data.message) : undefined;
+				} catch (e) {
+					logger.error("Error parsing bulk message JSON in multipart request", e);
+				}
+				try {
+					options = data.options ? JSON.parse(data.options) : undefined;
+				} catch (e) {
+					logger.error("Error parsing bulk options JSON in multipart request", e);
+				}
 
 				// Si se envía un archivo, ajusta el mensaje para que sea compatible con Buffer
 				if (req.file) {

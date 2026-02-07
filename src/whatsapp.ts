@@ -35,14 +35,18 @@ export async function init() {
             continue;
         }
 
-        const { readIncomingMessages, ...socketConfig } = JSON.parse(data);
+        try {
+            const { readIncomingMessages, ...socketConfig } = JSON.parse(data);
 
-        console.log("🟢 init: creando sesión de WhatsApp", {
-            sessionId,
-            userId
-        });
+            console.log("🟢 init: creando sesión de WhatsApp", {
+                sessionId,
+                userId
+            });
 
-        createSession({ sessionId, userId: userId ?? "", readIncomingMessages, socketConfig });
+            createSession({ sessionId, userId: userId ?? "", readIncomingMessages, socketConfig });
+        } catch (e) {
+            console.error(`❌ Error parsing session data for ${sessionId}:`, e);
+        }
     }
 
     console.log("🏁 init: todas las sesiones han sido procesadas");

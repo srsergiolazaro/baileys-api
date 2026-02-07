@@ -16,7 +16,24 @@ app.use(cors());
 console.log("✔️  CORS habilitado");
 
 app.use(express.json());
+// Middleware para capturar errores de sintaxis en JSON (evita que el servidor colapse por malformed JSON)
+app.use((err: any, _req: Request, res: Response, next: any) => {
+	if (err instanceof SyntaxError && "status" in err && err.status === 400 && "body" in err) {
+		console.error("❌ Error de sintaxis JSON detectado:", err.message);
+		return res.status(400).json({ error: "Invalid JSON format in request body" });
+	}
+	next();
+});
 console.log("✔️  Middleware JSON habilitado");
+
+// Manejo global de errores no capturados para evitar que el proceso muera
+process.on("uncaughtException", (error) => {
+	console.error("🔥 CRITICAL: Uncaught Exception:", error);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+	console.error("🌊 CRITICAL: Unhandled Rejection at:", promise, "reason:", reason);
+});
 
 // Configuración de Swagger UI
 const swaggerUiOptions = {
