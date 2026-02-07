@@ -29,12 +29,15 @@ const SSE_MAX_QR_GENERATION = Number(process.env.SSE_MAX_QR_GENERATION || 5);
 /**
  * Calculate exponential backoff delay for reconnection
  * Starts at RECONNECT_INTERVAL_BASE and doubles with each attempt, capped at 30 seconds
+ * Adds a small random jitter (10-20%) to avoid "thundering herd" effect
  */
 function getReconnectDelay(sessionId: string): number {
-	const attempts = retries.get(sessionId) ?? 0;
-	// Exponential backoff: base * 2^(attempts-1), capped at 30 seconds
-	const delay = Math.min(RECONNECT_INTERVAL_BASE * Math.pow(2, attempts), 30000);
-	return delay;
+	const lastAttempts = retries.get(sessionId) ?? 0;
+	// Exponential backoff: base * 2^(attempts-1)
+	const baseDelay = Math.min(RECONNECT_INTERVAL_BASE * Math.pow(2, lastAttempts), 30000);
+	// Add jitter: 10-20% of the base delay
+	const jitter = baseDelay * (0.1 + Math.random() * 0.1);
+	return Math.floor(baseDelay + jitter);
 }
 
 // Pre-key management: prevent excessive generation
@@ -207,6 +210,15 @@ export async function createSession(options: createSessionOptions) {
 		});
 
 		if (code === DisconnectReason.loggedOut || doNotReconnect) {
+			const reason = code === DisconnectReason.loggedOut
+				? "logged_out"
+				: `max_retries_reached (${MAX_RECONNECT_RETRIES} attempts)`;
+			logger.warn(`🛑 Session stopped reconnecting: ${reason}`, {
+				sessionId,
+				code,
+				attempts: retries.get(sessionId) ?? 0
+			});
+
 			if (res) {
 				if (SSE && !res.writableEnded) {
 					try {
@@ -350,8 +362,24 @@ export async function createSession(options: createSessionOptions) {
 			connectionState = update;
 			const { connection, lastDisconnect } = update;
 			const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
+			const attemptCount = retries.get(sessionId) ?? 0;
 
-			logger.info("connection.update", { sessionId, connection, statusCode, SSE });
+			// Solo logueamos como INFO si la conexión está abierta o el estado es importante
+			// Si es un error y estamos en los primeros reintentos, lo bajamos a DEBUG para reducir ruido
+			if (connection === "open") {
+				logger.info("connection.update: open", { sessionId, statusCode });
+			} else if (connection === "close") {
+				// El manejo detallado se hace en handleConnectionClose
+			} else if (update.qr) {
+				logger.debug("connection.update: qr received", { sessionId });
+			} else if (lastDisconnect?.error) {
+				// Solo alertamos si ya llevamos un par de intentos fallidos
+				if (attemptCount > 2) {
+					logger.warn("connection.update: connection errored", { sessionId, statusCode, attempts: attemptCount });
+				} else {
+					logger.debug("connection.update: transient connection error", { sessionId, statusCode });
+				}
+			}
 
 			if (connection === "open") {
 				retries.delete(sessionId);
