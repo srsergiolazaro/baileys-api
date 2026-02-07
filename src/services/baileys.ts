@@ -70,6 +70,7 @@ type createSessionOptions = {
 	readIncomingMessages?: boolean;
 	socketConfig?: SocketConfig;
 	deviceName?: string;
+	isReconnecting?: boolean;
 };
 
 export async function createSession(options: createSessionOptions) {
@@ -81,6 +82,7 @@ export async function createSession(options: createSessionOptions) {
 		readIncomingMessages = false,
 		socketConfig,
 		deviceName = "WhatsApp User",
+		isReconnecting = false,
 	} = options;
 
 	// ============================================================
@@ -94,7 +96,7 @@ export async function createSession(options: createSessionOptions) {
 		return { error: "Session already exists", sessionId };
 	}
 
-	if (!setRestartingLock(sessionId)) {
+	if (!isReconnecting && !setRestartingLock(sessionId)) {
 		logger.warn("createSession: Session is already initializing, skipping", { sessionId });
 		if (res && !res.headersSent && !SSE) {
 			return res.status(429).json({ error: "Session is already initializing", sessionId });
@@ -216,18 +218,21 @@ export async function createSession(options: createSessionOptions) {
 			return;
 		}
 
+		// Bloquear reinicializaciones manuales mientras se espera la reconexión automática
+		setRestartingLock(sessionId);
+
 		// IMPORTANTE: Eliminar de sessionsMap para permitir que la reconexión proceda
-		// de lo contrario, createSession bloqueará el intento por "Session already exists"
 		sessionsMap.delete(sessionId);
 
 		if (!restartRequired) {
-			logger.info("Reconnecting...", { attempts: retries.get(sessionId) ?? 1, sessionId });
+			logger.info("Reconnecting in " + RECONNECT_INTERVAL + "ms...", { attempts: retries.get(sessionId) ?? 1, sessionId });
 		}
 
 		setTimeout(
 			() => {
-				clearRestartingLock(sessionId); // Liberar JUSTO antes de re-intentar
-				createSession({ ...options, sessionId });
+				// NO liberamos el lock manualmente aquí, createSession lo hará cuando termine o falle
+				// Solo nos aseguramos de que createSession sepa que es una reconexión legítima
+				createSession({ ...options, sessionId, isReconnecting: true });
 			},
 			restartRequired ? 0 : RECONNECT_INTERVAL,
 		);

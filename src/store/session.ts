@@ -19,6 +19,7 @@ interface SessionCache {
 	creds: AuthenticationCreds | null;
 	dirty: Set<string>; // Keys that need to be persisted
 	lastFlush: number;
+	flushing: boolean;
 }
 
 // Caché global por sessionId - sobrevive reconexiones
@@ -26,7 +27,14 @@ const globalSessionCache = new Map<string, SessionCache>();
 
 // Configuración de persistencia
 const FLUSH_INTERVAL_MS = 60000; // Flush cada 60 segundos si hay cambios
-const CRITICAL_KEY_PREFIXES = ["pre-key-", "sender-key-", "session-", "app-state-"]; // Keys importantes para persistir
+const CRITICAL_KEY_PREFIXES = [
+	"pre-key-",
+	"sender-key-",
+	"session-",
+	"app-state-",
+	"next-pre-key-",
+	"identity-",
+]; // Keys importantes para persistir
 
 // Timers de flush por sesión
 const flushTimers = new Map<string, NodeJS.Timeout>();
@@ -41,6 +49,7 @@ function getSessionCache(sessionId: string): SessionCache {
 			creds: null,
 			dirty: new Set(),
 			lastFlush: Date.now(),
+			flushing: false,
 		});
 	}
 	return globalSessionCache.get(sessionId)!;
@@ -65,64 +74,82 @@ export function clearSessionCache(sessionId: string): void {
  */
 async function flushDirtyKeys(sessionId: string): Promise<void> {
 	const cache = globalSessionCache.get(sessionId);
-	if (!cache || cache.dirty.size === 0) return;
+	if (!cache || cache.dirty.size === 0 || cache.flushing) return;
 
-	const dirtyKeys = Array.from(cache.dirty);
-	cache.dirty.clear();
-	cache.lastFlush = Date.now();
+	cache.flushing = true;
 
-	// Filtrar solo keys críticas para persistir
-	const keysToPersist = dirtyKeys.filter((key) =>
-		CRITICAL_KEY_PREFIXES.some((prefix) => key.startsWith(prefix))
-	);
+	try {
+		const dirtyKeys = Array.from(cache.dirty);
+		cache.dirty.clear();
+		cache.lastFlush = Date.now();
 
-	if (keysToPersist.length === 0) {
-		logger.debug({ sessionId, skipped: dirtyKeys.length }, "No critical keys to persist");
-		return;
-	}
-
-	logger.info({ sessionId, count: keysToPersist.length }, "Flushing dirty keys to DB");
-
-	const operations: Promise<any>[] = [];
-	const BATCH_SIZE = 50; // Limit batch size to prevent DB overload
-
-	for (let i = 0; i < keysToPersist.length; i += BATCH_SIZE) {
-		const batch = keysToPersist.slice(i, i + BATCH_SIZE);
-		const batchOps = batch.map((cacheKey) => {
-			const value = cache.keys.get(cacheKey);
-			const sId = fixId(cacheKey);
-
-			if (value) {
-				const serializedData = JSON.stringify(value, BufferJSON.replacer);
-				return prisma.session.upsert({
-					select: { pkId: true },
-					create: { data: serializedData, id: sId, sessionId },
-					update: { data: serializedData },
-					where: { sessionId_id: { id: sId, sessionId } },
-				});
-			} else {
-				return prisma.session.deleteMany({
-					where: { id: sId, sessionId },
-				});
-			}
-		});
-
-		operations.push(
-			prisma.$transaction(batchOps).catch((e) => {
-				logger.error({ sessionId, batch: i, error: e }, "Batch flush failed");
-				// Re-add to dirty set for retry
-				batch.forEach((key) => cache.dirty.add(key));
-			})
+		// Filtrar solo keys críticas para persistir
+		const keysToPersist = dirtyKeys.filter((key) =>
+			CRITICAL_KEY_PREFIXES.some((prefix) => key.startsWith(prefix))
 		);
 
-		// Small delay between batches to prevent DB overload
-		if (i + BATCH_SIZE < keysToPersist.length) {
-			await new Promise((r) => setTimeout(r, 100));
+		if (keysToPersist.length === 0) {
+			logger.debug({ sessionId, skipped: dirtyKeys.length }, "No critical keys to persist");
+			return;
 		}
-	}
 
-	await Promise.allSettled(operations);
-	logger.info({ sessionId, persisted: keysToPersist.length }, "Dirty keys flushed");
+		logger.info({ sessionId, count: keysToPersist.length }, "Flushing dirty keys to DB");
+
+		const BATCH_SIZE = 40; // Reduced size slightly for Neon stability
+
+		for (let i = 0; i < keysToPersist.length; i += BATCH_SIZE) {
+			const batch = keysToPersist.slice(i, i + BATCH_SIZE);
+			const batchOps = batch.map((cacheKey) => {
+				const value = cache.keys.get(cacheKey);
+				const sId = fixId(cacheKey);
+
+				if (value) {
+					const serializedData = JSON.stringify(value, BufferJSON.replacer);
+					return prisma.session.upsert({
+						select: { pkId: true },
+						create: { data: serializedData, id: sId, sessionId },
+						update: { data: serializedData },
+						where: { sessionId_id: { id: sId, sessionId } },
+					});
+				} else {
+					return prisma.session.deleteMany({
+						where: { id: sId, sessionId },
+					});
+				}
+			});
+
+			try {
+				// Ejecución secuencial de batches para evitar deadlocks y sobrecarga de conexiones
+				await prisma.$transaction(batchOps);
+				logger.debug({ sessionId, batch: i, size: batch.length }, "Batch flush success");
+			} catch (e: any) {
+				logger.error(
+					{
+						sessionId,
+						error: e?.message || e,
+						stack: e?.stack,
+						batchStart: i,
+						batchSize: batch.length,
+					},
+					"Batch flush failed"
+				);
+				// Re-agregar a dirty para reintento en el próximo ciclo
+				batch.forEach((key) => cache.dirty.add(key));
+
+				// Si falla un batch, detenemos los demás para esta sesión para evitar spam de errores
+				break;
+			}
+
+			// Pequeño delay entre batches para aliviar la DB
+			if (i + BATCH_SIZE < keysToPersist.length) {
+				await new Promise((r) => setTimeout(r, 50));
+			}
+		}
+
+		logger.info({ sessionId, remainingDirty: cache.dirty.size }, "Dirty keys flush finished");
+	} finally {
+		cache.flushing = false;
+	}
 }
 
 /**
