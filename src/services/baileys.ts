@@ -359,7 +359,7 @@ export async function createSession(options: createSessionOptions) {
 
 		socket.ev.on("creds.update", saveCreds);
 		socket.ev.on("connection.update", async (update: Partial<ConnectionState>) => {
-			connectionState = update;
+			connectionState = { ...connectionState, ...update };
 			const { connection, lastDisconnect } = update;
 			const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
 			const attemptCount = retries.get(sessionId) ?? 0;

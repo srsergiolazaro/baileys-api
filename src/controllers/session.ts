@@ -133,7 +133,8 @@ export const addSSE: RequestHandler = async (req, res) => {
 		"Cache-Control": "no-cache",
 		Connection: "keep-alive",
 	});
-	createSession({ userId, res, SSE: true });
+	const sessionId = (req.query.sessionId as string) || undefined;
+	createSession({ userId, res, SSE: true, sessionId });
 };
 
 export const del: RequestHandler = async (req, res) => {
