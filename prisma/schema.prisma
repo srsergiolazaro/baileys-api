@@ -248,6 +248,7 @@ model UserSession {
   phoneNumber   String?         @db.VarChar(50)
   deviceName    String?         @db.VarChar(128)
   accountType   AccountType     @default(personal)
+  isBusiness    Boolean?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime
   lastActive    DateTime        @default(now())

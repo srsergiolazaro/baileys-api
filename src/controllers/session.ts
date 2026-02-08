@@ -34,6 +34,8 @@ export const getUserSessions: RequestHandler = async (req, res) => {
 				status: true,
 				phoneNumber: true,
 				deviceName: true,
+				accountType: true,
+				isBusiness: true,
 				lastActive: true,
 			},
 		});

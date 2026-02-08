@@ -716,11 +716,17 @@ export async function createSession(options: createSessionOptions) {
 				}
 
 				let accountType: AccountType = AccountType.personal;
+				let isBusiness = false;
+
 				if (me?.id) {
+					// Detectar si es business según el nombre en credenciales (asignado por Baileys durante pairing)
+					isBusiness = !!me.name;
+
 					try {
 						const businessProfile = await socket.getBusinessProfile(me.id);
 						if (businessProfile) {
 							accountType = AccountType.business;
+							isBusiness = true;
 							logger.info("Business account detected", { sessionId, category: businessProfile.category });
 						}
 					} catch (e) {
@@ -738,6 +744,7 @@ export async function createSession(options: createSessionOptions) {
 							deviceName: userName,
 							phoneNumber,
 							accountType,
+							isBusiness,
 							data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
 						},
 						create: {
@@ -748,6 +755,7 @@ export async function createSession(options: createSessionOptions) {
 							deviceName: userName,
 							phoneNumber,
 							accountType,
+							isBusiness,
 							createdAt: now,
 							updatedAt: now,
 							lastActive: now,
@@ -772,7 +780,7 @@ export async function createSession(options: createSessionOptions) {
 				if (currentRes && !currentRes.writableEnded) {
 					if (SSE) {
 						try {
-							currentRes.write(`data: ${JSON.stringify({ connection: "open", sessionId, phoneNumber, deviceName: userName, accountType })}\n\n`);
+							currentRes.write(`data: ${JSON.stringify({ connection: "open", sessionId, phoneNumber, deviceName: userName, accountType, isBusiness })}\n\n`);
 							currentRes.end();
 						} catch (e) {
 							logger.error("Failed to send SSE open event", { sessionId, error: e });
