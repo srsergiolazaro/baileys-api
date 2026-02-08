@@ -719,34 +719,39 @@ export async function createSession(options: createSessionOptions) {
 				let isBusiness = false;
 
 				if (me?.id) {
-					// 1. Verificar bizName en credenciales (rápido, asignado durante pairing)
-					const hasBizName = !!me.name;
-
-					// 2. Verificar AccountType en creds si existe (0 = personal)
+					// 1. Obtener AccountType de las credenciales (si Baileys lo detectó en el payload inicial)
+					// 0 = Personal, 1 = Business (según especificación de WA)
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					const credsAccountType = (socket.authState.creds as any).account?.accountType;
-					const hasCredsBizType = credsAccountType !== undefined && credsAccountType !== 0;
+					const creds = (socket.authState.creds as any);
+					const credsAccountType = creds.account?.accountType;
 
 					try {
-						// 3. Consultar perfil de negocio (confirmación definitiva)
+						// 2. Consultar perfil de negocio (confirmación definitiva)
 						const profile = await socket.getBusinessProfile(me.id);
-						const hasFullProfile = !!(profile && (profile.description || profile.category || profile.address));
 
-						if (hasFullProfile) {
+						// Una cuenta business real tendrá categoría o descripción asignada
+						if (profile && (profile.category || profile.description || profile.address)) {
 							isBusiness = true;
 							accountType = AccountType.business;
-							logger.info("Business account confirmed via profile", { sessionId, category: profile?.category });
-						} else {
-							// Fallback a indicadores secundarios si el perfil está vacío o no es concluyente
-							isBusiness = hasBizName || hasCredsBizType;
+							logger.info("Business account confirmed via profile content", { sessionId, category: profile.category });
+						} else if (credsAccountType !== undefined) {
+							// 3. Fallback al AccountType si el perfil falló o no tiene datos
+							isBusiness = credsAccountType === 1; // 1 es Business
 							if (isBusiness) accountType = AccountType.business;
-							logger.info("Business status determined via fallbacks", { sessionId, isBusiness, hasBizName, hasCredsBizType });
+							logger.info("Business status confirmed via creds accountType", { sessionId, isBusiness, credsAccountType });
 						}
 					} catch (e) {
-						// Si falla la consulta IQ, usamos los métodos locales
-						isBusiness = hasBizName || hasCredsBizType;
-						if (isBusiness) accountType = AccountType.business;
-						logger.debug("Business profile query failed, using fallbacks", { sessionId, isBusiness });
+						// 4. Si falla la consulta IQ, confiamos únicamente en el AccountType de las credenciales
+						if (credsAccountType !== undefined) {
+							isBusiness = credsAccountType === 1;
+							if (isBusiness) accountType = AccountType.business;
+							logger.debug("Profile query failed, using creds accountType", { sessionId, isBusiness, credsAccountType });
+						} else {
+							// Sin indicadores claros, por defecto es personal para evitar falsos positivos
+							isBusiness = false;
+							accountType = AccountType.personal;
+							logger.debug("Business detection inconclusive, defaulting to personal", { sessionId });
+						}
 					}
 				}
 
