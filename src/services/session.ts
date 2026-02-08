@@ -25,7 +25,7 @@ export function clearRestartingLock(sessionId: string): void {
 
 export function getSessionStatus(session: Session) {
 	const state = ["CONNECTING", "CONNECTED", "DISCONNECTING", "DISCONNECTED"];
-	let status = state[(session.ws as any).readyState];
+	let status = (session as any).ws ? state[(session as any).ws.readyState] : "DISCONNECTED";
 	status = session.user ? "AUTHENTICATED" : status;
 	return status;
 }

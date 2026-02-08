@@ -24,7 +24,7 @@ const SSEQRGenerations = new Map<string, number>();
 // Intervalo base de reconexión (mínimo 2 segundos para evitar loops rápidos)
 const RECONNECT_INTERVAL_BASE = Math.max(Number(process.env.RECONNECT_INTERVAL || 2000), 2000);
 const MAX_RECONNECT_RETRIES = Number(process.env.MAX_RECONNECT_RETRIES || 5);
-const SSE_MAX_QR_GENERATION = Number(process.env.SSE_MAX_QR_GENERATION || 5);
+const SSE_MAX_QR_GENERATION = Number(process.env.SSE_MAX_QR_GENERATION || 20);
 
 /**
  * Calculate exponential backoff delay for reconnection
@@ -130,9 +130,21 @@ export async function createSession(options: createSessionOptions) {
 				return { error: "SSE channel unavailable", sessionId: null };
 			}
 
-			// Primer mensaje SSE obligatorio
-			res.write(`data: ${JSON.stringify({ sessionId })}\n\n`);
-			logger.info("SSE inicial enviado correctamente", { sessionId });
+			// Primer mensaje SSE obligatorio (solo si no es reconexión)
+			if (!isReconnecting) {
+				res.write(`data: ${JSON.stringify({ sessionId })}\n\n`);
+				logger.info("SSE inicial enviado correctamente", { sessionId });
+			}
+
+			// Manejar cierre de conexión desde el cliente (navegador)
+			res.on("close", () => {
+				logger.info("SSE connection closed by client", { sessionId });
+				// No destruimos si es una reconexión de red normal, 
+				// pero si el canal SSE se cierra, usualmente es porque el usuario cerró la pestaña
+				if (!isReconnecting) {
+					destroy(false);
+				}
+			});
 
 		} catch (e) {
 			logger.error("❌ Error inicial SSE. NO se creará la sesión.", {
@@ -188,6 +200,8 @@ export async function createSession(options: createSessionOptions) {
 			logger.error("Error during session destroy", e);
 		} finally {
 			sessionsMap.delete(sessionId);
+			retries.delete(sessionId);
+			SSEQRGenerations.delete(sessionId);
 		}
 	};
 
