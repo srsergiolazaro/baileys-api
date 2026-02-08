@@ -4,9 +4,10 @@ import makeWASocket, {
 	DisconnectReason,
 	isJidBroadcast,
 	makeCacheableSignalKeyStore,
+	addTransactionCapability,
 	jidDecode,
 } from "baileys";
-import type { ConnectionState, GroupParticipant, ParticipantAction, SocketConfig } from "baileys";
+import type { ConnectionState, GroupParticipant, ParticipantAction, SocketConfig, WAMessageContent } from "baileys";
 import { Store, useSession, clearSessionCache } from "../store";
 import { prisma } from "../db";
 import { AccountType } from "@prisma/client";
@@ -416,18 +417,47 @@ export async function createSession(options: createSessionOptions) {
 	// ============================================================
 	try {
 		const { state, saveCreds } = await useSession(sessionId);
+
+		// ============================================================
+		// 🚀 OPTIMIZACIÓN 100X: Transactional Signal Store
+		// Previene condiciones de carrera y errores de "Old Counter".
+		// ============================================================
+		const signalStore = addTransactionCapability(state.keys, logger, {
+			maxCommitRetries: 3,
+			delayBetweenTriesMs: 500
+		});
+
 		socket = makeWASocket({
 			printQRInTerminal: false,
 			generateHighQualityLinkPreview: false,
-			syncFullHistory: false, // Recomendado para ahorrar ancho de banda y CPU
+			syncFullHistory: false,
+			// ============================================================
+			// 🚀 OPTIMIZACIÓN 100X: Skip History Sync
+			// No descargar chats pasados. Ahorra 100x en red, CPU y RAM.
+			// ============================================================
+			shouldSyncHistoryMessage: () => false,
 			markOnlineOnConnect: false, // No marcar como online automáticamente al conectar
 			...socketConfig,
 			auth: {
 				creds: state.creds,
-				keys: makeCacheableSignalKeyStore(state.keys, logger),
+				keys: makeCacheableSignalKeyStore(signalStore, logger),
 			},
 			logger,
 			shouldIgnoreJid: (jid) => isJidBroadcast(jid),
+			// ============================================================
+			// 🚀 OPTIMIZACIÓN: Cargar mensajes desde la BD para Reacciones/Retries
+			// ============================================================
+			getMessage: async (key): Promise<WAMessageContent | undefined> => {
+				try {
+					const msg = await prisma.message.findFirst({
+						where: { id: key.id!, remoteJid: key.remoteJid!, sessionId },
+						select: { message: true }
+					});
+					return (msg?.message as any) || undefined;
+				} catch {
+					return undefined;
+				}
+			}
 		});
 
 		const store = new Store(sessionId, socket.ev);

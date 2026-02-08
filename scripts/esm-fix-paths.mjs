@@ -78,23 +78,34 @@ async function transformFile(filePath) {
 	let content = await fs.readFile(filePath, "utf8");
 	const fileDir = path.dirname(filePath);
 
-	async function replaceAll(pattern) {
+	async function processPattern(pattern) {
 		const matches = [...content.matchAll(pattern)];
 		if (!matches.length) return;
 
-		for (const match of matches) {
-			const old = match[0];
+		// Get unique specifiers to avoid redundant work and double-replacements
+		const uniqueSpecs = [...new Set(matches.map(m => m[0]))];
+
+		// Sort by length descending to avoid replacing a substring of a longer specifier first
+		uniqueSpecs.sort((a, b) => b.length - a.length);
+
+		for (const old of uniqueSpecs) {
 			const resolved = await resolveSpecifier(fileDir, old);
-			content = content.replace(old, resolved);
+			if (old !== resolved) {
+				// Use a regex to replace exactly the occurrences that match the pattern's capture group
+				// for that specific specifier.
+				const escapedSpec = old.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+				const globalReplacePattern = new RegExp(`(?<=from\\s+['"])${escapedSpec}(?=['"])|(?<=import\\s*\\(\\s*['"])${escapedSpec}(?=['"]\\s*\\))|(?<=export\\s+\\*\\s+from\\s+['"])${escapedSpec}(?=['"])`, "g");
+				content = content.replace(globalReplacePattern, resolved);
+			}
 		}
 	}
 
-	await replaceAll(aliasPattern);
-	await replaceAll(dynamicAliasPattern);
-	await replaceAll(relativePattern);
-	await replaceAll(dynamicRelativePattern);
-	await replaceAll(exportAliasPattern);
-	await replaceAll(exportRelativePattern);
+	await processPattern(aliasPattern);
+	await processPattern(dynamicAliasPattern);
+	await processPattern(relativePattern);
+	await processPattern(dynamicRelativePattern);
+	await processPattern(exportAliasPattern);
+	await processPattern(exportRelativePattern);
 
 	await fs.writeFile(filePath, content, "utf8");
 }
