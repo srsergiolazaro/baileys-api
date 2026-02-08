@@ -7,6 +7,34 @@ import { delay as delayMs } from "@/utils";
 import { getSession, jidExists, listSessions } from "@/whatsapp";
 import { prisma } from "@/db";
 import type { Message } from "@prisma/client";
+import { getCachedMedia } from "@/utils/media-cache";
+
+/**
+ * Busca recursivamente URLs de media en el objeto message y las descarga/cachea
+ */
+async function processMediaUrls(message: any) {
+	if (!message || typeof message !== "object") return;
+
+	const keys = ["image", "video", "audio", "document", "sticker"];
+	for (const key of keys) {
+		if (message[key] && typeof message[key] === "object" && message[key].url) {
+			try {
+				const buffer = await getCachedMedia(message[key].url);
+				message[key] = buffer; // Reemplazamos la URL por el Buffer cacheado
+				logger.debug({ url: message[key].url }, "Media URL replaced with cached buffer");
+			} catch (e) {
+				logger.error({ url: message[key].url, error: e }, "Failed to cache media URL, sending as is");
+			}
+		}
+	}
+
+	// Manejo de botones/listas que pueden tener media (recursión simple)
+	for (const key in message) {
+		if (typeof message[key] === "object") {
+			await processMediaUrls(message[key]);
+		}
+	}
+}
 
 export const list: RequestHandler = async (req, res) => {
 	try {
@@ -79,6 +107,9 @@ export const send: RequestHandler = async (req, res) => {
 			});
 		}
 
+		// Pre-procesar URLs de media para usar caché local
+		await processMediaUrls(message);
+
 		try {
 			const result = await session.sendMessage(formatJid, message, options);
 			return res.status(200).json(result);
@@ -134,6 +165,9 @@ export const sendBulk: RequestHandler = async (req, res) => {
 					};
 				}
 			}
+
+			// Pre-procesar URLs de media para usar caché local
+			await processMediaUrls(message);
 
 			// Verificar si el JID existe
 			const { exists, formatJid } = await jidExists(session, jid);

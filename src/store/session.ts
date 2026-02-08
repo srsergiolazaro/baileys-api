@@ -26,7 +26,7 @@ interface SessionCache {
 const globalSessionCache = new Map<string, SessionCache>();
 
 // Configuración de persistencia
-const FLUSH_INTERVAL_MS = 60000; // Flush cada 60 segundos si hay cambios
+const FLUSH_INTERVAL_MS = 10000; // Flush cada 10 segundos (mejor equilibrio seguridad/rendimiento)
 const CRITICAL_KEY_PREFIXES = [
 	"pre-key-",
 	"sender-key-",
@@ -34,6 +34,9 @@ const CRITICAL_KEY_PREFIXES = [
 	"app-state-",
 	"next-pre-key-",
 	"identity-",
+	"lid-mapping-",
+	"device-list-",
+	"app-state-sync-version-",
 ]; // Keys importantes para persistir
 
 // Timers de flush por sesión

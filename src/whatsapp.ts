@@ -38,7 +38,15 @@ export async function init() {
         try {
             const { readIncomingMessages, ...socketConfig } = JSON.parse(data);
 
-            console.log("🟢 init: creando sesión de WhatsApp", {
+            // ============================================================
+            // 🎲 STAGGERED START (Jitter)
+            // Recomendación del creador: Evita que todas las sesiones conecten 
+            // al mismo tiempo desde la misma IP.
+            // ============================================================
+            const staggerDelay = Math.floor(Math.random() * 1000) + 500; // Entre 0.5s y 1.5s
+            await new Promise(resolve => setTimeout(resolve, staggerDelay));
+
+            console.log(`🟢 init: creando sesión (${staggerDelay}ms delay)`, {
                 sessionId,
                 userId
             });

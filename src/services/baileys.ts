@@ -11,7 +11,7 @@ import { Store, useSession, clearSessionCache } from "../store";
 import { prisma } from "../db";
 import { AccountType } from "@prisma/client";
 import { logger } from "../shared";
-import type { Boom } from "@hapi/boom";
+import { Boom } from "@hapi/boom";
 import type { Response } from "express";
 import { toDataURL } from "qrcode";
 import { sessionsMap, setRestartingLock, clearRestartingLock, sessionExists } from "./session";
@@ -104,7 +104,21 @@ export async function createSession(options: createSessionOptions) {
 	// 🛡️ PREVENCIÓN DE SESIONES DUPLICADAS
 	// ============================================================
 	if (sessionExists(sessionId)) {
-		logger.warn("createSession: Session already exists, skipping", { sessionId });
+		logger.info("createSession: Session already exists, attaching/skipping", { sessionId });
+		if (SSE && res) {
+			const session = sessionsMap.get(sessionId);
+			if (session) {
+				session.sseResponse = res;
+				session.SSE = true;
+				// Enviar mensaje de reconexión exitosa al canal
+				try {
+					res.write(`data: ${JSON.stringify({ sessionId, status: "attached" })}\n\n`);
+				} catch (e) {
+					logger.error("Failed to write to new SSE response", { sessionId, error: e });
+				}
+				return { success: true, sessionId, attached: true };
+			}
+		}
 		if (res && !res.headersSent && !SSE) {
 			return res.status(409).json({ error: "Session already exists", sessionId });
 		}
@@ -136,16 +150,6 @@ export async function createSession(options: createSessionOptions) {
 				logger.info("SSE inicial enviado correctamente", { sessionId });
 			}
 
-			// Manejar cierre de conexión desde el cliente (navegador)
-			res.on("close", () => {
-				logger.info("SSE connection closed by client", { sessionId });
-				// No destruimos si es una reconexión de red normal, 
-				// pero si el canal SSE se cierra, usualmente es porque el usuario cerró la pestaña
-				if (!isReconnecting) {
-					destroy(false);
-				}
-			});
-
 		} catch (e) {
 			logger.error("❌ Error inicial SSE. NO se creará la sesión.", {
 				sessionId,
@@ -167,7 +171,35 @@ export async function createSession(options: createSessionOptions) {
 	});
 
 	// ============================================================
-	// 🔥 DESTRUCCIÓN COMPLETA DE SESIÓN
+	// � REGISTRO INICIAL EN BASE DE DATOS
+	// Asegura que la sesión aparezca en el dashboard mientras se escanea el QR
+	// ============================================================
+	try {
+		const now = new Date();
+		await prisma.userSession.upsert({
+			where: { sessionId },
+			update: {
+				status: "authenticating", // Estado temporal mientras se escanea
+				updatedAt: now,
+				lastActive: now,
+			},
+			create: {
+				id: sessionId,
+				sessionId,
+				userId,
+				status: "authenticating",
+				deviceName: deviceName,
+				createdAt: now,
+				updatedAt: now,
+				lastActive: now,
+			},
+		});
+	} catch (e) {
+		logger.error("Failed to create initial UserSession", { sessionId, error: e });
+	}
+
+	// ============================================================
+	// �🔥 DESTRUCCIÓN COMPLETA DE SESIÓN
 	// ============================================================
 	let connectionState: Partial<ConnectionState> = { connection: "close" };
 	let socket: any;
@@ -199,10 +231,41 @@ export async function createSession(options: createSessionOptions) {
 		} catch (e) {
 			logger.error("Error during session destroy", e);
 		} finally {
+			if (watchdogTimer) {
+				clearTimeout(watchdogTimer);
+				watchdogTimer = null;
+			}
+			if (socket) {
+				logger.info({ sessionId }, "Cleaning up socket listeners for GC");
+				socket.ev.removeAllListeners();
+			}
 			sessionsMap.delete(sessionId);
 			retries.delete(sessionId);
 			SSEQRGenerations.delete(sessionId);
 		}
+	};
+
+	// ============================================================
+	// 🐕 WATCHDOG - REINICIO DE SESIÓN ZOMBIE
+	// Recomendación del creador: Reiniciar si no hay eventos en 5 min.
+	// ============================================================
+	const WATCHDOG_TIMEOUT = 5 * 60 * 1000; // 5 minutos
+	let watchdogTimer: NodeJS.Timeout | null = null;
+
+	const resetWatchdog = () => {
+		if (watchdogTimer) clearTimeout(watchdogTimer);
+		watchdogTimer = setTimeout(async () => {
+			if (!sessionsMap.has(sessionId)) return; // Sesión ya destruida
+
+			logger.warn({ sessionId }, "🐕 Watchdog: Sesión zombie detectada (5 min sin eventos). Reiniciando...");
+			if (socket) {
+				try {
+					socket.end(new Boom("Watchdog: No events for 5 minutes", { statusCode: DisconnectReason.connectionLost }));
+				} catch (e) {
+					logger.error({ sessionId, error: e }, "Failed to end socket via watchdog");
+				}
+			}
+		}, WATCHDOG_TIMEOUT);
 	};
 
 	// ============================================================
@@ -234,22 +297,26 @@ export async function createSession(options: createSessionOptions) {
 			});
 
 			if (res) {
-				if (SSE && !res.writableEnded) {
+				const session = sessionsMap.get(sessionId);
+				const currentRes = session?.sseResponse || res;
+
+				if (SSE && currentRes && !currentRes.writableEnded) {
 					try {
-						res.write(`data: ${JSON.stringify({
+						currentRes.write(`data: ${JSON.stringify({
 							connection: "close",
 							sessionId,
 							reason: code === DisconnectReason.loggedOut ? "logged_out" : "max_retries_reached",
 							statusCode: code,
 						})}\n\n`);
+						currentRes.end();
 					} catch (e) {
 						logger.error("Failed to send SSE close event", { sessionId, error: e });
 					}
 				}
 				if (!SSE && !res.headersSent) {
 					res.status(500).json({ error: "Unable to create session" });
+					res.end();
 				}
-				res.end();
 			}
 			destroy(code === DisconnectReason.loggedOut);
 			clearRestartingLock(sessionId); // Asegurar liberar lock
@@ -309,11 +376,14 @@ export async function createSession(options: createSessionOptions) {
 		}
 
 		const current = SSEQRGenerations.get(sessionId) ?? 0;
-		if (!res || res.writableEnded || (qr && current >= SSE_MAX_QR_GENERATION)) {
-			if (res && !res.writableEnded) {
+		const session = sessionsMap.get(sessionId);
+		const currentRes = session?.sseResponse || res;
+
+		if (!currentRes || currentRes.writableEnded || (qr && current >= SSE_MAX_QR_GENERATION)) {
+			if (currentRes && !currentRes.writableEnded) {
 				if (qr && current >= SSE_MAX_QR_GENERATION) {
 					try {
-						res.write(`data: ${JSON.stringify({
+						currentRes.write(`data: ${JSON.stringify({
 							connection: "close",
 							sessionId,
 							reason: "qr_expired",
@@ -323,7 +393,7 @@ export async function createSession(options: createSessionOptions) {
 						logger.error("Failed to send SSE qr_expired event", { sessionId, error: e });
 					}
 				}
-				res.end();
+				currentRes.end();
 			}
 			return;
 		}
@@ -332,10 +402,10 @@ export async function createSession(options: createSessionOptions) {
 		if (qr) SSEQRGenerations.set(sessionId, current + 1);
 
 		try {
-			res.write(`data: ${JSON.stringify(data)}\n\n`);
+			currentRes.write(`data: ${JSON.stringify(data)}\n\n`);
 		} catch (e) {
-			if (res && !res.writableEnded) res.end();
-			destroy(false);
+			if (currentRes && !currentRes.writableEnded) currentRes.end();
+			// No destruimos, permitimos reconexión SSE
 		}
 	};
 
@@ -349,6 +419,8 @@ export async function createSession(options: createSessionOptions) {
 		socket = makeWASocket({
 			printQRInTerminal: false,
 			generateHighQualityLinkPreview: false,
+			syncFullHistory: false, // Recomendado para ahorrar ancho de banda y CPU
+			markOnlineOnConnect: false, // No marcar como online automáticamente al conectar
 			...socketConfig,
 			auth: {
 				creds: state.creds,
@@ -359,7 +431,60 @@ export async function createSession(options: createSessionOptions) {
 		});
 
 		const store = new Store(sessionId, socket.ev);
-		sessionsMap.set(sessionId, { ...socket, destroy, store });
+		sessionsMap.set(sessionId, { ...socket, destroy, store, sseResponse: res, SSE });
+
+		// ============================================================
+		// 🚦 ANTI-BAN THROTTLING (Cola de mensajes)
+		// Recomendación del creador: Baileys no tiene throttling nativo.
+		// Implementamos un retraso humano de 1-3 segundos entre mensajes.
+		// ============================================================
+		const messageQueue: { jid: string; content: any; options: any; resolve: any; reject: any }[] = [];
+		let isProcessingQueue = false;
+
+		const originalSendMessage = socket.sendMessage.bind(socket);
+
+		const processQueue = async () => {
+			if (isProcessingQueue || messageQueue.length === 0) return;
+			isProcessingQueue = true;
+
+			while (messageQueue.length > 0) {
+				const { jid, content, options, resolve, reject } = messageQueue.shift()!;
+				try {
+					// ============================================================
+					// 🎭 HUMAN STEALTH SIMULATION (Composing...)
+					// ============================================================
+					// 1. Marcar como "disponible" (si no lo está ya)
+					await socket.sendPresenceUpdate("available");
+
+					// 2. Marcar como "escribiendo" (composing) por un tiempo aleatorio
+					await socket.sendPresenceUpdate("composing", jid);
+					const typingDelay = Math.floor(Math.random() * (2000 - 500 + 1)) + 500; // 0.5s a 2s
+					await new Promise(res => setTimeout(res, typingDelay));
+
+					// 3. Dejar de escribir antes de enviar
+					await socket.sendPresenceUpdate("paused", jid);
+
+					// Usamos setImmediate para asegurar que el envío no bloquee el event loop
+					await new Promise(res => setImmediate(res));
+					const result = await originalSendMessage(jid, content, options);
+					resolve(result);
+				} catch (err) {
+					reject(err);
+				}
+				// Retraso aleatorio "humano" entre 1.5 y 3 segundos
+				const delay = Math.floor(Math.random() * (3000 - 1500 + 1)) + 1500;
+				await new Promise(res => setTimeout(res, delay));
+			}
+
+			isProcessingQueue = false;
+		};
+
+		socket.sendMessage = (jid: string, content: any, options: any) => {
+			return new Promise((resolve, reject) => {
+				messageQueue.push({ jid, content, options, resolve, reject });
+				processQueue();
+			});
+		};
 
 		const originalSendRetryRequest = socket.sendRetryRequest.bind(socket);
 		socket.sendRetryRequest = async (...args: any[]) => {
@@ -372,6 +497,99 @@ export async function createSession(options: createSessionOptions) {
 		};
 
 		socket.ev.on("creds.update", saveCreds);
+
+		// Iniciar watchdog y escuchar CUALQUIER evento
+		resetWatchdog();
+		socket.ev.process(() => {
+			resetWatchdog();
+		});
+
+		// ============================================================
+		// 🆔 EVENTOS DE IDENTIDAD (LID & Contacts)
+		// Según recomendación: Vincular PN con LID para evitar duplicados.
+		// ============================================================
+		socket.ev.on("lid-mapping.update", async (mapping: { pn: string; lid: string }) => {
+			const { pn, lid } = mapping;
+			logger.info({ pn, lid, sessionId }, "LID mapping received, syncing identity in DB");
+			try {
+				await prisma.$transaction(async (tx) => {
+					// 1. Actualizar la sesión del usuario si el PN o LID coincide con la sesión actual
+					const currentMe = socket.user;
+					if (currentMe?.id) {
+						const decoded = jidDecode(currentMe.id);
+						const userPart = decoded?.user;
+						if (userPart && (pn.includes(userPart) || lid.includes(userPart))) {
+							await tx.userSession.update({
+								where: { sessionId },
+								data: {
+									phoneNumber: pn,
+									// Podríamos añadir un campo 'lid' a UserSession si fuera necesario en el futuro
+									updatedAt: new Date()
+								}
+							});
+						}
+					}
+
+					// 2. Vincular Contactos: Si existe un contacto con este PN, añadirle el LID (y viceversa)
+					// Esto evita duplicados al buscar por cualquiera de los dos IDs
+					await tx.contact.updateMany({
+						where: {
+							sessionId,
+							OR: [
+								{ id: pn },
+								{ id: lid },
+								{ phoneNumber: pn },
+								{ lid: lid }
+							]
+						},
+						data: { phoneNumber: pn, lid: lid }
+					});
+
+					// 3. Vincular Chats: Lo mismo para la tabla de chats
+					await tx.chat.updateMany({
+						where: {
+							sessionId,
+							OR: [
+								{ id: pn },
+								{ id: lid },
+								{ pnJid: pn },
+								{ lidJid: lid }
+							]
+						},
+						data: { pnJid: pn, lidJid: lid }
+					});
+				});
+			} catch (e) {
+				logger.error("Failed to sync identity mapping", { sessionId, error: e });
+			}
+		});
+
+		socket.ev.on("contacts.upsert", async (contacts: any[]) => {
+			// Sincronización básica de nombres de contactos para el Dashboard
+			for (const contact of contacts) {
+				try {
+					if (!contact.id) continue;
+					await prisma.contact.upsert({
+						where: { sessionId_id: { sessionId, id: contact.id } },
+						update: {
+							name: contact.name || contact.notify || contact.verifiedName,
+							phoneNumber: contact.phoneNumber,
+							lid: contact.lid
+						},
+						create: {
+							sessionId,
+							id: contact.id,
+							name: contact.name || contact.notify || contact.verifiedName,
+							phoneNumber: contact.phoneNumber,
+							lid: contact.lid
+						}
+					});
+				} catch (e) {
+					// Ignorar errores individuales de upsert
+				}
+			}
+		});
+
 		socket.ev.on("connection.update", async (update: Partial<ConnectionState>) => {
 			connectionState = { ...connectionState, ...update };
 			const { connection, lastDisconnect } = update;
@@ -468,19 +686,31 @@ export async function createSession(options: createSessionOptions) {
 						},
 					});
 					logger.info("UserSession synced to database on connection open", { sessionId, phoneNumber, userName });
+
+					// ============================================================
+					// 🧹 LIMPIEZA DE LLAVES (Cleanup)
+					// Según recomendación del creador para evitar bloat en DB
+					// ============================================================
+					performSessionCleanup(sessionId, socket);
+
 				} catch (e) {
 					logger.error("Failed to sync UserSession on connection open", { sessionId, error: e });
 				}
 
-				if (res && !res.writableEnded) {
+				const session = sessionsMap.get(sessionId);
+				const currentRes = session?.sseResponse || res;
+
+				if (currentRes && !currentRes.writableEnded) {
 					if (SSE) {
 						try {
-							res.write(`data: ${JSON.stringify({ connection: "open", sessionId, phoneNumber, deviceName: userName, accountType })}\n\n`);
+							currentRes.write(`data: ${JSON.stringify({ connection: "open", sessionId, phoneNumber, deviceName: userName, accountType })}\n\n`);
+							currentRes.end();
 						} catch (e) {
 							logger.error("Failed to send SSE open event", { sessionId, error: e });
 						}
+					} else {
+						currentRes.end();
 					}
-					res.end();
 					clearRestartingLock(sessionId); // Carga exitosa, liberamos lock
 					return;
 				}
@@ -503,6 +733,35 @@ export async function createSession(options: createSessionOptions) {
 		if (res && !res.headersSent && !SSE) {
 			res.status(500).json({ error: "Failed to initialize session", sessionId });
 		}
+	}
+}
+
+/**
+ * Realiza limpieza de pre-keys antiguas para evitar que la tabla Session crezca infinitamente.
+ * Estrategia recomendada por el creador de Baileys:
+ * Borrar llaves < firstUnuploadedPreKeyId, manteniendo un buffer de seguridad.
+ */
+async function performSessionCleanup(sessionId: string, socket: any) {
+	try {
+		const creds = socket.authState.creds;
+		const cutoff = creds.firstUnuploadedPreKeyId || 0;
+		const BUFFER = 50; // Mantener las últimas 50 llaves subidas para evitar fallos de descifrado
+
+		if (cutoff > BUFFER) {
+			const maxToDelete = cutoff - BUFFER;
+			const keysToDelete = Array.from({ length: maxToDelete }, (_, i) => (i + 1).toString());
+
+			logger.info({ sessionId, count: keysToDelete.length }, "Starting pre-key cleanup");
+
+			// Establecemos las llaves a null para que el store las borre de la DB
+			await socket.authState.keys.set({
+				"pre-key": Object.fromEntries(keysToDelete.map((id) => [id, null])),
+			});
+
+			logger.info({ sessionId, count: keysToDelete.length }, "Pre-key cleanup completed");
+		}
+	} catch (e) {
+		logger.error("Failed to perform session cleanup", { sessionId, error: e });
 	}
 }
 

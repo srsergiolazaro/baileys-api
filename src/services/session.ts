@@ -105,3 +105,4 @@ export function sessionExists(sessionId: string): boolean {
 }
 
 export const sessionsMap = sessions;
+(global as any).sessionsMap = sessionsMap;

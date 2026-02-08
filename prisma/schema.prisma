@@ -182,10 +182,11 @@ model Message {
 }
 
 model Session {
-  pkId      Int    @id @default(autoincrement())
-  sessionId String @db.VarChar(128)
-  id        String @db.VarChar(255)
+  pkId      Int      @id @default(autoincrement())
+  sessionId String   @db.VarChar(128)
+  id        String   @db.VarChar(255)
   data      String
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@unique([sessionId, id], map: "unique_session_id_per_session_id")
   @@index([sessionId])
