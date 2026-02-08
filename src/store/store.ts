@@ -7,6 +7,7 @@ export class Store {
 	private readonly messageHandler;
 	private readonly contactHandler;
 	private readonly groupMetadataHandler;
+	private readonly labelHandler;
 	private readonly sessionId: string;
 
 	constructor(sessionId: string, event: BaileysEventEmitter) {
@@ -15,6 +16,7 @@ export class Store {
 		this.messageHandler = handlers.messageHandler(sessionId, event);
 		this.contactHandler = handlers.contactHandler(sessionId, event);
 		this.groupMetadataHandler = handlers.groupMetadataHandler(sessionId, event);
+		this.labelHandler = handlers.labelHandler(sessionId, event);
 
 		// 🚀 PATRÓN SOTA: Procesamiento por lotes (Bundled Processing)
 		// Consolidar eventos de mensajes para evitar condiciones de carrera
@@ -44,6 +46,8 @@ export class Store {
 			// Otros handlers (Chat, Contacts, etc) siguen usando sus listeners internos
 			// o podrían ser migrados aquí también.
 		});
+
+		this.listen();
 	}
 
 	private processedCount = 0;
@@ -78,6 +82,7 @@ export class Store {
 		this.chatHandler.listen();
 		this.contactHandler.listen();
 		this.groupMetadataHandler.listen();
+		this.labelHandler.listen();
 	}
 
 	public unlisten() {
@@ -85,5 +90,10 @@ export class Store {
 		this.messageHandler.unlisten();
 		this.contactHandler.unlisten();
 		this.groupMetadataHandler.unlisten();
+		this.labelHandler.unlisten();
+	}
+
+	public getAllLabels() {
+		return this.labelHandler.getAllLabels();
 	}
 }

@@ -10,3 +10,4 @@ export * as user from "./user";
 
 export * as key from "./key";
 export * as newsletter from "./newsletter";
+export * as label from "./label";
