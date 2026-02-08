@@ -16,6 +16,10 @@ import { Boom } from "@hapi/boom";
 import type { Response } from "express";
 import { toDataURL } from "qrcode";
 import { sessionsMap, setRestartingLock, clearRestartingLock, sessionExists } from "./session";
+import { TelemetryEngine } from "./telemetry";
+
+// Map para rastrear motores de telemetría por sesión
+const telemetryEngines = new Map<string, TelemetryEngine>();
 // DESHABILITADO: Handlers de webhooks desactivados para reducir queries a DB
 // import { handleMessagesUpsert, handleGroupParticipantsUpdate } from "./handlers";
 
@@ -236,9 +240,17 @@ export async function createSession(options: createSessionOptions) {
 				clearTimeout(watchdogTimer);
 				watchdogTimer = null;
 			}
+
+			const engine = telemetryEngines.get(sessionId);
+			if (engine) {
+				engine.stop();
+				telemetryEngines.delete(sessionId);
+			}
+
 			if (socket) {
 				logger.info({ sessionId }, "Cleaning up socket listeners for GC");
 				socket.ev.removeAllListeners();
+				socket.ws.close();
 			}
 			sessionsMap.delete(sessionId);
 			retries.delete(sessionId);
@@ -483,7 +495,12 @@ export async function createSession(options: createSessionOptions) {
 					// ============================================================
 					// 🎭 HUMAN STEALTH SIMULATION (Composing...)
 					// ============================================================
-					// 1. Marcar como "disponible" (si no lo está ya)
+					// 1. Notificar al motor de telemetría la actividad (Despertar modo FOREGROUND)
+					const telEngine = telemetryEngines.get(sessionId);
+					if (telEngine) await telEngine.activityUpdate();
+
+					// 2. Marcar como "disponible" (si no lo está ya)
+					// (activityUpdate ya lo pone disponible si estaba en background)
 					await socket.sendPresenceUpdate("available");
 
 					// 2. Marcar como "escribiendo" (composing) por un tiempo aleatorio
@@ -635,6 +652,15 @@ export async function createSession(options: createSessionOptions) {
 			// Si es un error y estamos en los primeros reintentos, lo bajamos a DEBUG para reducir ruido
 			if (connection === "open") {
 				logger.info("connection.update: open", { sessionId, statusCode });
+
+				// ============================================================
+				// 🚀 SOTA: Iniciar Motor de Telemetría al conectar
+				// ============================================================
+				if (!telemetryEngines.has(sessionId)) {
+					const engine = new TelemetryEngine(sessionId, socket);
+					engine.start();
+					telemetryEngines.set(sessionId, engine);
+				}
 			} else if (connection === "close") {
 				// El manejo detallado se hace en handleConnectionClose
 			} else if (update.qr) {
