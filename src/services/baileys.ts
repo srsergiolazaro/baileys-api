@@ -6,6 +6,7 @@ import makeWASocket, {
 	makeCacheableSignalKeyStore,
 	addTransactionCapability,
 	jidDecode,
+	fetchLatestBaileysVersion
 } from "baileys";
 import type { ConnectionState, GroupParticipant, ParticipantAction, SocketConfig, WAMessageContent } from "baileys";
 import { Store, useSession, clearSessionCache } from "../store";
@@ -430,6 +431,7 @@ export async function createSession(options: createSessionOptions) {
 	try {
 		const { state, saveCreds } = await useSession(sessionId);
 
+
 		// ============================================================
 		// 🚀 OPTIMIZACIÓN 100X: Transactional Signal Store
 		// Previene condiciones de carrera y errores de "Old Counter".
@@ -439,7 +441,13 @@ export async function createSession(options: createSessionOptions) {
 			delayBetweenTriesMs: 500
 		});
 
+		// 🚀 OBTENER VERSIÓN OFICIAL (DINÁMICA)
+		// Evita el mensaje "The sender may be on an old version of Whatsapp"
+		const { version, isLatest } = await fetchLatestBaileysVersion();
+		logger.info({ sessionId, version: version.join('.'), isLatest }, "Socket using latest WA version");
+
 		socket = makeWASocket({
+			version,
 			printQRInTerminal: false,
 			generateHighQualityLinkPreview: false,
 			syncFullHistory: false,
