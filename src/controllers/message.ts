@@ -101,6 +101,8 @@ export const send: RequestHandler = async (req, res) => {
 
 
 		// Permitir envío a status@broadcast sin verificación de existencia
+
+		// Permitir envío a status@broadcast sin verificación de existencia
 		let formatJid = jid;
 		if (jid !== "status@broadcast") {
 			const check = await jidExists(session, jid);
@@ -111,33 +113,6 @@ export const send: RequestHandler = async (req, res) => {
 				});
 			}
 			formatJid = check.formatJid!;
-		} else {
-			// Manejo especial para STATUS BROADCAST
-			if (options?.statusJidList && Array.isArray(options.statusJidList)) {
-				// Formatear automáticamente números limpios a JIDs válidos
-				const validJids = options.statusJidList.map((id: string) =>
-					id.includes("@") ? id : `${id}@s.whatsapp.net`
-				);
-
-				// 🚀 TRUCO USYNC: Batch Presence Subscribe
-				try {
-					const batches = [];
-					for (let i = 0; i < validJids.length; i += 20) {
-						const batch = validJids.slice(i, i + 20);
-						batches.push(Promise.all(batch.map((jid: string) => session.presenceSubscribe(jid).catch(() => { }))));
-					}
-					await Promise.all(batches);
-					logger.info("USync refreshed via presenceSubscribe");
-				} catch (syncErr) {
-					logger.warn("USync refresh failed (non-critical)", syncErr);
-				}
-
-				options = {
-					...options,
-					statusJidList: validJids,
-					broadcast: true
-				};
-			}
 		}
 
 		// Pre-procesar URLs de media para usar caché local
