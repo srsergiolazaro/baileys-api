@@ -99,12 +99,17 @@ export const send: RequestHandler = async (req, res) => {
 			return res.status(400).json({ error: "Session not found or not connected" });
 		}
 
-		const { exists, formatJid, error } = await jidExists(session, jid);
-		if (!exists) {
-			return res.status(400).json({
-				error: error || "JID does not exist",
-				details: `Failed to verify JID: ${jid}`,
-			});
+		// Permitir envío a status@broadcast sin verificación de existencia
+		let formatJid = jid;
+		if (jid !== "status@broadcast") {
+			const check = await jidExists(session, jid);
+			if (!check.exists) {
+				return res.status(400).json({
+					error: check.error || "JID does not exist",
+					details: `Failed to verify JID: ${jid}`,
+				});
+			}
+			formatJid = check.formatJid!;
 		}
 
 		// Pre-procesar URLs de media para usar caché local
