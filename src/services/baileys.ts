@@ -595,28 +595,33 @@ export async function createSession(options: createSessionOptions) {
 		});
 
 		socket.ev.on("contacts.upsert", async (contacts: any[]) => {
-			// Sincronización básica de nombres de contactos para el Dashboard
-			for (const contact of contacts) {
-				try {
-					if (!contact.id) continue;
-					await prisma.contact.upsert({
-						where: { sessionId_id: { sessionId, id: contact.id } },
-						update: {
-							name: contact.name || contact.notify || contact.verifiedName,
-							phoneNumber: contact.phoneNumber,
-							lid: contact.lid
-						},
-						create: {
-							sessionId,
-							id: contact.id,
-							name: contact.name || contact.notify || contact.verifiedName,
-							phoneNumber: contact.phoneNumber,
-							lid: contact.lid
-						}
-					});
-				} catch (e) {
-					// Ignorar errores individuales de upsert
-				}
+			try {
+				const validContacts = contacts.filter(c => c.id);
+				if (validContacts.length === 0) return;
+
+				logger.info({ sessionId, count: validContacts.length }, "Bulk syncing contacts");
+
+				await prisma.$transaction(
+					validContacts.map(contact =>
+						prisma.contact.upsert({
+							where: { sessionId_id: { sessionId, id: contact.id } },
+							update: {
+								name: contact.name || contact.notify || contact.verifiedName,
+								phoneNumber: contact.phoneNumber,
+								lid: contact.lid
+							},
+							create: {
+								sessionId,
+								id: contact.id,
+								name: contact.name || contact.notify || contact.verifiedName,
+								phoneNumber: contact.phoneNumber,
+								lid: contact.lid
+							}
+						})
+					)
+				);
+			} catch (e) {
+				logger.error("Failed to bulk sync contacts", { sessionId, error: e });
 			}
 		});
 
