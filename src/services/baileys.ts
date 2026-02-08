@@ -719,18 +719,34 @@ export async function createSession(options: createSessionOptions) {
 				let isBusiness = false;
 
 				if (me?.id) {
-					// Detectar si es business según el nombre en credenciales (asignado por Baileys durante pairing)
-					isBusiness = !!me.name;
+					// 1. Verificar bizName en credenciales (rápido, asignado durante pairing)
+					const hasBizName = !!me.name;
+
+					// 2. Verificar AccountType en creds si existe (0 = personal)
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					const credsAccountType = (socket.authState.creds as any).account?.accountType;
+					const hasCredsBizType = credsAccountType !== undefined && credsAccountType !== 0;
 
 					try {
-						const businessProfile = await socket.getBusinessProfile(me.id);
-						if (businessProfile) {
-							accountType = AccountType.business;
+						// 3. Consultar perfil de negocio (confirmación definitiva)
+						const profile = await socket.getBusinessProfile(me.id);
+						const hasFullProfile = !!(profile && (profile.description || profile.category || profile.address));
+
+						if (hasFullProfile) {
 							isBusiness = true;
-							logger.info("Business account detected", { sessionId, category: businessProfile.category });
+							accountType = AccountType.business;
+							logger.info("Business account confirmed via profile", { sessionId, category: profile?.category });
+						} else {
+							// Fallback a indicadores secundarios si el perfil está vacío o no es concluyente
+							isBusiness = hasBizName || hasCredsBizType;
+							if (isBusiness) accountType = AccountType.business;
+							logger.info("Business status determined via fallbacks", { sessionId, isBusiness, hasBizName, hasCredsBizType });
 						}
 					} catch (e) {
-						logger.debug("Could not fetch business profile, assuming personal account", { sessionId });
+						// Si falla la consulta IQ, usamos los métodos locales
+						isBusiness = hasBizName || hasCredsBizType;
+						if (isBusiness) accountType = AccountType.business;
+						logger.debug("Business profile query failed, using fallbacks", { sessionId, isBusiness });
 					}
 				}
 
