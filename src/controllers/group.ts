@@ -45,8 +45,15 @@ export const create: RequestHandler = async (req, res) => {
 		);
 
 		const validParticipants = participantResults
-			.filter((result) => result.status === "fulfilled")
-			.map((result) => result.value.formatJid);
+			.filter(
+				(r): r is PromiseFulfilledResult<{ exists: boolean; formatJid: string }> =>
+					r.status === "fulfilled" && r.value.exists,
+			)
+			.map((r) => r.value.formatJid);
+
+		if (validParticipants.length === 0) {
+			return res.status(400).json({ error: "No valid participants found" });
+		}
 
 		const group = await session.groupCreate(subject, validParticipants);
 		res.status(201).json(group);
@@ -127,8 +134,15 @@ export const updateParticipants: RequestHandler = async (req, res) => {
 		);
 
 		const validParticipants = participantResults
-			.filter((result) => result.status === "fulfilled")
-			.map((result) => result.value.formatJid);
+			.filter(
+				(r): r is PromiseFulfilledResult<{ exists: boolean; formatJid: string }> =>
+					r.status === "fulfilled" && r.value.exists,
+			)
+			.map((r) => r.value.formatJid);
+
+		if (validParticipants.length === 0) {
+			return res.status(400).json({ error: "No valid participants found" });
+		}
 
 		const result = await session.groupParticipantsUpdate(jid, validParticipants, action);
 		res.status(200).json(result);

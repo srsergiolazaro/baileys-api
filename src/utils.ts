@@ -39,14 +39,8 @@ function normalizePhoneNumber(input: string): string {
 	// 3. Dejar solo dígitos
 	const digits = withoutPlus.replace(/\D+/g, "");
 
-	// 4. Validación básica (Perú)
-	// Números móviles PE: 9 dígitos
-	// Con código país: 51 + 9 dígitos = 11
-	if (digits.length === 9) {
-		return `51${digits}`;
-	}
-
-	if (digits.length === 11 && digits.startsWith("51")) {
+	// 4. Validar que tenga al menos un código país + número (7-15 dígitos según E.164)
+	if (digits.length >= 7 && digits.length <= 15) {
 		return digits;
 	}
 
