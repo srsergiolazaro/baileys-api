@@ -128,7 +128,7 @@ router.post(
  *         name: id
  *         required: true
  *         schema:
- *           type: number
+ *           type: string
  *         description: ID del webhook
  *     requestBody:
  *       required: true
@@ -177,7 +177,7 @@ router.put(
  *         name: id
  *         required: true
  *         schema:
- *           type: number
+ *           type: string
  *         description: ID del webhook a eliminar
  *     responses:
  *       200:
