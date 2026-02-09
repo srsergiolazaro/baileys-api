@@ -35,9 +35,9 @@ export async function callWebHookFile(
 		const fileFormat = mimeType.split("/")[1];
 
 		const formData = new FormData();
-		formData.append("message", message);
+		formData.append("message", JSON.stringify(message));
 		formData.append("session", session);
-		formData.append("messageContent", messageContent);
+		formData.append("messageContent", JSON.stringify(messageContent));
 		formData.append("messageType", messageType);
 		formData.append("type", type);
 		formData.append("file", buffer, { filename: `file.${fileFormat}` });
