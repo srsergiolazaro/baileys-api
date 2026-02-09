@@ -121,6 +121,29 @@ router.get("/:jid/photo", group.photo);
 
 /**
  * @swagger
+ * /groups/{jid}/invite-code:
+ *   get:
+ *     tags:
+ *       - Grupos
+ *     summary: Código de invitación
+ *     description: Obtiene el código de invitación del grupo
+ *     security:
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jid
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: JID del grupo
+ *     responses:
+ *       200:
+ *         description: Código de invitación obtenido exitosamente
+ */
+router.get("/:jid/invite-code", group.inviteCode);
+
+/**
+ * @swagger
  * /groups:
  *   post:
  *     tags:

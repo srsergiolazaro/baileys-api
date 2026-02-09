@@ -203,6 +203,19 @@ export const updateDescription: RequestHandler = async (req, res) => {
 
 export const photo = makePhotoURLHandler("group");
 
+export const inviteCode: RequestHandler = async (req, res) => {
+	try {
+		const { jid } = req.params;
+		const session = getSession(req.appData.sessionId)!;
+		const code = await session.groupInviteCode(jid);
+		res.status(200).json({ code });
+	} catch (e) {
+		const message = "An error occurred while getting group invite code";
+		logger.error(e, message);
+		res.status(500).json({ error: message });
+	}
+};
+
 export const leaveGroup: RequestHandler = async (req, res) => {
 	try {
 		const { jid } = req.body;
