@@ -19,10 +19,10 @@ import { toDataURL } from "qrcode";
 import { sessionsMap, setRestartingLock, clearRestartingLock, sessionExists } from "./session";
 import { TelemetryEngine } from "./telemetry";
 
+import { handleMessagesUpsert } from "./handlers";
+
 // Map para rastrear motores de telemetría por sesión
 const telemetryEngines = new Map<string, TelemetryEngine>();
-// DESHABILITADO: Handlers de webhooks desactivados para reducir queries a DB
-// import { handleMessagesUpsert, handleGroupParticipantsUpdate } from "./handlers";
 
 const retries = new Map<string, number>();
 const SSEQRGenerations = new Map<string, number>();
@@ -820,6 +820,11 @@ export async function createSession(options: createSessionOptions) {
 			}
 
 			handleConnectionUpdate();
+		});
+
+		// Webhook: enviar mensajes entrantes a los webhooks configurados
+		socket.ev.on("messages.upsert", (m: { messages: any[]; type: "notify" | "append" }) => {
+			handleMessagesUpsert(socket, m, sessionId, readIncomingMessages);
 		});
 
 		// Sesión inicializada correctamente en memoria

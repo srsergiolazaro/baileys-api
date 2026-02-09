@@ -1,6 +1,7 @@
 import type { RequestHandler } from "express";
 import { prisma } from "@/db";
 import { logger } from "@/shared";
+import { webhookCache } from "@/webhook-cache";
 
 export const list: RequestHandler = async (req, res) => {
 	try {
@@ -21,6 +22,7 @@ export const create: RequestHandler = async (req, res) => {
 		const webhook = await prisma.webhook.create({
 			data: { sessionId, url, webhookType },
 		});
+		webhookCache.clear(sessionId);
 		res.status(201).json(webhook);
 	} catch (e) {
 		const message = "An error occurred while creating the webhook";
@@ -46,6 +48,7 @@ export const update: RequestHandler = async (req, res) => {
 			where: { id },
 			data,
 		});
+		webhookCache.clear(req.appData.sessionId);
 		res.status(200).json(webhook);
 	} catch (e) {
 		const message = "An error occurred while updating the webhook";
@@ -85,6 +88,7 @@ export const remove: RequestHandler = async (req, res) => {
 		await prisma.webhook.delete({
 			where: { id },
 		});
+		webhookCache.clear(req.appData.sessionId);
 		res.status(200).json({ message: "Webhook deleted successfully" });
 	} catch (e) {
 		const message = "An error occurred while deleting the webhook";
