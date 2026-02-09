@@ -19,9 +19,10 @@ export function delay(ms: number) {
 
 
 
-const detectJidType = (jid: string): "group" | "number" => {
+const detectJidType = (jid: string): "group" | "number" | "lid" => {
 	const normalized = jid.toLowerCase();
 	if (normalized.endsWith("@g.us")) return "group";
+	if (normalized.endsWith("@lid")) return "lid";
 	if (normalized.endsWith("@s.whatsapp.net")) return "number";
 	return "number";
 };
@@ -69,6 +70,14 @@ export async function jidExists(
 	try {
 		const resolvedType = detectJidType(cleanInput);
 		logger.debug({ resolvedType }, "[jidExists] resolved JID type");
+
+		// ======================
+		// LID (Linked Identity) — sendMessage soporta @lid directo, onWhatsApp no
+		// ======================
+		if (resolvedType === "lid") {
+			logger.debug({ cleanInput }, "[jidExists] LID JID, passing through directly");
+			return { exists: true, formatJid: cleanInput };
+		}
 
 		// ======================
 		// NUMBER
