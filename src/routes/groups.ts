@@ -332,6 +332,14 @@ router.post(
 	group.updateSettings,
 );
 
+router.post(
+	"/member-add-mode",
+	body("jid").isString().notEmpty(),
+	body("mode").isString().isIn(["all_member_add", "admin_add"]).notEmpty(),
+	requestValidator,
+	group.memberAddMode,
+);
+
 /**
  * @swagger
  * /groups/leave:
