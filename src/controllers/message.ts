@@ -85,10 +85,15 @@ export const send: RequestHandler = async (req, res) => {
 
 			// Si se envía un archivo, ajusta el mensaje para que sea compatible con Buffer
 			if (req.file) {
-				const mediaType = req.file.mimetype.split("/")[0]; // 'image' o 'document'
+				const mimeBase = req.file.mimetype.split("/")[0];
+				const mediaKey = mimeBase === "application" ? "document"
+					: mimeBase === "audio" ? "audio"
+					: mimeBase === "video" ? "video"
+					: mimeBase === "image" ? "image"
+					: "document";
 				message = {
-					...message, // Concatenar con el mensaje enviado por el usuario
-					[mediaType]: req.file.buffer,
+					...message,
+					[mediaKey]: req.file.buffer,
 				};
 			}
 		}
