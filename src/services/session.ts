@@ -100,6 +100,26 @@ export async function stopSession(sessionId: string): Promise<boolean> {
 	return true;
 }
 
+/**
+ * Sincroniza el estado de las sesiones en la base de datos al arrancar la aplicación.
+ * Marca todas las sesiones que figuran como "active" o "authenticating" como "inactive",
+ * ya que al ser un nuevo proceso, ninguna sesión está realmente activa aún.
+ * Esto previene estados "zombie" tras un crash o reinicio.
+ */
+export async function syncSessionStatusOnStartup(): Promise<void> {
+	try {
+		const result = await prisma.userSession.updateMany({
+			where: {
+				status: { in: ["active", "authenticating"] }
+			},
+			data: { status: "inactive" }
+		});
+		logger.info({ count: result.count }, "🔄 Startup Sync: Sesiones reseteadas a 'inactive' al arrancar.");
+	} catch (e) {
+		logger.error("❌ Error sincronizando estados de sesión al inicio", e);
+	}
+}
+
 export function sessionExists(sessionId: string): boolean {
 	return sessions.has(sessionId);
 }

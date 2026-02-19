@@ -843,6 +843,17 @@ export async function createSession(options: createSessionOptions) {
 	} catch (error) {
 		logger.error("createSession: Critical error during initialization", { sessionId, error });
 		clearRestartingLock(sessionId);
+
+		// 🛡️ Fail-safe: Si falla críticamente, asegurar que no quede como "active" o "authenticating"
+		try {
+			await prisma.userSession.update({
+				where: { sessionId },
+				data: { status: "inactive" },
+			});
+		} catch (dbErr) {
+			logger.error("Failed to mark session as inactive after critical error", { sessionId, error: dbErr });
+		}
+
 		if (res && !res.headersSent && !SSE) {
 			res.status(500).json({ error: "Failed to initialize session", sessionId });
 		}
