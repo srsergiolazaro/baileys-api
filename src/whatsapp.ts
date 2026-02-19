@@ -31,13 +31,14 @@ export {
 export async function init() {
     console.log("🚀 init: iniciando carga de sesiones");
 
-    // Sincronizar estados en BD (Limpiar zombies de procesos anteriores)
-    await syncSessionStatusOnStartup();
-
     const userSessions = await prisma.userSession.findMany({
         select: { sessionId: true, data: true, userId: true },
         where: { status: { in: ["active", "authenticating"] } },
     });
+
+    // Sincronizar estados en BD (Limpiar zombies de procesos anteriores)
+    // Importante: Hacerlo después de obtener la lista para poder reiniciar las legítimas.
+    await syncSessionStatusOnStartup();
 
     console.log("📦 init: sesiones activas obtenidas", {
         count: userSessions.length
