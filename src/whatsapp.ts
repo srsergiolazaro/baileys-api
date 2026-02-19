@@ -20,7 +20,7 @@ export async function init() {
 
     const userSessions = await prisma.userSession.findMany({
         select: { sessionId: true, data: true, userId: true },
-        where: { status: "active" },
+        where: { status: { in: ["active", "authenticating"] } },
     });
 
     console.log("📦 init: sesiones activas obtenidas", {
