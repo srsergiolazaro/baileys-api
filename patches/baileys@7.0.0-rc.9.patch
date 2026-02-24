@@ -1,5 +1,5 @@
 diff --git a/lib/Utils/messages-media.js b/lib/Utils/messages-media.js
-index 0d32dfb4882dfe029ba8804772d7d89404b08e76..b57b3de8f5f8736e5c553b86903847a6b5f8dc56 100644
+index 0d32dfb4882dfe029ba8804772d7d89404b08e76..eb7b3de8f5f8736e5c553b86903847a6b5f8dc56 100644
 --- a/lib/Utils/messages-media.js
 +++ b/lib/Utils/messages-media.js
 @@ -151,8 +151,8 @@ export const generateProfilePicture = async (mediaUpload, dimensions) => {
@@ -13,11 +13,37 @@ index 0d32dfb4882dfe029ba8804772d7d89404b08e76..b57b3de8f5f8736e5c553b86903847a6
              .toBuffer();
      }
      else if ('jimp' in lib && typeof lib.jimp?.Jimp === 'function') {
-@@ -520,11 +520,12 @@ export const getWAUploadToServer = ({ customUploadHosts, fetchAgent, logger, opt
+@@ -295,16 +295,18 @@ export async function generateThumbnail(file, mediaType, options) {
+     };
+ }
+ export const getHttpStream = async (url, options = {}) => {
+-    const response = await fetch(url.toString(), {
+-        dispatcher: options.dispatcher,
++    const { default: axios } = await import('axios');
++    const response = await axios.get(url.toString(), {
+         method: 'GET',
+-        headers: options.headers
++        headers: options.headers,
++        responseType: 'stream',
++        validateStatus: () => true
+     });
+-    if (!response.ok) {
+-        throw new Boom(`Failed to fetch stream from ${url}`, { statusCode: response.status, data: { url } });
++    if (response.status >= 400) {
++        throw new Boom(`Failed to fetch stream from ${url}`, { statusCode: response.status, data: { url } });
+     }
+-    // @ts-ignore Node18+ Readable.fromWeb exists
+-    return response.body instanceof Readable ? response.body : Readable.fromWeb(response.body);
++
++    return response.data;
+ };
+ export const encryptedStream = async (media, mediaType, { logger, saveOriginalFileIfRequired, opts } = {}) => {
+     const { stream, type } = await getStream(media, opts);
+@@ -520,11 +522,12 @@ export const getWAUploadToServer = ({ customUploadHosts, fetchAgent, logger, opt
              // eslint-disable-next-line @typescript-eslint/no-explicit-any
              let result;
              try {
-+                const axios = require('axios');
++                const { default: axios } = await import('axios');
                  const stream = createReadStream(filePath);
 -                const response = await fetch(url, {
 -                    dispatcher: fetchAgent,
@@ -29,7 +55,7 @@ index 0d32dfb4882dfe029ba8804772d7d89404b08e76..b57b3de8f5f8736e5c553b86903847a6
                      headers: {
                          ...(() => {
                              const hdrs = options?.headers;
-@@ -535,13 +536,14 @@ export const getWAUploadToServer = ({ customUploadHosts, fetchAgent, logger, opt
+@@ -535,13 +538,14 @@ export const getWAUploadToServer = ({ customUploadHosts, fetchAgent, logger, opt
                          'Content-Type': 'application/octet-stream',
                          Origin: DEFAULT_ORIGIN
                      },
@@ -41,7 +67,8 @@ index 0d32dfb4882dfe029ba8804772d7d89404b08e76..b57b3de8f5f8736e5c553b86903847a6
 +                    maxContentLength: Infinity,
 +                    validateStatus: () => true // Allow us to read the JSON even if it's 400/500
                  });
-                 let parsed = undefined;
+-                let parsed = undefined;
++                let parsed;
                  try {
 -                    parsed = await response.json();
 +                    parsed = response.data;

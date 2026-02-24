@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   baileys@7.0.0-rc.9:
-    hash: 134cbb219216004f6be58282b509e552023845ac04e2920f138de58674d7ce11
+    hash: 8a9d10d6285c4ca3663b3a137525edef69e996c0013c0136b25f8a3997875536
     path: patches/baileys@7.0.0-rc.9.patch
 
 importers:
@@ -36,7 +36,7 @@ importers:
         version: 1.11.0
       baileys:
         specifier: 7.0.0-rc.9
-        version: 7.0.0-rc.9(patch_hash=134cbb219216004f6be58282b509e552023845ac04e2920f138de58674d7ce11)(link-preview-js@3.1.0)(sharp@0.34.4)
+        version: 7.0.0-rc.9(patch_hash=8a9d10d6285c4ca3663b3a137525edef69e996c0013c0136b25f8a3997875536)(link-preview-js@3.1.0)(sharp@0.34.4)
       cors:
         specifier: ^2.8.5
         version: 2.8.5
@@ -3377,7 +3377,7 @@ snapshots:
     transitivePeerDependencies:
       - debug
 
-  baileys@7.0.0-rc.9(patch_hash=134cbb219216004f6be58282b509e552023845ac04e2920f138de58674d7ce11)(link-preview-js@3.1.0)(sharp@0.34.4):
+  baileys@7.0.0-rc.9(patch_hash=8a9d10d6285c4ca3663b3a137525edef69e996c0013c0136b25f8a3997875536)(link-preview-js@3.1.0)(sharp@0.34.4):
     dependencies:
       '@cacheable/node-cache': 1.7.0
       '@hapi/boom': 9.1.4
