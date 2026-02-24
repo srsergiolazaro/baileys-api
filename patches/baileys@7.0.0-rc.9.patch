@@ -1,0 +1,50 @@
+diff --git a/lib/Utils/messages-media.js b/lib/Utils/messages-media.js
+index 0d32dfb4882dfe029ba8804772d7d89404b08e76..b57b3de8f5f8736e5c553b86903847a6b5f8dc56 100644
+--- a/lib/Utils/messages-media.js
++++ b/lib/Utils/messages-media.js
+@@ -151,8 +151,8 @@ export const generateProfilePicture = async (mediaUpload, dimensions) => {
+             .default(buffer)
+             .resize(w, h)
+             .jpeg({
+-            quality: 50
+-        })
++                quality: 50
++            })
+             .toBuffer();
+     }
+     else if ('jimp' in lib && typeof lib.jimp?.Jimp === 'function') {
+@@ -520,11 +520,12 @@ export const getWAUploadToServer = ({ customUploadHosts, fetchAgent, logger, opt
+             // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             let result;
+             try {
++                const axios = require('axios');
+                 const stream = createReadStream(filePath);
+-                const response = await fetch(url, {
+-                    dispatcher: fetchAgent,
++                const response = await axios({
++                    url,
+                     method: 'POST',
+-                    body: stream,
++                    data: stream,
+                     headers: {
+                         ...(() => {
+                             const hdrs = options?.headers;
+@@ -535,13 +536,14 @@ export const getWAUploadToServer = ({ customUploadHosts, fetchAgent, logger, opt
+                         'Content-Type': 'application/octet-stream',
+                         Origin: DEFAULT_ORIGIN
+                     },
+-                    duplex: 'half',
+-                    // Note: custom agents/proxy require undici Agent; omitted here.
+-                    signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined
++                    timeout: timeoutMs,
++                    maxBodyLength: Infinity,
++                    maxContentLength: Infinity,
++                    validateStatus: () => true // Allow us to read the JSON even if it's 400/500
+                 });
+                 let parsed = undefined;
+                 try {
+-                    parsed = await response.json();
++                    parsed = response.data;
+                 }
+                 catch {
+                     parsed = undefined;
