@@ -80,5 +80,10 @@
 		"dist/",
 		"prisma/schema.prisma",
 		".env.example"
-	]
+	],
+	"pnpm": {
+		"patchedDependencies": {
+			"baileys@7.0.0-rc.9": "patches/baileys@7.0.0-rc.9.patch"
+		}
+	}
 }

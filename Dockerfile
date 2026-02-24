@@ -12,6 +12,7 @@ RUN npm install -g pnpm
 # Copy configuration files
 COPY package.json pnpm-lock.yaml ./
 COPY prisma ./prisma/
+COPY patches ./patches/
 
 # Install all dependencies (including devDependencies for build)
 RUN pnpm install --frozen-lockfile
@@ -38,6 +39,7 @@ ENV NODE_ENV=production
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json /app/pnpm-lock.yaml ./
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/patches ./patches
 
 # Install ONLY production dependencies
 RUN pnpm install --prod --frozen-lockfile
