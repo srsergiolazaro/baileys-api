@@ -185,7 +185,8 @@ export async function createSession(options: createSessionOptions) {
 		await prisma.userSession.upsert({
 			where: { sessionId },
 			update: {
-				status: "authenticating", // Estado temporal mientras se escanea
+				// ⚠️ NO sobreescribir status como "authenticating" aquí durante la reinicialización.
+				// Esto preserva el estado "active" durante reconexiones (ej. watchdog).
 				updatedAt: now,
 				lastActive: now,
 			},
@@ -673,6 +674,15 @@ export async function createSession(options: createSessionOptions) {
 				// El manejo detallado se hace en handleConnectionClose
 			} else if (update.qr) {
 				logger.debug("connection.update: qr received", { sessionId });
+				// Actualizar estado a "authenticating" en BD si realmente se está emitiendo un QR
+				try {
+					await prisma.userSession.update({
+						where: { sessionId },
+						data: { status: "authenticating", updatedAt: new Date() },
+					});
+				} catch (e) {
+					logger.error("Failed to update status to authenticating on QR", { sessionId, error: e });
+				}
 			} else if (lastDisconnect?.error) {
 				// Solo alertamos si ya llevamos un par de intentos fallidos
 				if (attemptCount > 2) {
@@ -833,6 +843,17 @@ export async function createSession(options: createSessionOptions) {
 	} catch (error) {
 		logger.error("createSession: Critical error during initialization", { sessionId, error });
 		clearRestartingLock(sessionId);
+
+		// 🛡️ Fail-safe: Si falla críticamente, asegurar que no quede como "active" o "authenticating"
+		try {
+			await prisma.userSession.update({
+				where: { sessionId },
+				data: { status: "inactive" },
+			});
+		} catch (dbErr) {
+			logger.error("Failed to mark session as inactive after critical error", { sessionId, error: dbErr });
+		}
+
 		if (res && !res.headersSent && !SSE) {
 			res.status(500).json({ error: "Failed to initialize session", sessionId });
 		}

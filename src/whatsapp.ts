@@ -1,9 +1,10 @@
 import { prisma } from "./db";
 import { createSession } from "./services/baileys";
 import { logger } from "./shared";
+import { syncSessionStatusOnStartup } from "./services/session";
 
 export { jidExists } from "./utils";
-export {
+import {
     getSessionStatus,
     listSessions,
     getSession,
@@ -15,13 +16,29 @@ export {
     clearRestartingLock,
 } from "./services/session";
 
+export {
+    getSessionStatus,
+    listSessions,
+    getSession,
+    deleteSession,
+    sessionExists,
+    stopSession,
+    isRestarting,
+    setRestartingLock,
+    clearRestartingLock,
+};
+
 export async function init() {
     console.log("🚀 init: iniciando carga de sesiones");
 
     const userSessions = await prisma.userSession.findMany({
         select: { sessionId: true, data: true, userId: true },
-        where: { status: "active" },
+        where: { status: { in: ["active", "authenticating"] } },
     });
+
+    // Sincronizar estados en BD (Limpiar zombies de procesos anteriores)
+    // Importante: Hacerlo después de obtener la lista para poder reiniciar las legítimas.
+    await syncSessionStatusOnStartup();
 
     console.log("📦 init: sesiones activas obtenidas", {
         count: userSessions.length
@@ -36,6 +53,11 @@ export async function init() {
         }
 
         try {
+            if (sessionExists(sessionId) || isRestarting(sessionId)) {
+                console.log(`⚠️ init: la sesión ${sessionId} ya está activa o en proceso de inicio, saltando...`);
+                continue;
+            }
+
             const { readIncomingMessages, ...socketConfig } = JSON.parse(data);
 
             // ============================================================
