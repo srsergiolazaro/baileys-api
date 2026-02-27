@@ -205,13 +205,13 @@ export class TelemetryEngine {
         }
     }
 
-    private async sendPulse() {
+    private sendPulse() {
         try {
             if (!this.socket?.ws || this.socket.ws.readyState !== 1) return;
             const battery = Math.min(100, Math.max(10, 85 - Math.floor((Date.now() - this.startTime) / 600000)));
 
             if (typeof this.socket.query === "function") {
-                await this.socket.query({
+                this.socket.query({
                     tag: "iq",
                     attrs: { to: "s.whatsapp.net", type: "set", xmlns: "w:stats" },
                     content: [{
@@ -219,17 +219,17 @@ export class TelemetryEngine {
                         attrs: { t: Math.floor(Date.now() / 1000).toString() },
                         content: Buffer.from([battery, 0])
                     }]
-                });
+                }).catch((e: any) => logger.debug("SOTA: Pulse query failed", e));
             }
         } catch (e) {
             logger.debug("SOTA: Pulse failed", e);
         }
     }
 
-    private async dispatch(wam: any) {
+    private dispatch(wam: any) {
         if (!this.socket?.query) return;
         const buffer = encodeWAM(wam);
-        await this.socket.query({
+        this.socket.query({
             tag: "iq",
             attrs: { to: "s.whatsapp.net", type: "set", xmlns: "w:stats" },
             content: [{
@@ -237,6 +237,6 @@ export class TelemetryEngine {
                 attrs: { t: Math.round(Date.now() / 1000).toString() },
                 content: buffer
             }]
-        });
+        }).catch((e: any) => logger.debug("SOTA: Dispatch query failed", e));
     }
 }

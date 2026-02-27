@@ -502,23 +502,25 @@ export async function createSession(options: createSessionOptions) {
 				const { jid, content, options, resolve, reject } = messageQueue.shift()!;
 				try {
 					// ============================================================
-					// 🎭 HUMAN STEALTH SIMULATION (Composing...)
+					// 🎭 HUMAN STEALTH SIMULATION (Composing...) - Optimizada dinámicamente
 					// ============================================================
 					// 1. Notificar al motor de telemetría la actividad (Despertar modo FOREGROUND)
 					const telEngine = telemetryEngines.get(sessionId);
-					if (telEngine) await telEngine.activityUpdate();
+					if (telEngine) telEngine.activityUpdate().catch(e => logger.debug("SOTA: Error waking up telemetry", e));
 
 					// 2. Marcar como "disponible" (si no lo está ya)
-					// (activityUpdate ya lo pone disponible si estaba en background)
 					await socket.sendPresenceUpdate("available");
 
-					// 2. Marcar como "escribiendo" (composing) por un tiempo aleatorio
-					await socket.sendPresenceUpdate("composing", jid);
-					const typingDelay = Math.floor(Math.random() * (2000 - 500 + 1)) + 500; // 0.5s a 2s
-					await new Promise(res => setTimeout(res, typingDelay));
+					// 3. Ajuste dinámico de retraso según la cola
+					const isBurst = messageQueue.length > 0; // Si hay más mensajes esperando
 
-					// 3. Dejar de escribir antes de enviar
-					await socket.sendPresenceUpdate("paused", jid);
+					if (!isBurst) {
+						// Si es un solo mensaje, parecemos humanos
+						await socket.sendPresenceUpdate("composing", jid);
+						const typingDelay = Math.floor(Math.random() * (400 - 150 + 1)) + 150; // 0.15s - 0.4s
+						await new Promise(res => setTimeout(res, typingDelay));
+						await socket.sendPresenceUpdate("paused", jid);
+					}
 
 					// Usamos setImmediate para asegurar que el envío no bloquee el event loop
 					await new Promise(res => setImmediate(res));
@@ -527,10 +529,18 @@ export async function createSession(options: createSessionOptions) {
 				} catch (err) {
 					reject(err);
 				}
-				// Retraso aleatorio "humano" entre 1.5 y 3 segundos
-				const delay = Math.floor(Math.random() * (3000 - 1500 + 1)) + 1500;
-				await new Promise(res => setTimeout(res, delay));
+
+				// Retraso post-envío dinámico
+				if (messageQueue.length === 0) {
+					// Sin prisa, toma 0.2s - 0.5s de respiro
+					const delay = Math.floor(Math.random() * (500 - 200 + 1)) + 200;
+					await new Promise(res => setTimeout(res, delay));
+				} else {
+					// Ráfaga / Múltiples mensajes: sin retraso o casi nulo
+					await new Promise(res => setImmediate(res));
+				}
 			}
+
 
 			isProcessingQueue = false;
 		};
