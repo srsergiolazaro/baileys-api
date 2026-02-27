@@ -1,4 +1,4 @@
- 
+
 import { toNumber } from "baileys";
 import Long from "long";
 
@@ -33,6 +33,7 @@ export function transformPrisma(data: any): any {
 	return base;
 }
 
+
 /** Transform prisma result into JSON serializable types */
 export function serializePrisma(data: any): any {
 	if (data === null || data === undefined) return data;
@@ -54,4 +55,15 @@ export function serializePrisma(data: any): any {
 	}
 
 	return base;
+}
+
+/** Filter object keys to only include allowed ones */
+export function filterPrisma<T extends object>(data: T, allowedKeys: string[]): Partial<T> {
+	const filtered: any = {};
+	for (const key of allowedKeys) {
+		if (key in data) {
+			filtered[key] = (data as any)[key];
+		}
+	}
+	return filtered;
 }

@@ -1,9 +1,12 @@
 import type { BaileysEventEmitter } from "baileys";
 import type { BaileysEventHandler } from "@/store/types";
-import { transformPrisma } from "@/store/utils";
+import { filterPrisma, transformPrisma } from "@/store/utils";
 import { prisma } from "@/db";
 import { logger } from "@/shared";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import { Prisma } from "@prisma/client";
+
+const CONTACT_KEYS = Object.keys(Prisma.ContactScalarFieldEnum);
 
 export default function contactHandler(sessionId: string, event: BaileysEventEmitter) {
 	let listening = false;
@@ -22,12 +25,12 @@ export default function contactHandler(sessionId: string, event: BaileysEventEmi
 
 				// Ejecutamos upserts para todos los contactos nuevos/actualizados
 				for (const contact of contacts) {
-					const data = transformPrisma(contact);
+					const data = filterPrisma({ ...transformPrisma(contact), sessionId }, CONTACT_KEYS);
 					await tx.contact.upsert({
 						select: { pkId: true },
-						create: { ...data, sessionId },
+						create: { ...data, id: data.id!, sessionId } as any,
 						update: data,
-						where: { sessionId_id: { id: data.id, sessionId } },
+						where: { sessionId_id: { id: data.id!, sessionId } },
 					});
 				}
 
@@ -51,13 +54,13 @@ export default function contactHandler(sessionId: string, event: BaileysEventEmi
 		try {
 			await prisma.$transaction(
 				contacts
-					.map((c) => transformPrisma(c))
+					.map((c) => filterPrisma({ ...transformPrisma(c), sessionId }, CONTACT_KEYS))
 					.map((data) =>
 						prisma.contact.upsert({
 							select: { pkId: true },
-							create: { ...data, sessionId },
+							create: { ...data, id: data.id!, sessionId } as any,
 							update: data,
-							where: { sessionId_id: { id: data.id, sessionId } },
+							where: { sessionId_id: { id: data.id!, sessionId } },
 						}),
 					),
 			);

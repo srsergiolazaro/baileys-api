@@ -1,10 +1,13 @@
 
 import type { BaileysEventEmitter } from "baileys";
 import type { BaileysEventHandler } from "@/store/types";
-import { transformPrisma } from "@/store/utils";
+import { filterPrisma, transformPrisma } from "@/store/utils";
 import { prisma } from "@/db";
 import { logger } from "@/shared";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import { Prisma } from "@prisma/client";
+
+const GROUP_METADATA_KEYS = Object.keys(Prisma.GroupMetadataScalarFieldEnum);
 
 export default function groupMetadataHandler(sessionId: string, event: BaileysEventEmitter) {
 	const model = prisma.groupMetadata;
@@ -14,10 +17,10 @@ export default function groupMetadataHandler(sessionId: string, event: BaileysEv
 		try {
 			await prisma.$transaction(
 				groups.map((group) => {
-					const data = transformPrisma(group);
+					const data = filterPrisma({ ...transformPrisma(group), sessionId }, GROUP_METADATA_KEYS);
 					return model.upsert({
 						select: { pkId: true },
-						create: { ...data, sessionId },
+						create: { ...data, id: group.id, sessionId } as any,
 						update: data,
 						where: { sessionId_id: { id: group.id, sessionId } },
 					});
@@ -31,9 +34,10 @@ export default function groupMetadataHandler(sessionId: string, event: BaileysEv
 	const update: BaileysEventHandler<"groups.update"> = async (updates) => {
 		for (const update of updates) {
 			try {
+				const data = filterPrisma(transformPrisma(update), GROUP_METADATA_KEYS);
 				await model.update({
 					select: { pkId: true },
-					data: transformPrisma(update),
+					data: data,
 					where: { sessionId_id: { id: update.id!, sessionId } },
 				});
 			} catch (e) {

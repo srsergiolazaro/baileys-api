@@ -1,10 +1,12 @@
 import type { BaileysEventEmitter, MessageUserReceipt, proto, WAMessageKey } from "baileys";
 import { jidNormalizedUser, toNumber } from "baileys";
 import type { BaileysEventHandler, MakeTransformedPrisma } from "@/store/types";
-import { transformPrisma } from "@/store/utils";
+import { filterPrisma, transformPrisma } from "@/store/utils";
 import { prisma } from "@/db";
 import { logger } from "@/shared";
-import type { Message } from "@prisma/client";
+import { Prisma, type Message } from "@prisma/client";
+
+const MESSAGE_KEYS = Object.keys(Prisma.MessageScalarFieldEnum);
 
 function toBigIntTimestamp(ts: any): bigint | null {
 	if (!ts) return null;
@@ -36,12 +38,16 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 				if (isLatest) await tx.message.deleteMany({ where: { sessionId } });
 
 				await tx.message.createMany({
-					data: filteredMessages.map((message) => ({
-						...(transformPrisma(message) as MakeTransformedPrisma<Message>),
-						remoteJid: message.key.remoteJid!,
-						id: message.key.id!,
-						sessionId,
-					})),
+					data: filteredMessages.map((message) => {
+						const transformed = transformPrisma(message) as MakeTransformedPrisma<Message>;
+						const data = {
+							...transformed,
+							remoteJid: message.key.remoteJid!,
+							id: message.key.id!,
+							sessionId,
+						};
+						return filterPrisma(data, MESSAGE_KEYS) as any;
+					}),
 					skipDuplicates: true
 				});
 			});
@@ -102,7 +108,7 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 					supportAiCitations: []
 				};
 
-				upsertBuffer.push(prismaData);
+				upsertBuffer.push(filterPrisma(prismaData, MESSAGE_KEYS));
 			} catch (e) {
 				logger.error(e, "Error adding message to upsert buffer");
 			}

@@ -1,10 +1,12 @@
 import { type BaileysEventEmitter } from "baileys";
 import type { BaileysEventHandler, MakeTransformedPrisma } from "@/store/types";
-import { transformPrisma } from "@/store/utils";
+import { filterPrisma, transformPrisma } from "@/store/utils";
 import { prisma } from "@/db";
 import { logger } from "@/shared";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
-import type { Chat } from "@prisma/client";
+import { Prisma, type Chat } from "@prisma/client";
+
+const CHAT_KEYS = Object.keys(Prisma.ChatScalarFieldEnum);
 
 export default function chatHandler(sessionId: string, event: BaileysEventEmitter) {
 	let listening = false;
@@ -24,10 +26,11 @@ export default function chatHandler(sessionId: string, event: BaileysEventEmitte
 					await tx.chat.createMany({
 						data: chats
 							.filter((c) => c.id && !existingIds.includes(c.id))
-							.map((c) => ({
-								...(transformPrisma(c) as MakeTransformedPrisma<Chat>),
-								sessionId,
-							})),
+							.map((c) => {
+								const transformed = transformPrisma(c) as MakeTransformedPrisma<Chat>;
+								const data = { ...transformed, sessionId };
+								return filterPrisma(data, CHAT_KEYS) as any;
+							}),
 					})
 				).count;
 
@@ -43,14 +46,15 @@ export default function chatHandler(sessionId: string, event: BaileysEventEmitte
 			await prisma.$transaction(
 				chats
 					.map((c) => transformPrisma(c) as MakeTransformedPrisma<Chat>)
-					.map((data) =>
-						prisma.chat.upsert({
+					.map((transformed) => {
+						const data = filterPrisma({ ...transformed, sessionId }, CHAT_KEYS);
+						return prisma.chat.upsert({
 							select: { pkId: true },
-							create: { ...data, sessionId },
+							create: data as any,
 							update: data,
-							where: { sessionId_id: { id: data.id, sessionId } },
-						}),
-					),
+							where: { sessionId_id: { id: transformed.id, sessionId } },
+						});
+					}),
 			);
 		} catch (e) {
 			logger.error(e, "An error occured during chats upsert");
