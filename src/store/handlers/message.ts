@@ -191,9 +191,10 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 						userReceipt.push(receipt);
 					}
 
+					const cleanUserReceipt = JSON.parse(JSON.stringify(userReceipt));
 					await tx.message.update({
 						where: { pkId: message.pkId },
-						data: { userReceipt: userReceipt }
+						data: { userReceipt: cleanUserReceipt }
 					});
 				});
 			} catch (e) {
@@ -217,9 +218,10 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 
 					if (reaction.text) reactions.push(reaction);
 
+					const cleanReactions = JSON.parse(JSON.stringify(reactions));
 					await tx.message.update({
 						where: { pkId: message.pkId },
-						data: { reactions: reactions }
+						data: { reactions: cleanReactions }
 					});
 				});
 			} catch (e) {

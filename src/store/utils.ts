@@ -11,6 +11,7 @@ export function transformPrisma(data: any): any {
 
 	const base: any = {};
 	for (const [key, val] of Object.entries(data)) {
+		if (typeof val === "function") continue;
 		if (val instanceof Long || typeof val === "number") {
 			base[key] = toNumber(val);
 			continue;
@@ -23,7 +24,7 @@ export function transformPrisma(data: any): any {
 			base[key] = val;
 			continue;
 		}
-		if (typeof val === "object") {
+		if (typeof val === "object" && val !== null) {
 			base[key] = transformPrisma(val);
 			continue;
 		}
