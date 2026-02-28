@@ -7,10 +7,10 @@ import { delay as delayMs, withTimeout } from '@/utils';
 import { getSession, jidExists, listSessions } from '@/whatsapp';
 import { prisma } from '@/db';
 import type { Message } from '@prisma/client';
-import { getCachedMedia } from '@/utils/media-cache';
+import axios from 'axios';
 
 /**
- * Busca recursivamente URLs de media en el objeto message y las descarga/cachea
+ * Busca recursivamente URLs de media en el objeto message y las descarga directamente
  */
 async function processMediaUrls(message: any) {
 	if (!message || typeof message !== 'object') return;
@@ -19,13 +19,14 @@ async function processMediaUrls(message: any) {
 	for (const key of keys) {
 		if (message[key] && typeof message[key] === 'object' && message[key].url) {
 			try {
-				const buffer = await getCachedMedia(message[key].url);
-				message[key] = buffer; // Reemplazamos la URL por el Buffer cacheado
-				logger.debug({ url: message[key].url }, 'Media URL replaced with cached buffer');
+                const response = await axios.get(message[key].url, { responseType: 'arraybuffer', timeout: 15000 });
+				const buffer = Buffer.from(response.data);
+				message[key] = buffer; // Reemplazamos la URL por el Buffer directamente
+				logger.debug({ url: message[key].url }, 'Media URL replaced with downloaded buffer');
 			} catch (e) {
 				logger.error(
 					{ url: message[key].url, error: e },
-					'Failed to cache media URL, sending as is',
+					'Failed to download media URL, sending as is',
 				);
 			}
 		}
