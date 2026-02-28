@@ -27,20 +27,9 @@ export const logger: CustomLogger = pino({
 	},
 	hooks: {
 		logMethod(inputArgs: any[], method) {
-			if (inputArgs.length >= 1) {
-				const arg1 = inputArgs[0] as any;
-				const arg2 = inputArgs[1] as any;
-				const msgFilter = 'Skipping deletion of non-existent pre-key';
+			const msgFilter = 'Skipping deletion of non-existent pre-key';
+			if (JSON.stringify(inputArgs).includes(msgFilter)) return;
 
-				if (
-					(typeof arg1 === 'string' && arg1.includes(msgFilter)) ||
-					(typeof arg2 === 'string' && arg2.includes(msgFilter)) ||
-					(typeof arg1 === 'object' && arg1?.msg && typeof arg1.msg === 'string' && arg1.msg.includes(msgFilter)) ||
-					(typeof arg1 === 'object' && arg1?.err && typeof arg1.err === 'string' && arg1.err.includes(msgFilter))
-				) {
-					return;
-				}
-			}
 			return method.apply(this, inputArgs as any);
 		},
 	},
