@@ -9,6 +9,7 @@ type CustomLogger = Logger & {
 };
 
 export const logger: CustomLogger = pino({
+	level: 'warn',
 	timestamp: () => `,"time":"${new Date().toJSON()}"`,
 	transport: {
 		target: 'pino-pretty',
