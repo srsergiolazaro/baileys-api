@@ -1,10 +1,10 @@
-import { RequestHandler } from "express";
-import { prisma } from "@/db";
-import crypto from "crypto";
-import { logger } from "@/shared";
+import type { RequestHandler } from 'express';
+import { prisma } from '@/db';
+import crypto from 'crypto';
+import { logger } from '@/shared';
 // Helper to generate a random API key
 const generateApiKey = () => {
-	return crypto.randomBytes(32).toString("hex"); // 64 character hex string
+	return crypto.randomBytes(32).toString('hex'); // 64 character hex string
 };
 
 export const create: RequestHandler = async (req, res) => {
@@ -13,7 +13,7 @@ export const create: RequestHandler = async (req, res) => {
 
 		const plainKey = generateApiKey();
 		// Usamos SHA-256 para el hashing
-		const hashedKey = crypto.createHash("sha256").update(plainKey).digest("hex");
+		const hashedKey = crypto.createHash('sha256').update(plainKey).digest('hex');
 
 		const apiKey = await prisma.apiKey.create({
 			data: {
@@ -27,8 +27,8 @@ export const create: RequestHandler = async (req, res) => {
 		// Return the plain key ONLY ON CREATION
 		res.status(201).json({ apiKey: apiKey, plainKey: plainKey });
 	} catch (e) {
-		logger.error(e, "Error creating API key");
-		res.status(500).json({ error: "An error occurred while creating the API key" });
+		logger.error(e, 'Error creating API key');
+		res.status(500).json({ error: 'An error occurred while creating the API key' });
 	}
 };
 
@@ -48,8 +48,8 @@ export const findAll: RequestHandler = async (req, res) => {
 		});
 		res.status(200).json(apiKeys);
 	} catch (e) {
-		logger.error(e, "Error fetching API keys");
-		res.status(500).json({ error: "An error occurred while fetching API keys" });
+		logger.error(e, 'Error fetching API keys');
+		res.status(500).json({ error: 'An error occurred while fetching API keys' });
 	}
 };
 
@@ -68,12 +68,12 @@ export const findOne: RequestHandler = async (req, res) => {
 		});
 
 		if (!apiKey) {
-			return res.status(404).json({ error: "API Key not found" });
+			return res.status(404).json({ error: 'API Key not found' });
 		}
 		res.status(200).json(apiKey);
 	} catch (e) {
-		logger.error(e, "Error fetching API key");
-		res.status(500).json({ error: "An error occurred while fetching the API key" });
+		logger.error(e, 'Error fetching API key');
+		res.status(500).json({ error: 'An error occurred while fetching the API key' });
 	}
 };
 
@@ -98,8 +98,8 @@ export const update: RequestHandler = async (req, res) => {
 		});
 		res.status(200).json(updatedApiKey);
 	} catch (e) {
-		logger.error(e, "Error updating API key");
-		res.status(500).json({ error: "An error occurred while updating the API key" });
+		logger.error(e, 'Error updating API key');
+		res.status(500).json({ error: 'An error occurred while updating the API key' });
 	}
 };
 
@@ -113,7 +113,7 @@ export const remove: RequestHandler = async (req, res) => {
 		});
 
 		if (!existingKey) {
-			return res.status(404).json({ error: "API Key not found" });
+			return res.status(404).json({ error: 'API Key not found' });
 		}
 
 		// Delete the API key
@@ -123,10 +123,10 @@ export const remove: RequestHandler = async (req, res) => {
 
 		res.status(204).send(); // No content
 	} catch (e: any) {
-		if (e.code === "P2025") {
-			return res.status(404).json({ error: "API Key not found" });
+		if (e.code === 'P2025') {
+			return res.status(404).json({ error: 'API Key not found' });
 		}
-		logger.error(e, "Error deleting API key");
-		res.status(500).json({ error: "An error occurred while deleting the API key" });
+		logger.error(e, 'Error deleting API key');
+		res.status(500).json({ error: 'An error occurred while deleting the API key' });
 	}
 };

@@ -1,10 +1,10 @@
-import type { RequestHandler } from "express";
-import { logger } from "@/shared";
-import { getSession, jidExists } from "@/whatsapp";
-import { makePhotoURLHandler } from "./misc";
-import { prisma } from "@/db";
-import type { ParticipantAction } from "baileys";
-import Fuse from "fuse.js";
+import type { RequestHandler } from 'express';
+import { logger } from '@/shared';
+import { getSession, jidExists } from '@/whatsapp';
+import { makePhotoURLHandler } from './misc';
+import { prisma } from '@/db';
+import type { ParticipantAction } from 'baileys';
+import Fuse from 'fuse.js';
 
 export const list: RequestHandler = async (req, res) => {
 	try {
@@ -16,7 +16,7 @@ export const list: RequestHandler = async (req, res) => {
 			data: groups,
 		});
 	} catch (e) {
-		const message = "An error occurred during group list";
+		const message = 'An error occurred during group list';
 		logger.error(e, message);
 		res.status(500).json({ error: message });
 	}
@@ -30,7 +30,7 @@ export const find: RequestHandler = async (req, res) => {
 		const data = await session.groupMetadata(jid);
 		res.status(200).json(data);
 	} catch (e) {
-		const message = "An error occurred during group metadata fetch";
+		const message = 'An error occurred during group metadata fetch';
 		logger.error(e, message);
 		res.status(500).json({ error: message });
 	}
@@ -47,18 +47,18 @@ export const create: RequestHandler = async (req, res) => {
 		const validParticipants = participantResults
 			.filter(
 				(r): r is PromiseFulfilledResult<{ exists: boolean; formatJid: string }> =>
-					r.status === "fulfilled" && r.value.exists,
+					r.status === 'fulfilled' && r.value.exists,
 			)
 			.map((r) => r.value.formatJid);
 
 		if (validParticipants.length === 0) {
-			return res.status(400).json({ error: "No valid participants found" });
+			return res.status(400).json({ error: 'No valid participants found' });
 		}
 
 		const group = await session.groupCreate(subject, validParticipants);
 		res.status(201).json(group);
 	} catch (e) {
-		const message = "An error occurred during group creation";
+		const message = 'An error occurred during group creation';
 		logger.error(e, message);
 		res.status(500).json({ error: message });
 	}
@@ -71,9 +71,9 @@ export const update: RequestHandler = async (req, res) => {
 		if (subject) {
 			await session.groupUpdateSubject(jid, subject);
 		}
-		res.status(200).json({ message: "Group updated successfully" });
+		res.status(200).json({ message: 'Group updated successfully' });
 	} catch (e) {
-		const message = "An error occurred during group update";
+		const message = 'An error occurred during group update';
 		logger.error(e, message);
 		res.status(500).json({ error: message });
 	}
@@ -86,17 +86,17 @@ export const deleteGroup: RequestHandler = async (req, res) => {
 		const session = getSession(req.appData.sessionId)!;
 		const { exists } = await jidExists(session, jid);
 		if (!exists) {
-			return res.status(404).json({ error: "Group not found" });
+			return res.status(404).json({ error: 'Group not found' });
 		}
 		const metadata = await session.groupMetadata(jid);
 		const participants = metadata.participants;
 
 		await Promise.allSettled(
 			participants
-				.filter((p) => p.admin !== "superadmin")
-				.map((p) => session.groupParticipantsUpdate(jid, [p.id], "remove")),
+				.filter((p) => p.admin !== 'superadmin')
+				.map((p) => session.groupParticipantsUpdate(jid, [p.id], 'remove')),
 		);
-		await session.groupSettingUpdate(jid, "locked");
+		await session.groupSettingUpdate(jid, 'locked');
 		try {
 			await session.chatModify({ archive: true, lastMessages: [] }, jid);
 		} catch (e) {
@@ -107,9 +107,9 @@ export const deleteGroup: RequestHandler = async (req, res) => {
 		await prisma.contact.deleteMany({
 			where: { id: jid },
 		});
-		res.status(200).json({ message: "Group deleted successfully" });
+		res.status(200).json({ message: 'Group deleted successfully' });
 	} catch (e) {
-		const message = "An error occurred during group deletion";
+		const message = 'An error occurred during group deletion';
 		logger.error(e, message);
 		res.status(500).json({ error: message });
 	}
@@ -124,7 +124,7 @@ export const updateParticipants: RequestHandler = async (req, res) => {
 		}: { jid: string; action: ParticipantAction; participants: string[] } = req.body;
 		const session = getSession(req.appData.sessionId);
 		if (!session) {
-			const message = "Session not found";
+			const message = 'Session not found';
 			logger.error(message);
 			return res.status(500).json({ error: message });
 		}
@@ -136,18 +136,18 @@ export const updateParticipants: RequestHandler = async (req, res) => {
 		const validParticipants = participantResults
 			.filter(
 				(r): r is PromiseFulfilledResult<{ exists: boolean; formatJid: string }> =>
-					r.status === "fulfilled" && r.value.exists,
+					r.status === 'fulfilled' && r.value.exists,
 			)
 			.map((r) => r.value.formatJid);
 
 		if (validParticipants.length === 0) {
-			return res.status(400).json({ error: "No valid participants found" });
+			return res.status(400).json({ error: 'No valid participants found' });
 		}
 
 		const result = await session.groupParticipantsUpdate(jid, validParticipants, action);
 		res.status(200).json(result);
 	} catch (e) {
-		const message = "An error occurred during group participants update";
+		const message = 'An error occurred during group participants update';
 		logger.error(e, message);
 		res.status(500).json({ error: message });
 	}
@@ -158,16 +158,16 @@ export const updateSettings: RequestHandler = async (req, res) => {
 		const {
 			jid,
 			settings,
-		}: { jid: string; settings: "announcement" | "locked" | "not_announcement" | "unlocked" } =
+		}: { jid: string; settings: 'announcement' | 'locked' | 'not_announcement' | 'unlocked' } =
 			req.body;
 		const session = getSession(req.appData.sessionId)!;
 		const { exists, formatJid } = await jidExists(session, jid);
-		if (!exists) return res.status(400).json({ error: "Group JID does not exist" });
+		if (!exists) return res.status(400).json({ error: 'Group JID does not exist' });
 
 		const result = await session.groupSettingUpdate(formatJid, settings);
 		res.status(200).json(result);
 	} catch (e) {
-		const message = "An error occurred during group settings update";
+		const message = 'An error occurred during group settings update';
 		logger.error(e, message);
 		res.status(500).json({ error: message });
 	}
@@ -178,12 +178,12 @@ export const updateSubject: RequestHandler = async (req, res) => {
 		const { jid, subject } = req.body as { jid: string; subject: string };
 		const session = getSession(req.appData.sessionId)!;
 		const { exists, formatJid } = await jidExists(session, jid);
-		if (!exists) return res.status(400).json({ error: "Group JID does not exist" });
+		if (!exists) return res.status(400).json({ error: 'Group JID does not exist' });
 
 		await session.groupUpdateSubject(formatJid, subject);
-		res.status(200).json({ success: true, message: "Group subject updated successfully" });
+		res.status(200).json({ success: true, message: 'Group subject updated successfully' });
 	} catch (e) {
-		const message = "An error occurred while updating group subject";
+		const message = 'An error occurred while updating group subject';
 		const error = e as Error;
 		logger.error(error, message);
 		res.status(500).json({
@@ -199,12 +199,12 @@ export const updateDescription: RequestHandler = async (req, res) => {
 		const { jid, description } = req.body as { jid: string; description: string };
 		const session = getSession(req.appData.sessionId)!;
 		const { exists, formatJid } = await jidExists(session, jid);
-		if (!exists) return res.status(400).json({ error: "Group JID does not exist" });
+		if (!exists) return res.status(400).json({ error: 'Group JID does not exist' });
 
 		await session.groupUpdateDescription(formatJid, description);
-		res.status(200).json({ success: true, message: "Group description updated successfully" });
+		res.status(200).json({ success: true, message: 'Group description updated successfully' });
 	} catch (e) {
-		const message = "An error occurred while updating group description";
+		const message = 'An error occurred while updating group description';
 		const error = e as Error;
 		logger.error(error, message);
 		res.status(500).json({
@@ -215,7 +215,7 @@ export const updateDescription: RequestHandler = async (req, res) => {
 	}
 };
 
-export const photo = makePhotoURLHandler("group");
+export const photo = makePhotoURLHandler('group');
 
 export const inviteCode: RequestHandler = async (req, res) => {
 	try {
@@ -224,7 +224,7 @@ export const inviteCode: RequestHandler = async (req, res) => {
 		const code = await session.groupInviteCode(jid);
 		res.status(200).json({ code });
 	} catch (e) {
-		const message = "An error occurred while getting group invite code";
+		const message = 'An error occurred while getting group invite code';
 		logger.error(e, message);
 		res.status(500).json({ error: message });
 	}
@@ -235,12 +235,12 @@ export const leaveGroup: RequestHandler = async (req, res) => {
 		const { jid } = req.body;
 		const session = getSession(req.appData.sessionId)!;
 		const { exists, formatJid } = await jidExists(session, jid);
-		if (!exists) return res.status(400).json({ error: "Jid does not exist" });
+		if (!exists) return res.status(400).json({ error: 'Jid does not exist' });
 		await session.groupLeave(formatJid);
 
 		res.status(200).json({ success: true });
 	} catch (e) {
-		const message = "An error occurred while leaving the group";
+		const message = 'An error occurred while leaving the group';
 		logger.error(e, message);
 		res.status(500).json({ error: message });
 	}
@@ -248,12 +248,12 @@ export const leaveGroup: RequestHandler = async (req, res) => {
 
 export const memberAddMode: RequestHandler = async (req, res) => {
 	try {
-		const { jid, mode }: { jid: string; mode: "all_member_add" | "admin_add" } = req.body;
+		const { jid, mode }: { jid: string; mode: 'all_member_add' | 'admin_add' } = req.body;
 		const session = getSession(req.appData.sessionId)!;
 		await session.groupMemberAddMode(jid, mode);
 		res.status(200).json({ success: true });
 	} catch (e) {
-		const message = "An error occurred during group member add mode update";
+		const message = 'An error occurred during group member add mode update';
 		logger.error(e, message);
 		res.status(500).json({ error: message });
 	}
@@ -267,21 +267,21 @@ export const search: RequestHandler = async (req, res) => {
 		const groups = await session.groupFetchAllParticipating();
 		const groupValues = Object.values(groups);
 
-		if (!name || typeof name !== "string") {
+		if (!name || typeof name !== 'string') {
 			return res.status(200).json({
 				data: groupValues,
 			});
 		}
 
 		const fuse = new Fuse(groupValues, {
-			keys: ["subject"],
+			keys: ['subject'],
 			threshold: 0.3,
 		});
 
 		const result = fuse.search(name as string);
 		res.status(200).json(result.map((r) => r.item));
 	} catch (e) {
-		const message = "An error occurred during group search";
+		const message = 'An error occurred during group search';
 		logger.error(e, message);
 		res.status(500).json({ error: message });
 	}

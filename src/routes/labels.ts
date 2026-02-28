@@ -1,7 +1,7 @@
-import { Router } from "express";
-import { body } from "express-validator";
-import { label } from "../controllers";
-import requestValidator from "@/middlewares/request-validator";
+import { Router } from 'express';
+import { body } from 'express-validator';
+import { label } from '../controllers';
+import requestValidator from '@/middlewares/request-validator';
 
 const router = Router({ mergeParams: true });
 
@@ -66,14 +66,9 @@ const router = Router({ mergeParams: true });
  *                   deleted: { type: boolean }
  *                   predefinedId: { type: string }
  */
-router.get("/", label.list);
+router.get('/', label.list);
 
-router.post(
-    "/",
-    body("label").isObject().notEmpty(),
-    requestValidator,
-    label.add,
-);
+router.post('/', body('label').isObject().notEmpty(), requestValidator, label.add);
 
 /**
  * @swagger
@@ -106,11 +101,11 @@ router.post(
  *         description: Chat etiquetado exitosamente
  */
 router.post(
-    "/add-chat",
-    body("jid").isString().notEmpty(),
-    body("labelId").isString().notEmpty(),
-    requestValidator,
-    label.addChat,
+	'/add-chat',
+	body('jid').isString().notEmpty(),
+	body('labelId').isString().notEmpty(),
+	requestValidator,
+	label.addChat,
 );
 
 /**
@@ -144,11 +139,11 @@ router.post(
  *         description: Etiqueta removida del chat exitosamente
  */
 router.post(
-    "/remove-chat",
-    body("jid").isString().notEmpty(),
-    body("labelId").isString().notEmpty(),
-    requestValidator,
-    label.removeChat,
+	'/remove-chat',
+	body('jid').isString().notEmpty(),
+	body('labelId').isString().notEmpty(),
+	requestValidator,
+	label.removeChat,
 );
 
 export default router;

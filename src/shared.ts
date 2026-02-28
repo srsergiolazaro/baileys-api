@@ -1,4 +1,4 @@
-import pino, { type Logger } from "pino";
+import pino, { type Logger } from 'pino';
 
 // Custom log method type that accepts metadata objects
 type CustomLogger = Logger & {
@@ -11,12 +11,12 @@ type CustomLogger = Logger & {
 export const logger: CustomLogger = pino({
 	timestamp: () => `,"time":"${new Date().toJSON()}"`,
 	transport: {
-		target: "pino-pretty",
+		target: 'pino-pretty',
 		options: {
 			colorize: true,
-			translateTime: "SYS:yyyy-mm-dd HH:MM:ss.l",
-			ignore: "pid,hostname",
-			messageKey: "msg",
+			translateTime: 'SYS:yyyy-mm-dd HH:MM:ss.l',
+			ignore: 'pid,hostname',
+			messageKey: 'msg',
 			singleLine: false,
 		},
 	},

@@ -1,7 +1,7 @@
-import { Router } from "express";
-import { body, param, query } from "express-validator";
-import { webhook } from "@/controllers";
-import requestValidator from "@/middlewares/request-validator";
+import { Router } from 'express';
+import { body, param, query } from 'express-validator';
+import { webhook } from '@/controllers';
+import requestValidator from '@/middlewares/request-validator';
 
 const router = Router({ mergeParams: true });
 
@@ -23,7 +23,7 @@ const router = Router({ mergeParams: true });
  *       403:
  *         description: API key faltante o inválida
  */
-router.get("/", webhook.list);
+router.get('/', webhook.list);
 
 /**
  * @swagger
@@ -65,9 +65,9 @@ router.get("/", webhook.list);
  *         description: Invalid API key
  */
 router.get(
-	"/check",
-	query("url").isString().notEmpty(),
-	query("webhookType").optional().isString().notEmpty(),
+	'/check',
+	query('url').isString().notEmpty(),
+	query('webhookType').optional().isString().notEmpty(),
 	requestValidator,
 	webhook.checkByUrl,
 );
@@ -106,9 +106,9 @@ router.get(
  *         description: API key faltante o inválida
  */
 router.post(
-	"/",
-	body("url").isString().notEmpty(),
-	body("webhookType").optional().isString(),
+	'/',
+	body('url').isString().notEmpty(),
+	body('webhookType').optional().isString(),
 	requestValidator,
 	webhook.create,
 );
@@ -154,10 +154,10 @@ router.post(
  *         description: Webhook no encontrado
  */
 router.put(
-	"/:id",
-	param("id").isString().notEmpty(),
-	body("url").optional().isString().notEmpty(),
-	body("webhookType").optional().isString(),
+	'/:id',
+	param('id').isString().notEmpty(),
+	body('url').optional().isString().notEmpty(),
+	body('webhookType').optional().isString(),
 	requestValidator,
 	webhook.update,
 );
@@ -189,6 +189,6 @@ router.put(
  *       404:
  *         description: Webhook no encontrado
  */
-router.delete("/:id", param("id").isString().notEmpty(), requestValidator, webhook.remove);
+router.delete('/:id', param('id').isString().notEmpty(), requestValidator, webhook.remove);
 
 export default router;

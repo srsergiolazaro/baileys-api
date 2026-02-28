@@ -1,18 +1,17 @@
-
-import { toNumber } from "baileys";
-import Long from "long";
+import { toNumber } from 'baileys';
+import Long from 'long';
 
 /** Transform object props value into Prisma-supported types */
 export function transformPrisma(data: any): any {
 	if (data === null || data === undefined) return data;
-	if (typeof data !== "object") return data;
+	if (typeof data !== 'object') return data;
 
 	if (Array.isArray(data)) return data.map(transformPrisma);
 
 	const base: any = {};
 	for (const [key, val] of Object.entries(data)) {
-		if (typeof val === "function") continue;
-		if (val instanceof Long || typeof val === "number") {
+		if (typeof val === 'function') continue;
+		if (val instanceof Long || typeof val === 'number') {
 			base[key] = toNumber(val);
 			continue;
 		}
@@ -24,7 +23,7 @@ export function transformPrisma(data: any): any {
 			base[key] = val;
 			continue;
 		}
-		if (typeof val === "object" && val !== null) {
+		if (typeof val === 'object' && val !== null) {
 			base[key] = transformPrisma(val);
 			continue;
 		}
@@ -34,21 +33,20 @@ export function transformPrisma(data: any): any {
 	return base;
 }
 
-
 /** Transform prisma result into JSON serializable types */
 export function serializePrisma(data: any): any {
 	if (data === null || data === undefined) return data;
-	if (typeof data !== "object") return data;
+	if (typeof data !== 'object') return data;
 
 	if (Array.isArray(data)) return data.map(serializePrisma);
 
 	const base: any = {};
 	for (const [key, val] of Object.entries(data)) {
 		if (val instanceof Buffer) {
-			base[key] = val.toString("base64");
+			base[key] = val.toString('base64');
 			continue;
 		}
-		if (typeof val === "object") {
+		if (typeof val === 'object') {
 			base[key] = serializePrisma(val);
 			continue;
 		}

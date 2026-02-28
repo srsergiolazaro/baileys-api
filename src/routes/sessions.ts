@@ -1,7 +1,7 @@
-import { Router } from "express";
-import { session } from "@/controllers";
-import { getUserSessions } from "@/controllers/session";
-import { body } from "express-validator";
+import { Router } from 'express';
+import { session } from '@/controllers';
+import { getUserSessions } from '@/controllers/session';
+import { body } from 'express-validator';
 
 const router = Router();
 
@@ -19,7 +19,7 @@ const router = Router();
  *       200:
  *         description: Lista de sesiones obtenida exitosamente
  */
-router.get("/list", getUserSessions);
+router.get('/list', getUserSessions);
 
 /**
  * @swagger
@@ -45,7 +45,7 @@ router.get("/list", getUserSessions);
  *       404:
  *         description: Sesión no encontrada
  */
-router.get("/status", session.status);
+router.get('/status', session.status);
 
 /**
  * @swagger
@@ -77,7 +77,7 @@ router.get("/status", session.status);
  *       401:
  *         description: No autorizado - API Key inválida
  */
-router.post("/add", body("sessionId").isString().notEmpty(), session.add);
+router.post('/add', body('sessionId').isString().notEmpty(), session.add);
 
 /**
  * @swagger
@@ -104,7 +104,7 @@ router.post("/add", body("sessionId").isString().notEmpty(), session.add);
  *       401:
  *         description: No autorizado - API Key inválida
  */
-router.get("/add-sse", session.addSSE);
+router.get('/add-sse', session.addSSE);
 
 /**
  * @swagger
@@ -132,7 +132,7 @@ router.get("/add-sse", session.addSSE);
  *       404:
  *         description: Sesión no encontrada
  */
-router.delete("/", session.del);
+router.delete('/', session.del);
 
 /**
  * @swagger
@@ -201,6 +201,6 @@ router.delete("/", session.del);
  *       500:
  *         description: Error al reiniciar la sesión
  */
-router.post("/restart", session.restart);
+router.post('/restart', session.restart);
 
 export default router;

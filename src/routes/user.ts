@@ -1,7 +1,7 @@
-import { Router } from "express";
-import { body } from "express-validator";
-import { user } from "@/controllers";
-import requestValidator from "@/middlewares/request-validator";
+import { Router } from 'express';
+import { body } from 'express-validator';
+import { user } from '@/controllers';
+import requestValidator from '@/middlewares/request-validator';
 
 const router = Router({ mergeParams: true });
 
@@ -33,7 +33,7 @@ const router = Router({ mergeParams: true });
  *       400:
  *         description: Datos de entrada inválidos
  */
-router.post("/block", body("jid").isString().notEmpty(), requestValidator, user.block);
+router.post('/block', body('jid').isString().notEmpty(), requestValidator, user.block);
 
 /**
  * @swagger
@@ -63,7 +63,7 @@ router.post("/block", body("jid").isString().notEmpty(), requestValidator, user.
  *       400:
  *         description: Datos de entrada inválidos
  */
-router.post("/unblock", body("jid").isString().notEmpty(), requestValidator, user.unblock);
+router.post('/unblock', body('jid').isString().notEmpty(), requestValidator, user.unblock);
 
 /**
  * @swagger
@@ -97,9 +97,9 @@ router.post("/unblock", body("jid").isString().notEmpty(), requestValidator, use
  *         description: JID is required
  */
 router.post(
-	"/update-profile-picture",
-	body("jid").isString().notEmpty(),
-	body("url").optional().isString(),
+	'/update-profile-picture',
+	body('jid').isString().notEmpty(),
+	body('url').optional().isString(),
 	requestValidator,
 	user.updateProfilePicture,
 );

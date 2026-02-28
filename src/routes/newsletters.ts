@@ -1,7 +1,7 @@
-import { Router } from "express";
-import { body } from "express-validator";
-import { newsletter } from "@/controllers";
-import requestValidator from "@/middlewares/request-validator";
+import { Router } from 'express';
+import { body } from 'express-validator';
+import { newsletter } from '@/controllers';
+import requestValidator from '@/middlewares/request-validator';
 
 const router = Router({ mergeParams: true });
 
@@ -37,9 +37,9 @@ const router = Router({ mergeParams: true });
  *         description: Error al crear el newsletter
  */
 router.post(
-	"/",
-	body("name").isString().notEmpty(),
-	body("description").isString().optional(),
+	'/',
+	body('name').isString().notEmpty(),
+	body('description').isString().optional(),
 	requestValidator,
 	newsletter.create,
 );
@@ -72,12 +72,7 @@ router.post(
  *       500:
  *         description: Error al obtener metadatos
  */
-router.post(
-	"/metadata",
-	body("jid").isString().notEmpty(),
-	requestValidator,
-	newsletter.metadata,
-);
+router.post('/metadata', body('jid').isString().notEmpty(), requestValidator, newsletter.metadata);
 
 /**
  * @swagger
@@ -108,8 +103,8 @@ router.post(
  *         description: Error al suscribirse
  */
 router.post(
-	"/subscribe",
-	body("jid").isString().notEmpty(),
+	'/subscribe',
+	body('jid').isString().notEmpty(),
 	requestValidator,
 	newsletter.subscribe,
 );
@@ -143,8 +138,8 @@ router.post(
  *         description: Error al cancelar suscripción
  */
 router.post(
-	"/unsubscribe",
-	body("jid").isString().notEmpty(),
+	'/unsubscribe',
+	body('jid').isString().notEmpty(),
 	requestValidator,
 	newsletter.unsubscribe,
 );
@@ -182,9 +177,9 @@ router.post(
  *         description: Error al enviar mensaje
  */
 router.post(
-	"/send",
-	body("jid").isString().notEmpty(),
-	body("text").isString().notEmpty(),
+	'/send',
+	body('jid').isString().notEmpty(),
+	body('text').isString().notEmpty(),
 	requestValidator,
 	newsletter.send,
 );

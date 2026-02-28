@@ -1,18 +1,17 @@
-
-import axios from "axios";
-import FormData from "form-data";
-import type { proto } from "baileys";
+import axios from 'axios';
+import FormData from 'form-data';
+import type { proto } from 'baileys';
 
 export function callWebHook(url: string, body: any, response?: (data: any) => void) {
 	axios
 		.post(url, body)
 		.then((res) => {
-			console.log("callWebHook response", res.status, res.data);
+			console.log('callWebHook response', res.status, res.data);
 
 			if (res.status === 200 && response) response(res.data);
 		})
 		.catch((err) => {
-			console.log("Error calling webhook", err.message);
+			console.log('Error calling webhook', err.message);
 		});
 }
 
@@ -31,16 +30,16 @@ export async function callWebHookFile(
 ) {
 	try {
 		const { message, session, messageType, messageContent, type } = body;
-		const mimeType = messageContent?.mimetype || "audio/wave";
-		const fileFormat = mimeType.split("/")[1];
+		const mimeType = messageContent?.mimetype || 'audio/wave';
+		const fileFormat = mimeType.split('/')[1];
 
 		const formData = new FormData();
-		formData.append("message", JSON.stringify(message));
-		formData.append("session", session);
-		formData.append("messageContent", JSON.stringify(messageContent));
-		formData.append("messageType", messageType);
-		formData.append("type", type);
-		formData.append("file", buffer, { filename: `file.${fileFormat}` });
+		formData.append('message', JSON.stringify(message));
+		formData.append('session', session);
+		formData.append('messageContent', JSON.stringify(messageContent));
+		formData.append('messageType', messageType);
+		formData.append('type', type);
+		formData.append('file', buffer, { filename: `file.${fileFormat}` });
 
 		const data = await axios.post(url, formData, {
 			headers: formData.getHeaders(),
@@ -48,6 +47,6 @@ export async function callWebHookFile(
 
 		if (data.status === 200 && response) response(data.data);
 	} catch (error) {
-		console.log("Error calling webhook", error);
+		console.log('Error calling webhook', error);
 	}
 }

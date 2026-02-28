@@ -1,8 +1,8 @@
-import { Router } from "express";
-import { body, query } from "express-validator";
-import { contact } from "@/controllers";
-import requestValidator from "@/middlewares/request-validator";
-import jidValidator from "@/middlewares/jid-validator";
+import { Router } from 'express';
+import { body, query } from 'express-validator';
+import { contact } from '@/controllers';
+import requestValidator from '@/middlewares/request-validator';
+import jidValidator from '@/middlewares/jid-validator';
 
 const router = Router({ mergeParams: true });
 
@@ -32,9 +32,9 @@ const router = Router({ mergeParams: true });
  *         description: Lista de contactos obtenida exitosamente
  */
 router.get(
-	"/",
-	query("cursor").isNumeric().optional(),
-	query("limit").isNumeric().optional(),
+	'/',
+	query('cursor').isNumeric().optional(),
+	query('limit').isNumeric().optional(),
 	requestValidator,
 	contact.list,
 );
@@ -53,7 +53,7 @@ router.get(
  *       200:
  *         description: Lista de contactos bloqueados obtenida exitosamente
  */
-router.get("/blocklist", contact.listBlocked);
+router.get('/blocklist', contact.listBlocked);
 
 /**
  * @swagger
@@ -86,13 +86,12 @@ router.get("/blocklist", contact.listBlocked);
  *         description: Estado de bloqueo actualizado exitosamente
  */
 router.post(
-	"/blocklist/update",
-	body("jid").isString().notEmpty(),
-	body("action").isString().isIn(["block", "unblock"]).optional(),
+	'/blocklist/update',
+	body('jid').isString().notEmpty(),
+	body('action').isString().isIn(['block', 'unblock']).optional(),
 	requestValidator,
 	contact.updateBlock,
 );
-
 
 /**
  * @swagger
@@ -117,7 +116,7 @@ router.post(
  *       404:
  *         description: Contacto no encontrado
  */
-router.get("/:jid", jidValidator, contact.check);
+router.get('/:jid', jidValidator, contact.check);
 
 /**
  * @swagger
@@ -142,6 +141,6 @@ router.get("/:jid", jidValidator, contact.check);
  *       404:
  *         description: Foto no encontrada
  */
-router.get("/:jid/photo", contact.photo);
+router.get('/:jid/photo', contact.photo);
 
 export default router;

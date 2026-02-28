@@ -1,11 +1,10 @@
-
-import type { BaileysEventEmitter } from "baileys";
-import type { BaileysEventHandler } from "@/store/types";
-import { filterPrisma, transformPrisma } from "@/store/utils";
-import { prisma } from "@/db";
-import { logger } from "@/shared";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
-import { Prisma } from "@prisma/client";
+import type { BaileysEventEmitter } from 'baileys';
+import type { BaileysEventHandler } from '@/store/types';
+import { filterPrisma, transformPrisma } from '@/store/utils';
+import { prisma } from '@/db';
+import { logger } from '@/shared';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { Prisma } from '@prisma/client';
 
 const GROUP_METADATA_KEYS = Object.keys(Prisma.GroupMetadataScalarFieldEnum);
 
@@ -13,7 +12,7 @@ export default function groupMetadataHandler(sessionId: string, event: BaileysEv
 	const model = prisma.groupMetadata;
 	let listening = false;
 
-	const upsert: BaileysEventHandler<"groups.upsert"> = async (groups) => {
+	const upsert: BaileysEventHandler<'groups.upsert'> = async (groups) => {
 		try {
 			await prisma.$transaction(
 				groups.map((group) => {
@@ -24,14 +23,14 @@ export default function groupMetadataHandler(sessionId: string, event: BaileysEv
 						update: data,
 						where: { sessionId_id: { id: group.id, sessionId } },
 					});
-				})
+				}),
 			);
 		} catch (e) {
-			logger.error(e, "An error occured during groups upsert");
+			logger.error(e, 'An error occured during groups upsert');
 		}
 	};
 
-	const update: BaileysEventHandler<"groups.update"> = async (updates) => {
+	const update: BaileysEventHandler<'groups.update'> = async (updates) => {
 		for (const update of updates) {
 			try {
 				const data = filterPrisma(transformPrisma(update), GROUP_METADATA_KEYS);
@@ -41,13 +40,13 @@ export default function groupMetadataHandler(sessionId: string, event: BaileysEv
 					where: { sessionId_id: { id: update.id!, sessionId } },
 				});
 			} catch (e) {
-				if (e instanceof PrismaClientKnownRequestError && e.code === "P2025") continue;
-				logger.error(e, "An error occured during group metadata update");
+				if (e instanceof PrismaClientKnownRequestError && e.code === 'P2025') continue;
+				logger.error(e, 'An error occured during group metadata update');
 			}
 		}
 	};
 
-	const updateParticipant: BaileysEventHandler<"group-participants.update"> = async ({
+	const updateParticipant: BaileysEventHandler<'group-participants.update'> = async ({
 		id,
 		action,
 		participants,
@@ -65,20 +64,20 @@ export default function groupMetadataHandler(sessionId: string, event: BaileysEv
 				let metadataParticipants = (group.participants || []) as any[];
 
 				switch (action) {
-					case "add":
+					case 'add':
 						metadataParticipants.push(
 							...participants.map((p) => ({ id: p, isAdmin: false, isSuperAdmin: false })),
 						);
 						break;
-					case "demote":
-					case "promote":
+					case 'demote':
+					case 'promote':
 						for (const participant of metadataParticipants) {
 							if (participants.includes(participant.id)) {
-								participant.isAdmin = action === "promote";
+								participant.isAdmin = action === 'promote';
 							}
 						}
 						break;
-					case "remove":
+					case 'remove':
 						metadataParticipants = metadataParticipants.filter((p) => !participants.includes(p.id));
 						break;
 				}
@@ -90,7 +89,7 @@ export default function groupMetadataHandler(sessionId: string, event: BaileysEv
 				});
 			});
 		} catch (e) {
-			logger.error(e, "An error occured during group participants update");
+			logger.error(e, 'An error occured during group participants update');
 		}
 	};
 

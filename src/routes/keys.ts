@@ -1,11 +1,9 @@
-import { Router } from "express";
-import { key } from "@/controllers";
-import { userValidator } from "@/middlewares/user-validator";
-import { apiKeyValidator } from "@/middlewares/api-key-validator";
+import { Router } from 'express';
+import { key } from '@/controllers';
+import { userValidator } from '@/middlewares/user-validator';
+import { apiKeyValidator } from '@/middlewares/api-key-validator';
 
 const router = Router();
-
-
 
 /**
  *
@@ -94,7 +92,7 @@ const router = Router();
  *       500:
  *         description: Internal server error
  */
-router.post("/", userValidator, key.create);
+router.post('/', userValidator, key.create);
 
 /**
  * @swagger
@@ -122,7 +120,7 @@ router.post("/", userValidator, key.create);
  *       500:
  *         description: Internal server error
  */
-router.get("/", userValidator, key.findAll);
+router.get('/', userValidator, key.findAll);
 
 /**
  * @swagger
@@ -151,7 +149,7 @@ router.get("/", userValidator, key.findAll);
  *       500:
  *         description: Internal server error
  */
-router.get("/:id", key.findOne);
+router.get('/:id', key.findOne);
 
 /**
  * @swagger
@@ -194,7 +192,7 @@ router.get("/:id", key.findOne);
  *       500:
  *         description: Internal server error
  */
-router.put("/:id", key.update);
+router.put('/:id', key.update);
 
 /**
  * @swagger
@@ -219,6 +217,6 @@ router.put("/:id", key.update);
  *       500:
  *         description: Internal server error
  */
-router.delete("/:id", key.remove);
+router.delete('/:id', key.remove);
 
 export default router;

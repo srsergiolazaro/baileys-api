@@ -1,17 +1,17 @@
-import { type BaileysEventEmitter } from "baileys";
-import type { BaileysEventHandler, MakeTransformedPrisma } from "@/store/types";
-import { filterPrisma, transformPrisma } from "@/store/utils";
-import { prisma } from "@/db";
-import { logger } from "@/shared";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
-import { Prisma, type Chat } from "@prisma/client";
+import { type BaileysEventEmitter } from 'baileys';
+import type { BaileysEventHandler, MakeTransformedPrisma } from '@/store/types';
+import { filterPrisma, transformPrisma } from '@/store/utils';
+import { prisma } from '@/db';
+import { logger } from '@/shared';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { Prisma, type Chat } from '@prisma/client';
 
 const CHAT_KEYS = Object.keys(Prisma.ChatScalarFieldEnum);
 
 export default function chatHandler(sessionId: string, event: BaileysEventEmitter) {
 	let listening = false;
 
-	const set: BaileysEventHandler<"messaging-history.set"> = async ({ chats, isLatest }) => {
+	const set: BaileysEventHandler<'messaging-history.set'> = async ({ chats, isLatest }) => {
 		try {
 			await prisma.$transaction(async (tx) => {
 				if (isLatest) await tx.chat.deleteMany({ where: { sessionId } });
@@ -19,7 +19,10 @@ export default function chatHandler(sessionId: string, event: BaileysEventEmitte
 				const existingIds = (
 					await tx.chat.findMany({
 						select: { id: true },
-						where: { id: { in: chats.map((c) => c.id).filter((id): id is string => !!id) }, sessionId },
+						where: {
+							id: { in: chats.map((c) => c.id).filter((id): id is string => !!id) },
+							sessionId,
+						},
 					})
 				).map((i) => i.id);
 				const chatsAdded = (
@@ -34,14 +37,14 @@ export default function chatHandler(sessionId: string, event: BaileysEventEmitte
 					})
 				).count;
 
-				logger.info({ chatsAdded }, "Synced chats");
+				logger.info({ chatsAdded }, 'Synced chats');
 			});
 		} catch (e) {
-			logger.error(e, "An error occured during chats set");
+			logger.error(e, 'An error occured during chats set');
 		}
 	};
 
-	const upsert: BaileysEventHandler<"chats.upsert"> = async (chats) => {
+	const upsert: BaileysEventHandler<'chats.upsert'> = async (chats) => {
 		try {
 			await prisma.$transaction(
 				chats
@@ -57,11 +60,11 @@ export default function chatHandler(sessionId: string, event: BaileysEventEmitte
 					}),
 			);
 		} catch (e) {
-			logger.error(e, "An error occured during chats upsert");
+			logger.error(e, 'An error occured during chats upsert');
 		}
 	};
 
-	const update: BaileysEventHandler<"chats.update"> = async (updates) => {
+	const update: BaileysEventHandler<'chats.update'> = async (updates) => {
 		// Agrupamos actualizaciones por ID de chat para evitar colisiones si hay múltiples en el mismo lote
 		for (const update of updates) {
 			try {
@@ -70,11 +73,14 @@ export default function chatHandler(sessionId: string, event: BaileysEventEmitte
 					if (value !== null && value !== undefined) chatData[key] = value;
 				};
 
-				if ('conversationTimestamp' in update) safeAssign('conversationTimestamp', update.conversationTimestamp);
+				if ('conversationTimestamp' in update)
+					safeAssign('conversationTimestamp', update.conversationTimestamp);
 				if ('unreadCount' in update) safeAssign('unreadCount', update.unreadCount);
 				if ('readOnly' in update) safeAssign('readOnly', update.readOnly);
-				if ('ephemeralExpiration' in update) safeAssign('ephemeralExpiration', update.ephemeralExpiration);
-				if ('ephemeralSettingTimestamp' in update) safeAssign('ephemeralSettingTimestamp', update.ephemeralSettingTimestamp);
+				if ('ephemeralExpiration' in update)
+					safeAssign('ephemeralExpiration', update.ephemeralExpiration);
+				if ('ephemeralSettingTimestamp' in update)
+					safeAssign('ephemeralSettingTimestamp', update.ephemeralSettingTimestamp);
 				if ('name' in update) safeAssign('name', update.name);
 				if ('notSpam' in update) safeAssign('notSpam', update.notSpam);
 				if ('archived' in update) safeAssign('archived', update.archived);
@@ -89,7 +95,7 @@ export default function chatHandler(sessionId: string, event: BaileysEventEmitte
 					data: {
 						...data,
 						unreadCount:
-							typeof data.unreadCount === "number"
+							typeof data.unreadCount === 'number'
 								? data.unreadCount > 0
 									? { increment: data.unreadCount }
 									: { set: data.unreadCount }
@@ -98,22 +104,22 @@ export default function chatHandler(sessionId: string, event: BaileysEventEmitte
 					where: { sessionId_id: { id: update.id!, sessionId } },
 				});
 			} catch (e) {
-				if (e instanceof PrismaClientKnownRequestError && e.code === "P2025") {
+				if (e instanceof PrismaClientKnownRequestError && e.code === 'P2025') {
 					// Silent failure if chat doesn't exist
 					return;
 				}
-				logger.error(e, "An error occured during chat update");
+				logger.error(e, 'An error occured during chat update');
 			}
 		}
 	};
 
-	const del: BaileysEventHandler<"chats.delete"> = async (ids) => {
+	const del: BaileysEventHandler<'chats.delete'> = async (ids) => {
 		try {
 			await prisma.chat.deleteMany({
 				where: { id: { in: ids } },
 			});
 		} catch (e) {
-			logger.error(e, "An error occured during chats delete");
+			logger.error(e, 'An error occured during chats delete');
 		}
 	};
 

@@ -1,12 +1,11 @@
+import type { AuthenticationCreds, AuthenticationState, SignalDataTypeMap } from 'baileys';
+import { proto } from 'baileys';
+import { BufferJSON, initAuthCreds } from 'baileys';
+import { prisma } from '@/db';
+import { logger } from '@/shared';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
-import type { AuthenticationCreds, AuthenticationState, SignalDataTypeMap } from "baileys";
-import { proto } from "baileys";
-import { BufferJSON, initAuthCreds } from "baileys";
-import { prisma } from "@/db";
-import { logger } from "@/shared";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
-
-const fixId = (id: string) => id.replace(/\//g, "__").replace(/:/g, "-");
+const fixId = (id: string) => id.replace(/\//g, '__').replace(/:/g, '-');
 
 // ============================================================
 // 🔐 GLOBAL SESSION CACHE SYSTEM
@@ -28,15 +27,15 @@ const globalSessionCache = new Map<string, SessionCache>();
 // Configuración de persistencia
 const FLUSH_INTERVAL_MS = 10000; // Flush cada 10 segundos (mejor equilibrio seguridad/rendimiento)
 const CRITICAL_KEY_PREFIXES = [
-	"pre-key-",
-	"sender-key-",
-	"session-",
-	"app-state-",
-	"next-pre-key-",
-	"identity-",
-	"lid-mapping-",
-	"device-list-",
-	"app-state-sync-version-",
+	'pre-key-',
+	'sender-key-',
+	'session-',
+	'app-state-',
+	'next-pre-key-',
+	'identity-',
+	'lid-mapping-',
+	'device-list-',
+	'app-state-sync-version-',
 ]; // Keys importantes para persistir
 
 // Timers de flush por sesión
@@ -68,7 +67,7 @@ export function clearSessionCache(sessionId: string): void {
 		flushTimers.delete(sessionId);
 	}
 	globalSessionCache.delete(sessionId);
-	logger.info({ sessionId }, "Session cache cleared");
+	logger.info({ sessionId }, 'Session cache cleared');
 }
 
 /**
@@ -88,15 +87,15 @@ async function flushDirtyKeys(sessionId: string): Promise<void> {
 
 		// Filtrar solo keys críticas para persistir
 		const keysToPersist = dirtyKeys.filter((key) =>
-			CRITICAL_KEY_PREFIXES.some((prefix) => key.startsWith(prefix))
+			CRITICAL_KEY_PREFIXES.some((prefix) => key.startsWith(prefix)),
 		);
 
 		if (keysToPersist.length === 0) {
-			logger.debug({ sessionId, skipped: dirtyKeys.length }, "No critical keys to persist");
+			logger.debug({ sessionId, skipped: dirtyKeys.length }, 'No critical keys to persist');
 			return;
 		}
 
-		logger.info({ sessionId, count: keysToPersist.length }, "Flushing dirty keys to DB");
+		logger.info({ sessionId, count: keysToPersist.length }, 'Flushing dirty keys to DB');
 
 		const BATCH_SIZE = 40; // Reduced size slightly for Neon stability
 
@@ -124,7 +123,7 @@ async function flushDirtyKeys(sessionId: string): Promise<void> {
 			try {
 				// Ejecución secuencial de batches para evitar deadlocks y sobrecarga de conexiones
 				await prisma.$transaction(batchOps);
-				logger.debug({ sessionId, batch: i, size: batch.length }, "Batch flush success");
+				logger.debug({ sessionId, batch: i, size: batch.length }, 'Batch flush success');
 			} catch (e: any) {
 				logger.error(
 					{
@@ -134,7 +133,7 @@ async function flushDirtyKeys(sessionId: string): Promise<void> {
 						batchStart: i,
 						batchSize: batch.length,
 					},
-					"Batch flush failed"
+					'Batch flush failed',
 				);
 				// Re-agregar a dirty para reintento en el próximo ciclo
 				batch.forEach((key) => cache.dirty.add(key));
@@ -149,7 +148,7 @@ async function flushDirtyKeys(sessionId: string): Promise<void> {
 			}
 		}
 
-		logger.info({ sessionId, remainingDirty: cache.dirty.size }, "Dirty keys flush finished");
+		logger.info({ sessionId, remainingDirty: cache.dirty.size }, 'Dirty keys flush finished');
 	} finally {
 		cache.flushing = false;
 	}
@@ -165,12 +164,12 @@ function startFlushTimer(sessionId: string): void {
 		try {
 			await flushDirtyKeys(sessionId);
 		} catch (e) {
-			logger.error({ sessionId, error: e }, "Periodic flush failed");
+			logger.error({ sessionId, error: e }, 'Periodic flush failed');
 		}
 	}, FLUSH_INTERVAL_MS);
 
 	flushTimers.set(sessionId, timer);
-	logger.debug({ sessionId }, "Flush timer started");
+	logger.debug({ sessionId }, 'Flush timer started');
 }
 
 /**
@@ -178,14 +177,14 @@ function startFlushTimer(sessionId: string): void {
  * Útil para shutdown graceful
  */
 export async function flushAllSessions(): Promise<void> {
-	logger.info("Flushing all session caches...");
+	logger.info('Flushing all session caches...');
 	const promises = Array.from(globalSessionCache.keys()).map((sessionId) =>
 		flushDirtyKeys(sessionId).catch((e) =>
-			logger.error({ sessionId, error: e }, "Failed to flush session on shutdown")
-		)
+			logger.error({ sessionId, error: e }, 'Failed to flush session on shutdown'),
+		),
 	);
 	await Promise.allSettled(promises);
-	logger.info("All session caches flushed");
+	logger.info('All session caches flushed');
 }
 
 export async function useSession(sessionId: string): Promise<{
@@ -209,7 +208,7 @@ export async function useSession(sessionId: string): Promise<{
 				where: { sessionId_id: { id, sessionId } },
 			});
 		} catch (e) {
-			logger.error(e, "An error occured during session write");
+			logger.error(e, 'An error occured during session write');
 		}
 	};
 
@@ -226,10 +225,10 @@ export async function useSession(sessionId: string): Promise<{
 
 			return JSON.parse(result.data, BufferJSON.reviver);
 		} catch (e) {
-			if (e instanceof PrismaClientKnownRequestError && e.code === "P2025") {
+			if (e instanceof PrismaClientKnownRequestError && e.code === 'P2025') {
 				// Silent - key doesn't exist
 			} else {
-				logger.error(e, "An error occured during session read");
+				logger.error(e, 'An error occured during session read');
 			}
 			return null;
 		}
@@ -238,12 +237,12 @@ export async function useSession(sessionId: string): Promise<{
 	// Cargar credenciales: primero de caché, luego de DB
 	let creds: AuthenticationCreds;
 	if (cache.creds) {
-		logger.debug({ sessionId }, "Using cached credentials");
+		logger.debug({ sessionId }, 'Using cached credentials');
 		creds = cache.creds;
 	} else {
-		creds = (await read("creds")) || initAuthCreds();
+		creds = (await read('creds')) || initAuthCreds();
 		cache.creds = creds;
-		logger.debug({ sessionId, fromDb: !!cache.creds }, "Credentials loaded");
+		logger.debug({ sessionId, fromDb: !!cache.creds }, 'Credentials loaded');
 	}
 
 	const saveCreds = async (update?: Partial<AuthenticationCreds>) => {
@@ -252,8 +251,8 @@ export async function useSession(sessionId: string): Promise<{
 		}
 		cache.creds = creds;
 		// PRISMA SE DESPIERTA AQUÍ - Solo en creds.update
-		await write(creds, "creds");
-		logger.debug({ sessionId }, "Credentials saved to DB");
+		await write(creds, 'creds');
+		logger.debug({ sessionId }, 'Credentials saved to DB');
 	};
 
 	return {
@@ -280,7 +279,7 @@ export async function useSession(sessionId: string): Promise<{
 						// 2. Read from DB (only if not in cache)
 						try {
 							let value = await read(cacheKey);
-							if (type === "app-state-sync-key" && value) {
+							if (type === 'app-state-sync-key' && value) {
 								value = proto.Message.AppStateSyncKeyData.fromObject(value);
 							}
 
@@ -291,7 +290,7 @@ export async function useSession(sessionId: string): Promise<{
 								data[id] = undefined as any; // Baileys prefiere undefined para llaves no encontradas
 							}
 						} catch (e) {
-							logger.error({ sessionId, cacheKey, error: e }, "Error reading key");
+							logger.error({ sessionId, cacheKey, error: e }, 'Error reading key');
 							data[id] = undefined as any;
 						}
 					}
@@ -318,9 +317,12 @@ export async function useSession(sessionId: string): Promise<{
 
 					// Si hay muchas keys dirty, flush inmediato para evitar pérdida
 					if (cache.dirty.size > 500) {
-						logger.warn({ sessionId, dirtyCount: cache.dirty.size }, "Too many dirty keys, forcing flush");
+						logger.warn(
+							{ sessionId, dirtyCount: cache.dirty.size },
+							'Too many dirty keys, forcing flush',
+						);
 						flushDirtyKeys(sessionId).catch((e) =>
-							logger.error({ sessionId, error: e }, "Forced flush failed")
+							logger.error({ sessionId, error: e }, 'Forced flush failed'),
 						);
 					}
 				},
