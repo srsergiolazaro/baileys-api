@@ -267,11 +267,12 @@ export const restart: RequestHandler = async (req, res) => {
 			try {
 				const parsedData = JSON.parse(userSession.data);
 				readIncomingMessages = parsedData.readIncomingMessages || false;
-				const { readIncomingMessages: _, ...rest } = parsedData;
+				const { readIncomingMessages: _readIncomingMessages, ...rest } = parsedData;
+				void _readIncomingMessages;
 				if (Object.keys(rest).length > 0) {
 					socketConfig = rest;
 				}
-			} catch (e) {
+			} catch {
 				logger.warn({ sessionId }, 'restart: no se pudo parsear data de sesión');
 			}
 		}

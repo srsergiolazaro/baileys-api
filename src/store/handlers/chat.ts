@@ -1,17 +1,18 @@
-import { type BaileysEventEmitter } from 'baileys';
-import type { BaileysEventHandler, MakeTransformedPrisma } from '@/store/types';
+import type { BaileysEventEmitter } from 'baileys';
+/* import type { BaileysEventHandler, MakeTransformedPrisma } from '@/store/types';
 import { filterPrisma, transformPrisma } from '@/store/utils';
-import { prisma } from '@/db';
-import { logger } from '@/shared';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
-import { Prisma, type Chat } from '@prisma/client';
+import { prisma } from '@/db'; */
+/* import { logger } from '@/shared';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'; */
+// import { Prisma, type Chat } from '@prisma/client';
 
-const CHAT_KEYS = Object.keys(Prisma.ChatScalarFieldEnum);
+// const CHAT_KEYS = Object.keys(Prisma.ChatScalarFieldEnum);
 
-export default function chatHandler(sessionId: string, event: BaileysEventEmitter) {
+export default function chatHandler(sessionId: string, _event: BaileysEventEmitter) {
+    void _event;
 	let listening = false;
 
-	const set: BaileysEventHandler<'messaging-history.set'> = async ({ chats, isLatest }) => {
+	/* const _set: BaileysEventHandler<'messaging-history.set'> = async ({ chats, isLatest }) => {
 		try {
 			await prisma.$transaction(async (tx) => {
 				if (isLatest) await tx.chat.deleteMany({ where: { sessionId } });
@@ -42,9 +43,9 @@ export default function chatHandler(sessionId: string, event: BaileysEventEmitte
 		} catch (e) {
 			logger.error(e, 'An error occured during chats set');
 		}
-	};
+	}; */
 
-	const upsert: BaileysEventHandler<'chats.upsert'> = async (chats) => {
+	/* const _upsert: BaileysEventHandler<'chats.upsert'> = async (chats) => {
 		try {
 			await prisma.$transaction(
 				chats
@@ -62,9 +63,9 @@ export default function chatHandler(sessionId: string, event: BaileysEventEmitte
 		} catch (e) {
 			logger.error(e, 'An error occured during chats upsert');
 		}
-	};
+	}; */
 
-	const update: BaileysEventHandler<'chats.update'> = async (updates) => {
+	/* const _update: BaileysEventHandler<'chats.update'> = async (updates) => {
 		// Agrupamos actualizaciones por ID de chat para evitar colisiones si hay múltiples en el mismo lote
 		for (const update of updates) {
 			try {
@@ -111,9 +112,9 @@ export default function chatHandler(sessionId: string, event: BaileysEventEmitte
 				logger.error(e, 'An error occured during chat update');
 			}
 		}
-	};
+	}; */
 
-	const del: BaileysEventHandler<'chats.delete'> = async (ids) => {
+	/* const _del: BaileysEventHandler<'chats.delete'> = async (ids) => {
 		try {
 			await prisma.chat.deleteMany({
 				where: { id: { in: ids } },
@@ -121,7 +122,7 @@ export default function chatHandler(sessionId: string, event: BaileysEventEmitte
 		} catch (e) {
 			logger.error(e, 'An error occured during chats delete');
 		}
-	};
+	}; */
 
 	const listen = () => {
 		if (listening) return;

@@ -18,7 +18,7 @@ function createPrismaClient() {
 	const adapter = new PrismaNeon({ connectionString });
 
 	return new PrismaClient({
-		// @ts-ignore driverAdapters es un previewFeature
+		// driverAdapters es un previewFeature
 		adapter,
 		log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
 	});

@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { key } from '@/controllers';
 import { userValidator } from '@/middlewares/user-validator';
-import { apiKeyValidator } from '@/middlewares/api-key-validator';
 
 const router = Router();
 

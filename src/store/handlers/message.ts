@@ -1,5 +1,5 @@
-import type { BaileysEventEmitter, MessageUserReceipt, proto, WAMessageKey } from 'baileys';
-import { jidNormalizedUser, toNumber } from 'baileys';
+import type { BaileysEventEmitter, WAMessageKey } from 'baileys';
+import { jidNormalizedUser } from 'baileys';
 import type { BaileysEventHandler, MakeTransformedPrisma } from '@/store/types';
 import { filterPrisma, transformPrisma } from '@/store/utils';
 import { prisma } from '@/db';
@@ -144,7 +144,8 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 					const transformed = transformPrisma(merged) as MakeTransformedPrisma<Message>;
 
 					// Remover metadatos internos de Prisma para el update
-					const { pkId: _, sessionId: __, ...updateData } = transformed;
+					const { pkId: _pkId, sessionId: _sessionId, ...updateData } = transformed;
+					void _pkId; void _sessionId;
 
 					await tx.message.update({
 						where: { pkId: prevData.pkId },

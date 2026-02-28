@@ -10,8 +10,6 @@ import makeWASocket, {
 } from 'baileys';
 import type {
 	ConnectionState,
-	GroupParticipant,
-	ParticipantAction,
 	SocketConfig,
 	WAMessageContent,
 } from 'baileys';
@@ -434,7 +432,7 @@ export async function createSession(options: createSessionOptions) {
 
 		try {
 			currentRes.write(`data: ${JSON.stringify(data)}\n\n`);
-		} catch (e) {
+		} catch {
 			if (currentRes && !currentRes.writableEnded) currentRes.end();
 			// No destruimos, permitimos reconexión SSE
 		}
@@ -785,7 +783,7 @@ export async function createSession(options: createSessionOptions) {
 								credsAccountType,
 							});
 						}
-					} catch (e) {
+					} catch {
 						// 4. Si falla la consulta IQ, confiamos únicamente en el AccountType de las credenciales
 						if (credsAccountType !== undefined) {
 							isBusiness = credsAccountType === 1;

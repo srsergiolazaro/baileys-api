@@ -1,6 +1,5 @@
 import { logger } from '../shared';
 import { randomUUID } from 'node:crypto';
-// @ts-ignore
 import { BinaryInfo, encodeWAM } from 'baileys/lib/WAM/index.js';
 
 /**

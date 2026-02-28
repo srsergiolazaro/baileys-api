@@ -1,17 +1,17 @@
 import type { BaileysEventEmitter } from 'baileys';
-import type { BaileysEventHandler } from '@/store/types';
+/* import type { BaileysEventHandler } from '@/store/types';
 import { filterPrisma, transformPrisma } from '@/store/utils';
-import { prisma } from '@/db';
-import { logger } from '@/shared';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
-import { Prisma } from '@prisma/client';
+import { prisma } from '@/db'; */
+// import { logger } from '@/shared';
+// import { Prisma } from '@prisma/client';
 
-const CONTACT_KEYS = Object.keys(Prisma.ContactScalarFieldEnum);
+// const CONTACT_KEYS = Object.keys(Prisma.ContactScalarFieldEnum);
 
-export default function contactHandler(sessionId: string, event: BaileysEventEmitter) {
+export default function contactHandler(sessionId: string, _event: BaileysEventEmitter) {
+    void _event;
 	let listening = false;
 
-	const set: BaileysEventHandler<'messaging-history.set'> = async ({ contacts }) => {
+	/* const _set: BaileysEventHandler<'messaging-history.set'> = async ({ contacts }) => {
 		try {
 			await prisma.$transaction(async (tx) => {
 				const contactIds = contacts.map((c) => c.id);
@@ -45,9 +45,9 @@ export default function contactHandler(sessionId: string, event: BaileysEventEmi
 		} catch (e) {
 			logger.error(e, 'An error occured during contacts set');
 		}
-	};
+	}; */
 
-	const upsert: BaileysEventHandler<'contacts.upsert'> = async (contacts) => {
+	/* const _upsert: BaileysEventHandler<'contacts.upsert'> = async (contacts) => {
 		try {
 			await prisma.$transaction(
 				contacts
@@ -64,9 +64,9 @@ export default function contactHandler(sessionId: string, event: BaileysEventEmi
 		} catch (e) {
 			logger.error(e, 'An error occured during contacts upsert');
 		}
-	};
+	}; */
 
-	const update: BaileysEventHandler<'contacts.update'> = async (updates) => {
+	/* const _update: BaileysEventHandler<'contacts.update'> = async (updates) => {
 		try {
 			await prisma.$transaction(
 				updates.map((u) => {
@@ -82,7 +82,7 @@ export default function contactHandler(sessionId: string, event: BaileysEventEmi
 		} catch (e) {
 			logger.error(e, 'An error occured during contact update');
 		}
-	};
+	}; */
 
 	const listen = () => {
 		if (listening) return;

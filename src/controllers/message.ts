@@ -1,10 +1,10 @@
 import type { proto, WAGenericMediaMessage, WAMessage } from 'baileys';
-import { downloadMediaMessage, downloadContentFromMessage } from 'baileys';
+import { downloadMediaMessage } from 'baileys';
 import { serializePrisma } from '@/utils';
 import type { RequestHandler } from 'express';
 import { logger } from '@/shared';
 import { delay as delayMs, withTimeout } from '@/utils';
-import { getSession, jidExists, listSessions } from '@/whatsapp';
+import { getSession, jidExists } from '@/whatsapp';
 import { prisma } from '@/db';
 import type { Message } from '@prisma/client';
 import axios from 'axios';
@@ -161,13 +161,12 @@ export const sendBulk: RequestHandler = async (req, res) => {
 
 	for (const [index, data] of req.body.entries()) {
 		try {
-			let { jid, type = 'number', message, options } = data;
+			let { jid, message, options } = data;
 			const delay = data.delay || 1000; // 'delay' es constante porque no se reasigna
 
 			// Procesa los datos de form-data si existen
 			if (req.is('multipart/form-data')) {
 				jid = data.jid;
-				type = data.type || 'number';
 				try {
 					message = data.message ? JSON.parse(data.message) : undefined;
 				} catch (e) {

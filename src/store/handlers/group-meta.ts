@@ -1,18 +1,19 @@
 import type { BaileysEventEmitter } from 'baileys';
-import type { BaileysEventHandler } from '@/store/types';
+/* import type { BaileysEventHandler } from '@/store/types';
 import { filterPrisma, transformPrisma } from '@/store/utils';
-import { prisma } from '@/db';
-import { logger } from '@/shared';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
-import { Prisma } from '@prisma/client';
+import { prisma } from '@/db'; */
+/* import { logger } from '@/shared';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'; */
+// import { Prisma } from '@prisma/client';
 
-const GROUP_METADATA_KEYS = Object.keys(Prisma.GroupMetadataScalarFieldEnum);
+/* const model = prisma.groupMetadata; */
+// const GROUP_METADATA_KEYS = Object.keys(Prisma.GroupMetadataScalarFieldEnum);
 
-export default function groupMetadataHandler(sessionId: string, event: BaileysEventEmitter) {
-	const model = prisma.groupMetadata;
+export default function groupMetadataHandler(sessionId: string, _event: BaileysEventEmitter) {
+    void _event;
 	let listening = false;
 
-	const upsert: BaileysEventHandler<'groups.upsert'> = async (groups) => {
+	/* const _upsert: BaileysEventHandler<'groups.upsert'> = async (groups) => {
 		try {
 			await prisma.$transaction(
 				groups.map((group) => {
@@ -28,9 +29,9 @@ export default function groupMetadataHandler(sessionId: string, event: BaileysEv
 		} catch (e) {
 			logger.error(e, 'An error occured during groups upsert');
 		}
-	};
+	}; */
 
-	const update: BaileysEventHandler<'groups.update'> = async (updates) => {
+	/* const _update: BaileysEventHandler<'groups.update'> = async (updates) => {
 		for (const update of updates) {
 			try {
 				const data = filterPrisma(transformPrisma(update), GROUP_METADATA_KEYS);
@@ -44,9 +45,9 @@ export default function groupMetadataHandler(sessionId: string, event: BaileysEv
 				logger.error(e, 'An error occured during group metadata update');
 			}
 		}
-	};
+	}; */
 
-	const updateParticipant: BaileysEventHandler<'group-participants.update'> = async ({
+	/* const _updateParticipant: BaileysEventHandler<'group-participants.update'> = async ({
 		id,
 		action,
 		participants,
@@ -91,7 +92,7 @@ export default function groupMetadataHandler(sessionId: string, event: BaileysEv
 		} catch (e) {
 			logger.error(e, 'An error occured during group participants update');
 		}
-	};
+	}; */
 
 	const listen = () => {
 		if (listening) return;

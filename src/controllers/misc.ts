@@ -3,7 +3,7 @@ import { logger } from '../shared';
 import { getSession, jidExists } from '@/whatsapp';
 
 export const makePhotoURLHandler =
-	(type: 'number' | 'group' = 'number'): RequestHandler =>
+	(): RequestHandler =>
 	async (req, res) => {
 		try {
 			const { sessionId, jid } = req.appData;
