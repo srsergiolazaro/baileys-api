@@ -215,7 +215,7 @@ export const updateDescription: RequestHandler = async (req, res) => {
 	}
 };
 
-export const photo = makePhotoURLHandler('group');
+export const photo = makePhotoURLHandler();
 
 export const inviteCode: RequestHandler = async (req, res) => {
 	try {
