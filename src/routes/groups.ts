@@ -1,7 +1,7 @@
-import { Router } from "express";
-import { query, body } from "express-validator";
-import { group } from "@/controllers";
-import requestValidator from "@/middlewares/request-validator";
+import { Router } from 'express';
+import { query, body } from 'express-validator';
+import { group } from '@/controllers';
+import requestValidator from '@/middlewares/request-validator';
 
 const router = Router({ mergeParams: true });
 
@@ -31,9 +31,9 @@ const router = Router({ mergeParams: true });
  *         description: Lista de grupos obtenida exitosamente
  */
 router.get(
-	"/",
-	query("cursor").isNumeric().optional(),
-	query("limit").isNumeric().optional(),
+	'/',
+	query('cursor').isNumeric().optional(),
+	query('limit').isNumeric().optional(),
 	requestValidator,
 	group.list,
 );
@@ -62,7 +62,7 @@ router.get(
  *       200:
  *         description: Grupos encontrados exitosamente
  */
-router.post("/search", body("name").isString().optional(), requestValidator, group.search);
+router.post('/search', body('name').isString().optional(), requestValidator, group.search);
 
 /**
  * @swagger
@@ -92,7 +92,7 @@ router.post("/search", body("name").isString().optional(), requestValidator, gro
  *       404:
  *         description: Grupo no encontrado
  */
-router.post("/find", body("jid").isString().notEmpty(), requestValidator, group.find);
+router.post('/find', body('jid').isString().notEmpty(), requestValidator, group.find);
 
 /**
  * @swagger
@@ -117,7 +117,7 @@ router.post("/find", body("jid").isString().notEmpty(), requestValidator, group.
  *       404:
  *         description: Foto no encontrada
  */
-router.get("/:jid/photo", group.photo);
+router.get('/:jid/photo', group.photo);
 
 /**
  * @swagger
@@ -140,7 +140,7 @@ router.get("/:jid/photo", group.photo);
  *       200:
  *         description: Código de invitación obtenido exitosamente
  */
-router.get("/:jid/invite-code", group.inviteCode);
+router.get('/:jid/invite-code', group.inviteCode);
 
 /**
  * @swagger
@@ -175,9 +175,9 @@ router.get("/:jid/invite-code", group.inviteCode);
  *         description: Grupo creado exitosamente
  */
 router.post(
-	"/",
-	body("subject").isString().notEmpty(),
-	body("participants").isArray().notEmpty(),
+	'/',
+	body('subject').isString().notEmpty(),
+	body('participants').isArray().notEmpty(),
 	requestValidator,
 	group.create,
 );
@@ -212,9 +212,9 @@ router.post(
  *         description: Grupo actualizado exitosamente
  */
 router.put(
-	"/update",
-	body("jid").isString().notEmpty(),
-	body("subject").isString().optional(),
+	'/update',
+	body('jid').isString().notEmpty(),
+	body('subject').isString().optional(),
 	requestValidator,
 	group.update,
 );
@@ -245,7 +245,7 @@ router.put(
  *       200:
  *         description: Grupo eliminado exitosamente
  */
-router.delete("/delete", body("jid").isString().notEmpty(), requestValidator, group.deleteGroup);
+router.delete('/delete', body('jid').isString().notEmpty(), requestValidator, group.deleteGroup);
 
 /**
  * @swagger
@@ -285,10 +285,10 @@ router.delete("/delete", body("jid").isString().notEmpty(), requestValidator, gr
  *         description: Participantes actualizados exitosamente
  */
 router.post(
-	"/participants",
-	body("jid").isString().notEmpty(),
-	body("action").isString().isIn(["add", "remove", "promote", "demote"]).notEmpty(),
-	body("participants").isArray().notEmpty(),
+	'/participants',
+	body('jid').isString().notEmpty(),
+	body('action').isString().isIn(['add', 'remove', 'promote', 'demote']).notEmpty(),
+	body('participants').isArray().notEmpty(),
 	requestValidator,
 	group.updateParticipants,
 );
@@ -325,17 +325,17 @@ router.post(
  *         description: Configuración actualizada exitosamente
  */
 router.post(
-	"/settings",
-	body("jid").isString().notEmpty(),
-	body("settings").isString().notEmpty(),
+	'/settings',
+	body('jid').isString().notEmpty(),
+	body('settings').isString().notEmpty(),
 	requestValidator,
 	group.updateSettings,
 );
 
 router.post(
-	"/member-add-mode",
-	body("jid").isString().notEmpty(),
-	body("mode").isString().isIn(["all_member_add", "admin_add"]).notEmpty(),
+	'/member-add-mode',
+	body('jid').isString().notEmpty(),
+	body('mode').isString().isIn(['all_member_add', 'admin_add']).notEmpty(),
 	requestValidator,
 	group.memberAddMode,
 );
@@ -366,7 +366,7 @@ router.post(
  *       200:
  *         description: Grupo abandonado exitosamente
  */
-router.post("/leave", body("jid").isString().notEmpty(), requestValidator, group.leaveGroup);
+router.post('/leave', body('jid').isString().notEmpty(), requestValidator, group.leaveGroup);
 
 /**
  * @swagger
@@ -399,9 +399,9 @@ router.post("/leave", body("jid").isString().notEmpty(), requestValidator, group
  *         description: Asunto actualizado exitosamente
  */
 router.post(
-	"/update-subject",
-	body("jid").isString().notEmpty(),
-	body("subject").isString().notEmpty(),
+	'/update-subject',
+	body('jid').isString().notEmpty(),
+	body('subject').isString().notEmpty(),
 	requestValidator,
 	group.updateSubject,
 );
@@ -437,9 +437,9 @@ router.post(
  *         description: Descripción actualizada exitosamente
  */
 router.post(
-	"/update-description",
-	body("jid").isString().notEmpty(),
-	body("description").isString().notEmpty(),
+	'/update-description',
+	body('jid').isString().notEmpty(),
+	body('description').isString().notEmpty(),
 	requestValidator,
 	group.updateDescription,
 );

@@ -1,12 +1,12 @@
-import { RequestHandler } from "express";
-import { prisma } from "@/db";
+import type { RequestHandler } from 'express';
+import { prisma } from '@/db';
 
 /**
  * Middleware that only validates the API key without checking the session
  * This is useful for routes that don't require an existing session (like session creation)
  */
 export const apiKeyValidatorKeyOnly: RequestHandler = async (req, res, next) => {
-	const userId = (req.headers["x-user-id"] as string) || req.query.userId || req.body.userId;
+	const userId = (req.headers['x-user-id'] as string) || req.query.userId || req.body.userId;
 
 	// Initialize appData if it doesn't exist
 	if (!req.appData) {
@@ -17,7 +17,7 @@ export const apiKeyValidatorKeyOnly: RequestHandler = async (req, res, next) => 
 	return next();
 };
 
-const sessionCache = new Map<string, { userId: string, expires: number }>();
+const sessionCache = new Map<string, { userId: string; expires: number }>();
 const SESSION_CACHE_TTL = 60 * 1000; // 1 minuto de caché
 
 /**
@@ -26,10 +26,10 @@ const SESSION_CACHE_TTL = 60 * 1000; // 1 minuto de caché
  */
 export const apiKeyValidator: RequestHandler = async (req, res, next) => {
 	const sessionId =
-		(req.headers["x-session-id"] as string) || req.query.sessionId || req.body.sessionId;
+		(req.headers['x-session-id'] as string) || req.query.sessionId || req.body.sessionId;
 
 	if (!sessionId) {
-		return res.status(400).json({ error: "Session ID is required" });
+		return res.status(400).json({ error: 'Session ID is required' });
 	}
 
 	// Initialize appData if it doesn't exist
@@ -58,7 +58,7 @@ export const apiKeyValidator: RequestHandler = async (req, res, next) => {
 	// Guardar en caché
 	sessionCache.set(sessionId, {
 		userId: userSession.userId,
-		expires: Date.now() + SESSION_CACHE_TTL
+		expires: Date.now() + SESSION_CACHE_TTL,
 	});
 
 	req.appData.userId = userSession.userId;

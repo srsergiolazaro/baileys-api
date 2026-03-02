@@ -1,6 +1,6 @@
-import type { BaileysEventEmitter } from "baileys";
-import { logger } from "@/shared";
-import * as handlers from "./handlers";
+import type { BaileysEventEmitter } from 'baileys';
+import { logger } from '@/shared';
+import * as handlers from './handlers';
 
 export class Store {
 	private readonly chatHandler;
@@ -21,23 +21,23 @@ export class Store {
 		// 🚀 PATRÓN SOTA: Procesamiento por lotes (Bundled Processing)
 		// Consolidar eventos de mensajes para evitar condiciones de carrera
 		(event as any).process(async (events: any) => {
-			if (events["messaging-history.set"]) {
-				await this.messageHandler.set(events["messaging-history.set"]);
+			if (events['messaging-history.set']) {
+				await this.messageHandler.set(events['messaging-history.set']);
 			}
-			if (events["messages.upsert"]) {
-				await this.messageHandler.upsert(events["messages.upsert"]);
+			if (events['messages.upsert']) {
+				await this.messageHandler.upsert(events['messages.upsert']);
 			}
-			if (events["messages.update"]) {
-				await this.messageHandler.update(events["messages.update"]);
+			if (events['messages.update']) {
+				await this.messageHandler.update(events['messages.update']);
 			}
-			if (events["messages.delete"]) {
-				await this.messageHandler.del(events["messages.delete"]);
+			if (events['messages.delete']) {
+				await this.messageHandler.del(events['messages.delete']);
 			}
-			if (events["message-receipt.update"]) {
-				await this.messageHandler.updateReceipt(events["message-receipt.update"]);
+			if (events['message-receipt.update']) {
+				await this.messageHandler.updateReceipt(events['message-receipt.update']);
 			}
-			if (events["messages.reaction"]) {
-				await this.messageHandler.updateReaction(events["messages.reaction"]);
+			if (events['messages.reaction']) {
+				await this.messageHandler.updateReaction(events['messages.reaction']);
 			}
 
 			// 🚀 SOTA: Backpressure Management (Memory-Aware)
@@ -63,16 +63,22 @@ export class Store {
 		const heapUsedPercent = usage.heapUsed / usage.heapTotal;
 
 		if (heapUsedPercent > this.MEMORY_THRESHOLD && !this.isPaused) {
-			if (typeof event.ws?.pause === "function") {
+			if (typeof event.ws?.pause === 'function') {
 				event.ws.pause();
 				this.isPaused = true;
-				logger.warn({ sessionId: this.sessionId, heapUsedPercent }, "⚠️ SOTA: Backpressure activated - Pausing WebSocket");
+				logger.warn(
+					{ sessionId: this.sessionId, heapUsedPercent },
+					'⚠️ SOTA: Backpressure activated - Pausing WebSocket',
+				);
 			}
-		} else if (heapUsedPercent < (this.MEMORY_THRESHOLD * 0.7) && this.isPaused) {
-			if (typeof event.ws?.resume === "function") {
+		} else if (heapUsedPercent < this.MEMORY_THRESHOLD * 0.7 && this.isPaused) {
+			if (typeof event.ws?.resume === 'function') {
 				event.ws.resume();
 				this.isPaused = false;
-				logger.info({ sessionId: this.sessionId, heapUsedPercent }, "✅ SOTA: Backpressure deactivated - Resuming WebSocket");
+				logger.info(
+					{ sessionId: this.sessionId, heapUsedPercent },
+					'✅ SOTA: Backpressure deactivated - Resuming WebSocket',
+				);
 			}
 		}
 	}

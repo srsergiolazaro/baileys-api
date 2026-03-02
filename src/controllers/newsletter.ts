@@ -1,6 +1,6 @@
-import type { RequestHandler } from "express";
-import { logger } from "@/shared";
-import { getSession } from "@/whatsapp";
+import type { RequestHandler } from 'express';
+import { logger } from '@/shared';
+import { getSession } from '@/whatsapp';
 
 export const create: RequestHandler = async (req, res) => {
 	try {
@@ -15,7 +15,7 @@ export const create: RequestHandler = async (req, res) => {
 			data: newsletter,
 		});
 	} catch (e) {
-		const message = "An error occurred during newsletter creation";
+		const message = 'An error occurred during newsletter creation';
 		logger.error(e, message);
 		res.status(500).json({ error: message });
 	}
@@ -27,14 +27,14 @@ export const metadata: RequestHandler = async (req, res) => {
 		const { jid } = req.body as { jid: string };
 		const session = getSession(sessionId)!;
 
-		const meta = await session.newsletterMetadata("jid", jid);
+		const meta = await session.newsletterMetadata('jid', jid);
 
 		res.status(200).json({
 			success: true,
 			data: meta,
 		});
 	} catch (e) {
-		const message = "An error occurred fetching newsletter metadata";
+		const message = 'An error occurred fetching newsletter metadata';
 		logger.error(e, message);
 		res.status(500).json({ error: message });
 	}
@@ -50,10 +50,10 @@ export const subscribe: RequestHandler = async (req, res) => {
 
 		res.status(200).json({
 			success: true,
-			message: "Subscribed to newsletter successfully",
+			message: 'Subscribed to newsletter successfully',
 		});
 	} catch (e) {
-		const message = "An error occurred subscribing to newsletter";
+		const message = 'An error occurred subscribing to newsletter';
 		logger.error(e, message);
 		res.status(500).json({ error: message });
 	}
@@ -69,10 +69,10 @@ export const unsubscribe: RequestHandler = async (req, res) => {
 
 		res.status(200).json({
 			success: true,
-			message: "Unsubscribed from newsletter successfully",
+			message: 'Unsubscribed from newsletter successfully',
 		});
 	} catch (e) {
-		const message = "An error occurred unsubscribing from newsletter";
+		const message = 'An error occurred unsubscribing from newsletter';
 		logger.error(e, message);
 		res.status(500).json({ error: message });
 	}
@@ -91,7 +91,7 @@ export const send: RequestHandler = async (req, res) => {
 			data: result,
 		});
 	} catch (e) {
-		const message = "An error occurred sending message to newsletter";
+		const message = 'An error occurred sending message to newsletter';
 		logger.error(e, message);
 		res.status(500).json({ error: message });
 	}

@@ -1,7 +1,7 @@
-import { Router } from "express";
-import { product } from "@/controllers";
-import requestValidator from "@/middlewares/request-validator";
-import { body } from "express-validator";
+import { Router } from 'express';
+import { product } from '@/controllers';
+import requestValidator from '@/middlewares/request-validator';
+import { body } from 'express-validator';
 
 const router = Router({ mergeParams: true });
 
@@ -101,7 +101,7 @@ const router = Router({ mergeParams: true });
  *             example:
  *               error: "Session not found"
  */
-router.post("/list", body("jid").isString(), requestValidator, product.list);
+router.post('/list', body('jid').isString(), requestValidator, product.list);
 
 /**
  * @swagger
@@ -168,9 +168,9 @@ router.post("/list", body("jid").isString(), requestValidator, product.list);
  *         description: Sesión no encontrada
  */
 router.post(
-	"/collections",
-	body("jid").isString().optional(),
-	body("limit").isNumeric().optional(),
+	'/collections',
+	body('jid').isString().optional(),
+	body('limit').isNumeric().optional(),
 	requestValidator,
 	product.getCollections,
 );
@@ -291,16 +291,16 @@ router.post(
  *         description: Sesión no encontrada
  */
 router.post(
-	"/create",
-	body("name").isString().notEmpty(),
-	body("currency").isString().notEmpty(),
-	body("description").isString().notEmpty(),
-	body("price").isNumeric().notEmpty(),
-	body("url").isString().optional(),
-	body("isHidden").isBoolean().optional(),
-	body("retailerId").isString().optional(),
-	body("originCountryCode").isString().optional(),
-	body("images").isArray().optional(),
+	'/create',
+	body('name').isString().notEmpty(),
+	body('currency').isString().notEmpty(),
+	body('description').isString().notEmpty(),
+	body('price').isNumeric().notEmpty(),
+	body('url').isString().optional(),
+	body('isHidden').isBoolean().optional(),
+	body('retailerId').isString().optional(),
+	body('originCountryCode').isString().optional(),
+	body('images').isArray().optional(),
 	requestValidator,
 	product.create,
 );
@@ -404,17 +404,17 @@ router.post(
  *         description: Sesión o producto no encontrado
  */
 router.put(
-	"/update",
-	body("productId").isString().notEmpty(),
-	body("update").isObject().notEmpty(),
-	body("update.name").isString().notEmpty(),
-	body("update.description").isString().notEmpty(),
-	body("update.price").isNumeric().notEmpty(),
-	body("update.currency").isString().notEmpty(),
-	body("update.url").isString().optional(),
-	body("update.isHidden").isBoolean().optional(),
-	body("update.retailerId").isString().optional(),
-	body("update.images").isArray().optional(),
+	'/update',
+	body('productId').isString().notEmpty(),
+	body('update').isObject().notEmpty(),
+	body('update.name').isString().notEmpty(),
+	body('update.description').isString().notEmpty(),
+	body('update.price').isNumeric().notEmpty(),
+	body('update.currency').isString().notEmpty(),
+	body('update.url').isString().optional(),
+	body('update.isHidden').isBoolean().optional(),
+	body('update.retailerId').isString().optional(),
+	body('update.images').isArray().optional(),
 	requestValidator,
 	product.update,
 );
@@ -467,8 +467,8 @@ router.put(
  *         description: Sesión no encontrada
  */
 router.post(
-	"/delete",
-	body("productIds").isArray().notEmpty(),
+	'/delete',
+	body('productIds').isArray().notEmpty(),
 	requestValidator,
 	product.deleteRoute,
 );
@@ -548,9 +548,9 @@ router.post(
  *         description: Sesión u orden no encontrada
  */
 router.post(
-	"/order-details",
-	body("orderId").isString().notEmpty(),
-	body("token").isString().notEmpty(),
+	'/order-details',
+	body('orderId').isString().notEmpty(),
+	body('token').isString().notEmpty(),
 	requestValidator,
 	product.getOrderDetails,
 );
@@ -672,18 +672,18 @@ router.post(
  *         description: Sesión no encontrada
  */
 router.post(
-	"/send-message",
-	body("jid").isString().notEmpty(),
-	body("product").isObject().notEmpty(),
-	body("product.productImage").isObject().notEmpty(),
-	body("product.productImage.url").isString().notEmpty(),
-	body("product.title").isString().notEmpty(),
-	body("product.description").isString().notEmpty(),
-	body("product.currencyCode").isString().notEmpty(),
-	body("product.priceAmount1000").isNumeric().notEmpty(),
-	body("product.retailerId").isString().optional(),
-	body("product.url").isString().optional(),
-	body("options").isObject().optional(),
+	'/send-message',
+	body('jid').isString().notEmpty(),
+	body('product').isObject().notEmpty(),
+	body('product.productImage').isObject().notEmpty(),
+	body('product.productImage.url').isString().notEmpty(),
+	body('product.title').isString().notEmpty(),
+	body('product.description').isString().notEmpty(),
+	body('product.currencyCode').isString().notEmpty(),
+	body('product.priceAmount1000').isNumeric().notEmpty(),
+	body('product.retailerId').isString().optional(),
+	body('product.url').isString().optional(),
+	body('options').isObject().optional(),
 	requestValidator,
 	product.sendProductMessage,
 );
@@ -873,14 +873,14 @@ router.post(
  *               error: "An error occurred while updating business profile"
  */
 router.put(
-	"/business-profile",
-	body("address").isString().optional(),
-	body("email").isEmail().optional(),
-	body("description").isString().optional(),
-	body("websites").isArray().optional(),
-	body("hours").isObject().optional(),
-	body("hours.timezone").isString().optional(),
-	body("hours.days").isArray().optional(),
+	'/business-profile',
+	body('address').isString().optional(),
+	body('email').isEmail().optional(),
+	body('description').isString().optional(),
+	body('websites').isArray().optional(),
+	body('hours').isObject().optional(),
+	body('hours.timezone').isString().optional(),
+	body('hours.days').isArray().optional(),
 	requestValidator,
 	product.updateBusinessProfile,
 );
@@ -953,8 +953,8 @@ router.put(
  *               error: "An error occurred while updating cover photo"
  */
 router.put(
-	"/cover-photo",
-	body("photo").isString().notEmpty(),
+	'/cover-photo',
+	body('photo').isString().notEmpty(),
 	requestValidator,
 	product.updateCoverPhoto,
 );
@@ -1015,8 +1015,8 @@ router.put(
  *               error: "An error occurred while removing cover photo"
  */
 router.delete(
-	"/cover-photo",
-	body("id").isString().notEmpty(),
+	'/cover-photo',
+	body('id').isString().notEmpty(),
 	requestValidator,
 	product.removeCoverPhoto,
 );

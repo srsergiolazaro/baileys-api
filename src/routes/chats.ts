@@ -1,7 +1,7 @@
-import { Router } from "express";
-import { query, body } from "express-validator";
-import { chat } from "../controllers";
-import requestValidator from "@/middlewares/request-validator";
+import { Router } from 'express';
+import { query, body } from 'express-validator';
+import { chat } from '../controllers';
+import requestValidator from '@/middlewares/request-validator';
 
 const router = Router({ mergeParams: true });
 
@@ -31,9 +31,9 @@ const router = Router({ mergeParams: true });
  *         description: Lista de chats obtenida exitosamente
  */
 router.get(
-	"/",
-	query("cursor").isNumeric().optional(),
-	query("limit").isNumeric().optional(),
+	'/',
+	query('cursor').isNumeric().optional(),
+	query('limit').isNumeric().optional(),
 	requestValidator,
 	chat.list,
 );
@@ -72,9 +72,9 @@ router.get(
  *         description: Chat no encontrado
  */
 router.get(
-	"/:jid",
-	query("cursor").isNumeric().optional(),
-	query("limit").isNumeric().optional(),
+	'/:jid',
+	query('cursor').isNumeric().optional(),
+	query('limit').isNumeric().optional(),
 	requestValidator,
 	chat.find,
 );
@@ -110,9 +110,9 @@ router.get(
  *         description: Chat silenciado exitosamente
  */
 router.post(
-	"/mute",
-	body("jid").isString().notEmpty(),
-	body("duration").isNumeric().notEmpty(),
+	'/mute',
+	body('jid').isString().notEmpty(),
+	body('duration').isNumeric().notEmpty(),
 	requestValidator,
 	chat.mute,
 );
@@ -150,9 +150,9 @@ router.post(
  *         description: Mensajes marcados como leídos exitosamente
  */
 router.post(
-	"/read",
-	body("jid").isString().notEmpty(),
-	body("messageIds").isArray().notEmpty(),
+	'/read',
+	body('jid').isString().notEmpty(),
+	body('messageIds').isArray().notEmpty(),
 	requestValidator,
 	chat.markRead,
 );
@@ -187,9 +187,9 @@ router.post(
  *         description: Configuración actualizada exitosamente
  */
 router.post(
-	"/disappearing",
-	body("jid").isString().notEmpty(),
-	body("duration").isNumeric().optional(),
+	'/disappearing',
+	body('jid').isString().notEmpty(),
+	body('duration').isNumeric().optional(),
 	requestValidator,
 	chat.setDisappearing,
 );

@@ -1,22 +1,22 @@
-import { prisma } from "@/db";
-import type { ProductBase, ProductUpdate, WAMediaUpload } from "baileys";
-import type { RequestHandler } from "express";
-import { logger } from "@/shared";
-import { getSession, jidExists } from "@/whatsapp";
+import { prisma } from '@/db';
+import type { ProductBase, ProductUpdate, WAMediaUpload } from 'baileys';
+import type { RequestHandler } from 'express';
+import { logger } from '@/shared';
+import { getSession, jidExists } from '@/whatsapp';
 
 // Tipos para el perfil de negocio (basados en Baileys Types/Bussines.d.ts)
-type DayOfWeekBusiness = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
+type DayOfWeekBusiness = 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat';
 
 type HoursDay =
 	| {
 			day: DayOfWeekBusiness;
-			mode: "specific_hours";
+			mode: 'specific_hours';
 			openTimeInMinutes: string;
 			closeTimeInMinutes: string;
 	  }
 	| {
 			day: DayOfWeekBusiness;
-			mode: "open_24h" | "appointment_only";
+			mode: 'open_24h' | 'appointment_only';
 	  };
 
 interface UpdateBusinessProfileProps {
@@ -37,16 +37,16 @@ export const list: RequestHandler = async (req, res) => {
 		const session = getSession(req.appData.sessionId);
 
 		if (!session) {
-			return res.status(404).json({ error: "Session not found" });
+			return res.status(404).json({ error: 'Session not found' });
 		}
 
 		const { exists, formatJid } = await jidExists(session, jid);
-		if (!exists) return res.status(400).json({ error: "JID does not exist" });
+		if (!exists) return res.status(400).json({ error: 'JID does not exist' });
 
 		const products = await session.getCatalog({ jid: formatJid });
 		return res.status(200).json(products);
 	} catch (error) {
-		const message = "An error occurred during product list";
+		const message = 'An error occurred during product list';
 		logger.error(error, message);
 		return res.status(500).json({ error: message });
 	}
@@ -58,19 +58,19 @@ export const getCollections: RequestHandler = async (req, res) => {
 		const session = getSession(req.appData.sessionId);
 
 		if (!session) {
-			return res.status(404).json({ error: "Session not found" });
+			return res.status(404).json({ error: 'Session not found' });
 		}
 
 		// Verificar JID si se proporciona
 		if (jid) {
 			const { exists } = await jidExists(session, jid);
-			if (!exists) return res.status(400).json({ error: "JID does not exist" });
+			if (!exists) return res.status(400).json({ error: 'JID does not exist' });
 		}
 
 		const collections = await session.getCollections(jid, limit);
 		return res.status(200).json(collections);
 	} catch (error) {
-		const message = "An error occurred during collection fetch";
+		const message = 'An error occurred during collection fetch';
 		logger.error(error, message);
 		return res.status(500).json({ error: message });
 	}
@@ -86,7 +86,7 @@ export const create: RequestHandler = async (req, res) => {
 		const session = getSession(req.appData.sessionId);
 
 		if (!session) {
-			return res.status(404).json({ error: "Session not found" });
+			return res.status(404).json({ error: 'Session not found' });
 		}
 
 		const productRes = await session.productCreate(product);
@@ -114,9 +114,9 @@ export const create: RequestHandler = async (req, res) => {
 			},
 		});
 
-		return res.status(200).json({ message: "Product created", productRes, savedProduct });
+		return res.status(200).json({ message: 'Product created', productRes, savedProduct });
 	} catch (error) {
-		const message = "An error occurred during product creation";
+		const message = 'An error occurred during product creation';
 		logger.error(error, message);
 		return res.status(500).json({ error, message });
 	}
@@ -128,7 +128,7 @@ export const deleteRoute: RequestHandler = async (req, res) => {
 		const session = getSession(req.appData.sessionId);
 
 		if (!session) {
-			return res.status(404).json({ error: "Session not found" });
+			return res.status(404).json({ error: 'Session not found' });
 		}
 
 		const { deleted } = await session.productDelete(whatsappIds);
@@ -161,7 +161,7 @@ export const deleteRoute: RequestHandler = async (req, res) => {
 
 		return res.status(200).json({ message: `${deleted} products deleted` });
 	} catch (error) {
-		const message = "An error occurred during product deletion";
+		const message = 'An error occurred during product deletion';
 		logger.error(error, message);
 		return res.status(500).json({ error: message });
 	}
@@ -173,7 +173,7 @@ export const update: RequestHandler = async (req, res) => {
 		const session = getSession(req.appData.sessionId);
 
 		if (!session) {
-			return res.status(404).json({ error: "Session not found" });
+			return res.status(404).json({ error: 'Session not found' });
 		}
 
 		await session.productUpdate(productId, update);
@@ -200,7 +200,7 @@ export const update: RequestHandler = async (req, res) => {
 
 		return res.status(200).json(updatedProduct);
 	} catch (error) {
-		const message = "An error occurred during product update";
+		const message = 'An error occurred during product update';
 		logger.error(error, message);
 		return res.status(500).json({ error: message });
 	}
@@ -212,13 +212,13 @@ export const getOrderDetails: RequestHandler = async (req, res) => {
 		const session = getSession(req.appData.sessionId);
 
 		if (!session) {
-			return res.status(404).json({ error: "Session not found" });
+			return res.status(404).json({ error: 'Session not found' });
 		}
 
 		const orderDetails = await session.getOrderDetails(orderId, token);
 		return res.status(200).json(orderDetails);
 	} catch (error) {
-		const message = "An error occurred while fetching order details";
+		const message = 'An error occurred while fetching order details';
 		logger.error(error, message);
 		return res.status(500).json({ error: message });
 	}
@@ -234,16 +234,16 @@ export const sendProductMessage: RequestHandler = async (req, res) => {
 		const session = getSession(req.appData.sessionId);
 
 		if (!session) {
-			return res.status(404).json({ error: "Session not found" });
+			return res.status(404).json({ error: 'Session not found' });
 		}
 
 		const { exists, formatJid } = await jidExists(session, jid);
-		if (!exists) return res.status(400).json({ error: "JID does not exist" });
+		if (!exists) return res.status(400).json({ error: 'JID does not exist' });
 
 		const message = await session.sendMessage(formatJid, product, options);
-		return res.status(200).json({ message: "Product message sent", details: message });
+		return res.status(200).json({ message: 'Product message sent', details: message });
 	} catch (error) {
-		const message = "An error occurred while sending product message";
+		const message = 'An error occurred while sending product message';
 		logger.error(error, message);
 		return res.status(500).json({ error: message });
 	}
@@ -257,13 +257,13 @@ export const updateBusinessProfile: RequestHandler = async (req, res) => {
 		const session = getSession(req.appData.sessionId);
 
 		if (!session) {
-			return res.status(404).json({ error: "Session not found" });
+			return res.status(404).json({ error: 'Session not found' });
 		}
 
 		const result = await session.updateBussinesProfile(profileData);
-		return res.status(200).json({ message: "Business profile updated", result });
+		return res.status(200).json({ message: 'Business profile updated', result });
 	} catch (error) {
-		const message = "An error occurred while updating business profile";
+		const message = 'An error occurred while updating business profile';
 		logger.error(error, message);
 		return res.status(500).json({ error: message });
 	}
@@ -275,13 +275,13 @@ export const updateCoverPhoto: RequestHandler = async (req, res) => {
 		const session = getSession(req.appData.sessionId);
 
 		if (!session) {
-			return res.status(404).json({ error: "Session not found" });
+			return res.status(404).json({ error: 'Session not found' });
 		}
 
 		const fbid = await session.updateCoverPhoto({ url: photo });
-		return res.status(200).json({ message: "Cover photo updated", fbid });
+		return res.status(200).json({ message: 'Cover photo updated', fbid });
 	} catch (error) {
-		const message = "An error occurred while updating cover photo";
+		const message = 'An error occurred while updating cover photo';
 		logger.error(error, message);
 		return res.status(500).json({ error: message });
 	}
@@ -293,13 +293,13 @@ export const removeCoverPhoto: RequestHandler = async (req, res) => {
 		const session = getSession(req.appData.sessionId);
 
 		if (!session) {
-			return res.status(404).json({ error: "Session not found" });
+			return res.status(404).json({ error: 'Session not found' });
 		}
 
 		await session.removeCoverPhoto(id);
-		return res.status(200).json({ message: "Cover photo removed" });
+		return res.status(200).json({ message: 'Cover photo removed' });
 	} catch (error) {
-		const message = "An error occurred while removing cover photo";
+		const message = 'An error occurred while removing cover photo';
 		logger.error(error, message);
 		return res.status(500).json({ error: message });
 	}

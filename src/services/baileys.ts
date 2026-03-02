@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from "uuid";
+import { v4 as uuidv4 } from 'uuid';
 
 import makeWASocket, {
 	DisconnectReason,
@@ -6,20 +6,24 @@ import makeWASocket, {
 	makeCacheableSignalKeyStore,
 	addTransactionCapability,
 	jidDecode,
-	fetchLatestBaileysVersion
-} from "baileys";
-import type { ConnectionState, GroupParticipant, ParticipantAction, SocketConfig, WAMessageContent } from "baileys";
-import { Store, useSession, clearSessionCache } from "../store";
-import { prisma } from "../db";
-import { AccountType } from "@prisma/client";
-import { logger } from "../shared";
-import { Boom } from "@hapi/boom";
-import type { Response } from "express";
-import { toDataURL } from "qrcode";
-import { sessionsMap, setRestartingLock, clearRestartingLock, sessionExists } from "./session";
-import { TelemetryEngine } from "./telemetry";
+	fetchLatestBaileysVersion,
+} from 'baileys';
+import type {
+	ConnectionState,
+	SocketConfig,
+	WAMessageContent,
+} from 'baileys';
+import { Store, useSession, clearSessionCache } from '../store';
+import { prisma } from '../db';
+import { AccountType } from '@prisma/client';
+import { logger } from '../shared';
+import { Boom } from '@hapi/boom';
+import type { Response } from 'express';
+import { toDataURL } from 'qrcode';
+import { sessionsMap, setRestartingLock, clearRestartingLock, sessionExists } from './session';
+import { TelemetryEngine } from './telemetry';
 
-import { handleMessagesUpsert } from "./handlers";
+import { handleMessagesUpsert } from './handlers';
 
 // Map para rastrear motores de telemetría por sesión
 const telemetryEngines = new Map<string, TelemetryEngine>();
@@ -57,14 +61,14 @@ async function countPreKeys(sessionId: string): Promise<number> {
 	const result = await prisma.session.count({
 		where: {
 			sessionId,
-			id: { startsWith: "pre-key-" },
+			id: { startsWith: 'pre-key-' },
 		},
 	});
 	return result;
 }
 
 function isConnectionClosedError(error: unknown): error is Boom {
-	if (!error || typeof error !== "object") return false;
+	if (!error || typeof error !== 'object') return false;
 	const boomError = error as Boom;
 	return (
 		Boolean((boomError as Boom)?.isBoom) &&
@@ -102,7 +106,7 @@ export async function createSession(options: createSessionOptions) {
 		SSE = false,
 		readIncomingMessages = false,
 		socketConfig,
-		deviceName = "WhatsApp User",
+		deviceName = 'WhatsApp User',
 		isReconnecting = false,
 	} = options;
 
@@ -110,7 +114,7 @@ export async function createSession(options: createSessionOptions) {
 	// 🛡️ PREVENCIÓN DE SESIONES DUPLICADAS
 	// ============================================================
 	if (sessionExists(sessionId)) {
-		logger.info("createSession: Session already exists, attaching/skipping", { sessionId });
+		logger.info('createSession: Session already exists, attaching/skipping', { sessionId });
 		if (SSE && res) {
 			const session = sessionsMap.get(sessionId);
 			if (session) {
@@ -118,25 +122,25 @@ export async function createSession(options: createSessionOptions) {
 				session.SSE = true;
 				// Enviar mensaje de reconexión exitosa al canal
 				try {
-					res.write(`data: ${JSON.stringify({ sessionId, status: "attached" })}\n\n`);
+					res.write(`data: ${JSON.stringify({ sessionId, status: 'attached' })}\n\n`);
 				} catch (e) {
-					logger.error("Failed to write to new SSE response", { sessionId, error: e });
+					logger.error('Failed to write to new SSE response', { sessionId, error: e });
 				}
 				return { success: true, sessionId, attached: true };
 			}
 		}
 		if (res && !res.headersSent && !SSE) {
-			return res.status(409).json({ error: "Session already exists", sessionId });
+			return res.status(409).json({ error: 'Session already exists', sessionId });
 		}
-		return { error: "Session already exists", sessionId };
+		return { error: 'Session already exists', sessionId };
 	}
 
 	if (!isReconnecting && !setRestartingLock(sessionId)) {
-		logger.warn("createSession: Session is already initializing, skipping", { sessionId });
+		logger.warn('createSession: Session is already initializing, skipping', { sessionId });
 		if (res && !res.headersSent && !SSE) {
-			return res.status(429).json({ error: "Session is already initializing", sessionId });
+			return res.status(429).json({ error: 'Session is already initializing', sessionId });
 		}
-		return { error: "Session is already initializing", sessionId };
+		return { error: 'Session is already initializing', sessionId };
 	}
 
 	// ============================================================
@@ -145,30 +149,29 @@ export async function createSession(options: createSessionOptions) {
 	if (SSE) {
 		try {
 			if (!res || res.writableEnded) {
-				logger.error("SSE habilitado pero no hay response válido", { sessionId });
+				logger.error('SSE habilitado pero no hay response válido', { sessionId });
 				clearRestartingLock(sessionId);
-				return { error: "SSE channel unavailable", sessionId: null };
+				return { error: 'SSE channel unavailable', sessionId: null };
 			}
 
 			// Primer mensaje SSE obligatorio (solo si no es reconexión)
 			if (!isReconnecting) {
 				res.write(`data: ${JSON.stringify({ sessionId })}\n\n`);
-				logger.info("SSE inicial enviado correctamente", { sessionId });
+				logger.info('SSE inicial enviado correctamente', { sessionId });
 			}
-
 		} catch (e) {
-			logger.error("❌ Error inicial SSE. NO se creará la sesión.", {
+			logger.error('❌ Error inicial SSE. NO se creará la sesión.', {
 				sessionId,
 				error: (e as any)?.message,
 			});
 
 			if (res && !res.writableEnded) res.end();
 			clearRestartingLock(sessionId);
-			return { error: "SSE initialization failed", sessionId: null };
+			return { error: 'SSE initialization failed', sessionId: null };
 		}
 	}
 
-	logger.info("createSession: start", {
+	logger.info('createSession: start', {
 		sessionId,
 		userId,
 		SSE,
@@ -194,7 +197,7 @@ export async function createSession(options: createSessionOptions) {
 				id: sessionId,
 				sessionId,
 				userId,
-				status: "authenticating",
+				status: 'authenticating',
 				deviceName: deviceName,
 				createdAt: now,
 				updatedAt: now,
@@ -202,13 +205,13 @@ export async function createSession(options: createSessionOptions) {
 			},
 		});
 	} catch (e) {
-		logger.error("Failed to create initial UserSession", { sessionId, error: e });
+		logger.error('Failed to create initial UserSession', { sessionId, error: e });
 	}
 
 	// ============================================================
 	// �🔥 DESTRUCCIÓN COMPLETA DE SESIÓN
 	// ============================================================
-	let connectionState: Partial<ConnectionState> = { connection: "close" };
+	let connectionState: Partial<ConnectionState> = { connection: 'close' };
 	let socket: any;
 
 	const destroy = async (logout = true) => {
@@ -226,17 +229,19 @@ export async function createSession(options: createSessionOptions) {
 					prisma.webhook.deleteMany({ where: { sessionId } }),
 					prisma.session.deleteMany({ where: { sessionId } }),
 				]);
-				logger.info("Session and data destroyed (logged out)", { session: sessionId });
+				logger.info('Session and data destroyed (logged out)', { session: sessionId });
 			} else {
 				// NO limpiar caché - mantener para reconexión
 				await prisma.userSession.updateMany({
 					where: { sessionId },
-					data: { status: "inactive" },
+					data: { status: 'inactive' },
 				});
-				logger.info("Session marked as inactive (cache preserved for reconnection)", { session: sessionId });
+				logger.info('Session marked as inactive (cache preserved for reconnection)', {
+					session: sessionId,
+				});
 			}
 		} catch (e) {
-			logger.error("Error during session destroy", e);
+			logger.error('Error during session destroy', e);
 		} finally {
 			if (watchdogTimer) {
 				clearTimeout(watchdogTimer);
@@ -250,7 +255,7 @@ export async function createSession(options: createSessionOptions) {
 			}
 
 			if (socket) {
-				logger.info({ sessionId }, "Cleaning up socket listeners for GC");
+				logger.info({ sessionId }, 'Cleaning up socket listeners for GC');
 				socket.ev.removeAllListeners();
 				socket.ws.close();
 			}
@@ -272,12 +277,19 @@ export async function createSession(options: createSessionOptions) {
 		watchdogTimer = setTimeout(async () => {
 			if (!sessionsMap.has(sessionId)) return; // Sesión ya destruida
 
-			logger.warn({ sessionId }, "🐕 Watchdog: Sesión zombie detectada (5 min sin eventos). Reiniciando...");
+			logger.warn(
+				{ sessionId },
+				'🐕 Watchdog: Sesión zombie detectada (5 min sin eventos). Reiniciando...',
+			);
 			if (socket) {
 				try {
-					socket.end(new Boom("Watchdog: No events for 5 minutes", { statusCode: DisconnectReason.connectionLost }));
+					socket.end(
+						new Boom('Watchdog: No events for 5 minutes', {
+							statusCode: DisconnectReason.connectionLost,
+						}),
+					);
 				} catch (e) {
-					logger.error({ sessionId, error: e }, "Failed to end socket via watchdog");
+					logger.error({ sessionId, error: e }, 'Failed to end socket via watchdog');
 				}
 			}
 		}, WATCHDOG_TIMEOUT);
@@ -292,7 +304,7 @@ export async function createSession(options: createSessionOptions) {
 		const restartRequired = code === DisconnectReason.restartRequired;
 		const doNotReconnect = !shouldReconnect(sessionId);
 
-		logger.info("connection.close", {
+		logger.info('connection.close', {
 			sessionId,
 			code,
 			restartRequired,
@@ -302,13 +314,14 @@ export async function createSession(options: createSessionOptions) {
 		});
 
 		if (code === DisconnectReason.loggedOut || doNotReconnect) {
-			const reason = code === DisconnectReason.loggedOut
-				? "logged_out"
-				: `max_retries_reached (${MAX_RECONNECT_RETRIES} attempts)`;
+			const reason =
+				code === DisconnectReason.loggedOut
+					? 'logged_out'
+					: `max_retries_reached (${MAX_RECONNECT_RETRIES} attempts)`;
 			logger.warn(`🛑 Session stopped reconnecting: ${reason}`, {
 				sessionId,
 				code,
-				attempts: retries.get(sessionId) ?? 0
+				attempts: retries.get(sessionId) ?? 0,
 			});
 
 			if (res) {
@@ -317,19 +330,21 @@ export async function createSession(options: createSessionOptions) {
 
 				if (SSE && currentRes && !currentRes.writableEnded) {
 					try {
-						currentRes.write(`data: ${JSON.stringify({
-							connection: "close",
-							sessionId,
-							reason: code === DisconnectReason.loggedOut ? "logged_out" : "max_retries_reached",
-							statusCode: code,
-						})}\n\n`);
+						currentRes.write(
+							`data: ${JSON.stringify({
+								connection: 'close',
+								sessionId,
+								reason: code === DisconnectReason.loggedOut ? 'logged_out' : 'max_retries_reached',
+								statusCode: code,
+							})}\n\n`,
+						);
 						currentRes.end();
 					} catch (e) {
-						logger.error("Failed to send SSE close event", { sessionId, error: e });
+						logger.error('Failed to send SSE close event', { sessionId, error: e });
 					}
 				}
 				if (!SSE && !res.headersSent) {
-					res.status(500).json({ error: "Unable to create session" });
+					res.status(500).json({ error: 'Unable to create session' });
 					res.end();
 				}
 			}
@@ -349,17 +364,14 @@ export async function createSession(options: createSessionOptions) {
 		logger.info(`Reconnecting in ${reconnectDelay}ms...`, {
 			attempts: retries.get(sessionId) ?? 1,
 			sessionId,
-			restartRequired
+			restartRequired,
 		});
 
-		setTimeout(
-			() => {
-				// NO liberamos el lock manualmente aquí, createSession lo hará cuando termine o falle
-				// Solo nos aseguramos de que createSession sepa que es una reconexión legítima
-				createSession({ ...options, sessionId, isReconnecting: true });
-			},
-			reconnectDelay,
-		);
+		setTimeout(() => {
+			// NO liberamos el lock manualmente aquí, createSession lo hará cuando termine o falle
+			// Solo nos aseguramos de que createSession sepa que es una reconexión legítima
+			createSession({ ...options, sessionId, isReconnecting: true });
+		}, reconnectDelay);
 	};
 
 	// ============================================================
@@ -373,8 +385,8 @@ export async function createSession(options: createSessionOptions) {
 				const qr = await toDataURL(connectionState.qr);
 				res.status(200).json({ qr, sessionId });
 			} catch (e) {
-				logger.error("QR generation error", e);
-				res.status(500).json({ error: "QR generation failed" });
+				logger.error('QR generation error', e);
+				res.status(500).json({ error: 'QR generation failed' });
 			}
 		}
 	};
@@ -386,7 +398,7 @@ export async function createSession(options: createSessionOptions) {
 			try {
 				qr = await toDataURL(connectionState.qr);
 			} catch (e) {
-				logger.error("QR error", e);
+				logger.error('QR error', e);
 			}
 		}
 
@@ -398,14 +410,16 @@ export async function createSession(options: createSessionOptions) {
 			if (currentRes && !currentRes.writableEnded) {
 				if (qr && current >= SSE_MAX_QR_GENERATION) {
 					try {
-						currentRes.write(`data: ${JSON.stringify({
-							connection: "close",
-							sessionId,
-							reason: "qr_expired",
-							maxQrReached: true,
-						})}\n\n`);
+						currentRes.write(
+							`data: ${JSON.stringify({
+								connection: 'close',
+								sessionId,
+								reason: 'qr_expired',
+								maxQrReached: true,
+							})}\n\n`,
+						);
 					} catch (e) {
-						logger.error("Failed to send SSE qr_expired event", { sessionId, error: e });
+						logger.error('Failed to send SSE qr_expired event', { sessionId, error: e });
 					}
 				}
 				currentRes.end();
@@ -418,7 +432,7 @@ export async function createSession(options: createSessionOptions) {
 
 		try {
 			currentRes.write(`data: ${JSON.stringify(data)}\n\n`);
-		} catch (e) {
+		} catch {
 			if (currentRes && !currentRes.writableEnded) currentRes.end();
 			// No destruimos, permitimos reconexión SSE
 		}
@@ -432,20 +446,22 @@ export async function createSession(options: createSessionOptions) {
 	try {
 		const { state, saveCreds } = await useSession(sessionId);
 
-
 		// ============================================================
 		// 🚀 OPTIMIZACIÓN 100X: Transactional Signal Store
 		// Previene condiciones de carrera y errores de "Old Counter".
 		// ============================================================
 		const signalStore = addTransactionCapability(state.keys, logger, {
 			maxCommitRetries: 3,
-			delayBetweenTriesMs: 500
+			delayBetweenTriesMs: 500,
 		});
 
 		// 🚀 OBTENER VERSIÓN OFICIAL (DINÁMICA)
 		// Evita el mensaje "The sender may be on an old version of Whatsapp"
 		const { version, isLatest } = await fetchLatestBaileysVersion();
-		logger.info({ sessionId, version: version.join('.'), isLatest }, "Socket using latest WA version");
+		logger.info(
+			{ sessionId, version: version.join('.'), isLatest },
+			'Socket using latest WA version',
+		);
 
 		socket = makeWASocket({
 			version,
@@ -472,13 +488,13 @@ export async function createSession(options: createSessionOptions) {
 				try {
 					const msg = await prisma.message.findFirst({
 						where: { id: key.id!, remoteJid: key.remoteJid!, sessionId },
-						select: { message: true }
+						select: { message: true },
 					});
 					return (msg?.message as any) || undefined;
 				} catch {
 					return undefined;
 				}
-			}
+			},
 		});
 
 		const store = new Store(sessionId, socket.ev);
@@ -489,7 +505,8 @@ export async function createSession(options: createSessionOptions) {
 		// Recomendación del creador: Baileys no tiene throttling nativo.
 		// Implementamos un retraso humano de 1-3 segundos entre mensajes.
 		// ============================================================
-		const messageQueue: { jid: string; content: any; options: any; resolve: any; reject: any }[] = [];
+		const messageQueue: { jid: string; content: any; options: any; resolve: any; reject: any }[] =
+			[];
 		let isProcessingQueue = false;
 
 		const originalSendMessage = socket.sendMessage.bind(socket);
@@ -506,24 +523,27 @@ export async function createSession(options: createSessionOptions) {
 					// ============================================================
 					// 1. Notificar al motor de telemetría la actividad (Despertar modo FOREGROUND)
 					const telEngine = telemetryEngines.get(sessionId);
-					if (telEngine) telEngine.activityUpdate().catch(e => logger.debug("SOTA: Error waking up telemetry", e));
+					if (telEngine)
+						telEngine
+							.activityUpdate()
+							.catch((e) => logger.debug('SOTA: Error waking up telemetry', e));
 
 					// 2. Marcar como "disponible" (si no lo está ya)
-					await socket.sendPresenceUpdate("available");
+					await socket.sendPresenceUpdate('available');
 
 					// 3. Ajuste dinámico de retraso según la cola
 					const isBurst = messageQueue.length > 0; // Si hay más mensajes esperando
 
 					if (!isBurst) {
 						// Si es un solo mensaje, parecemos humanos
-						await socket.sendPresenceUpdate("composing", jid);
+						await socket.sendPresenceUpdate('composing', jid);
 						const typingDelay = Math.floor(Math.random() * (400 - 150 + 1)) + 150; // 0.15s - 0.4s
-						await new Promise(res => setTimeout(res, typingDelay));
-						await socket.sendPresenceUpdate("paused", jid);
+						await new Promise((res) => setTimeout(res, typingDelay));
+						await socket.sendPresenceUpdate('paused', jid);
 					}
 
 					// Usamos setImmediate para asegurar que el envío no bloquee el event loop
-					await new Promise(res => setImmediate(res));
+					await new Promise((res) => setImmediate(res));
 					const result = await originalSendMessage(jid, content, options);
 					resolve(result);
 				} catch (err) {
@@ -534,13 +554,12 @@ export async function createSession(options: createSessionOptions) {
 				if (messageQueue.length === 0) {
 					// Sin prisa, toma 0.2s - 0.5s de respiro
 					const delay = Math.floor(Math.random() * (500 - 200 + 1)) + 200;
-					await new Promise(res => setTimeout(res, delay));
+					await new Promise((res) => setTimeout(res, delay));
 				} else {
 					// Ráfaga / Múltiples mensajes: sin retraso o casi nulo
-					await new Promise(res => setImmediate(res));
+					await new Promise((res) => setImmediate(res));
 				}
 			}
-
 
 			isProcessingQueue = false;
 		};
@@ -562,7 +581,7 @@ export async function createSession(options: createSessionOptions) {
 			}
 		};
 
-		socket.ev.on("creds.update", saveCreds);
+		socket.ev.on('creds.update', saveCreds);
 
 		// Iniciar watchdog y escuchar CUALQUIER evento
 		resetWatchdog();
@@ -574,9 +593,9 @@ export async function createSession(options: createSessionOptions) {
 		// 🆔 EVENTOS DE IDENTIDAD (LID & Contacts)
 		// Según recomendación: Vincular PN con LID para evitar duplicados.
 		// ============================================================
-		socket.ev.on("lid-mapping.update", async (mapping: { pn: string; lid: string }) => {
+		socket.ev.on('lid-mapping.update', async (mapping: { pn: string; lid: string }) => {
 			const { pn, lid } = mapping;
-			logger.info({ pn, lid, sessionId }, "LID mapping received, syncing identity in DB");
+			logger.info({ pn, lid, sessionId }, 'LID mapping received, syncing identity in DB');
 			try {
 				await prisma.$transaction(async (tx) => {
 					// 1. Actualizar la sesión del usuario si el PN o LID coincide con la sesión actual
@@ -590,8 +609,8 @@ export async function createSession(options: createSessionOptions) {
 								data: {
 									phoneNumber: pn,
 									// Podríamos añadir un campo 'lid' a UserSession si fuera necesario en el futuro
-									updatedAt: new Date()
-								}
+									updatedAt: new Date(),
+								},
 							});
 						}
 					}
@@ -601,67 +620,57 @@ export async function createSession(options: createSessionOptions) {
 					await tx.contact.updateMany({
 						where: {
 							sessionId,
-							OR: [
-								{ id: pn },
-								{ id: lid },
-								{ phoneNumber: pn },
-								{ lid: lid }
-							]
+							OR: [{ id: pn }, { id: lid }, { phoneNumber: pn }, { lid: lid }],
 						},
-						data: { phoneNumber: pn, lid: lid }
+						data: { phoneNumber: pn, lid: lid },
 					});
 
 					// 3. Vincular Chats: Lo mismo para la tabla de chats
 					await tx.chat.updateMany({
 						where: {
 							sessionId,
-							OR: [
-								{ id: pn },
-								{ id: lid },
-								{ pnJid: pn },
-								{ lidJid: lid }
-							]
+							OR: [{ id: pn }, { id: lid }, { pnJid: pn }, { lidJid: lid }],
 						},
-						data: { pnJid: pn, lidJid: lid }
+						data: { pnJid: pn, lidJid: lid },
 					});
 				});
 			} catch (e) {
-				logger.error("Failed to sync identity mapping", { sessionId, error: e });
+				logger.error('Failed to sync identity mapping', { sessionId, error: e });
 			}
 		});
 
-		socket.ev.on("contacts.upsert", async (contacts: any[]) => {
+		socket.ev.on('contacts.upsert', async (contacts: any[]) => {
 			try {
-				const validContacts = contacts.filter(c => c.id);
+				const validContacts = contacts.filter((c) => c.id);
 				if (validContacts.length === 0) return;
 
-				logger.info({ sessionId, count: validContacts.length }, "Bulk syncing contacts");
+				logger.info({ sessionId, count: validContacts.length }, 'Bulk syncing contacts');
 
 				await prisma.$transaction(
-					validContacts.map(contact =>
+					validContacts.map((contact) =>
 						prisma.contact.upsert({
 							where: { sessionId_id: { sessionId, id: contact.id } },
 							update: {
 								name: contact.name || contact.notify || contact.verifiedName,
 								phoneNumber: contact.phoneNumber,
-								lid: contact.lid
+								lid: contact.lid,
 							},
 							create: {
 								sessionId,
 								id: contact.id,
 								name: contact.name || contact.notify || contact.verifiedName,
 								phoneNumber: contact.phoneNumber,
-								lid: contact.lid
-							}
-						})
-					)
+								lid: contact.lid,
+							},
+						}),
+					),
 				);
 			} catch (e) {
-				logger.error("Failed to bulk sync contacts", { sessionId, error: e });
+				logger.error('Failed to bulk sync contacts', { sessionId, error: e });
 			}
 		});
 
-		socket.ev.on("connection.update", async (update: Partial<ConnectionState>) => {
+		socket.ev.on('connection.update', async (update: Partial<ConnectionState>) => {
 			connectionState = { ...connectionState, ...update };
 			const { connection, lastDisconnect } = update;
 			const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
@@ -669,8 +678,8 @@ export async function createSession(options: createSessionOptions) {
 
 			// Solo logueamos como INFO si la conexión está abierta o el estado es importante
 			// Si es un error y estamos en los primeros reintentos, lo bajamos a DEBUG para reducir ruido
-			if (connection === "open") {
-				logger.info("connection.update: open", { sessionId, statusCode });
+			if (connection === 'open') {
+				logger.info('connection.update: open', { sessionId, statusCode });
 
 				// ============================================================
 				// 🚀 SOTA: Iniciar Motor de Telemetría al conectar
@@ -680,45 +689,52 @@ export async function createSession(options: createSessionOptions) {
 					engine.start();
 					telemetryEngines.set(sessionId, engine);
 				}
-			} else if (connection === "close") {
+			} else if (connection === 'close') {
 				// El manejo detallado se hace en handleConnectionClose
 			} else if (update.qr) {
-				logger.debug("connection.update: qr received", { sessionId });
+				logger.debug('connection.update: qr received', { sessionId });
 				// Actualizar estado a "authenticating" en BD si realmente se está emitiendo un QR
 				try {
 					await prisma.userSession.update({
 						where: { sessionId },
-						data: { status: "authenticating", updatedAt: new Date() },
+						data: { status: 'authenticating', updatedAt: new Date() },
 					});
 				} catch (e) {
-					logger.error("Failed to update status to authenticating on QR", { sessionId, error: e });
+					logger.error('Failed to update status to authenticating on QR', { sessionId, error: e });
 				}
 			} else if (lastDisconnect?.error) {
 				// Solo alertamos si ya llevamos un par de intentos fallidos
 				if (attemptCount > 2) {
-					logger.warn("connection.update: connection errored", { sessionId, statusCode, attempts: attemptCount });
+					logger.warn('connection.update: connection errored', {
+						sessionId,
+						statusCode,
+						attempts: attemptCount,
+					});
 				} else {
-					logger.debug("connection.update: transient connection error", { sessionId, statusCode });
+					logger.debug('connection.update: transient connection error', { sessionId, statusCode });
 				}
 			}
 
-			if (connection === "open") {
+			if (connection === 'open') {
 				retries.delete(sessionId);
 				SSEQRGenerations.delete(sessionId);
 
 				// Verificar y subir pre-keys solo si realmente es necesario
 				try {
 					const preKeyCount = await countPreKeys(sessionId);
-					logger.info("Current pre-key count", { sessionId, preKeyCount });
+					logger.info('Current pre-key count', { sessionId, preKeyCount });
 
 					if (preKeyCount < PRE_KEY_SUFFICIENT_THRESHOLD) {
 						await socket.uploadPreKeysToServerIfRequired();
-						logger.info("Pre-keys uploaded", { sessionId, previousCount: preKeyCount });
+						logger.info('Pre-keys uploaded', { sessionId, previousCount: preKeyCount });
 					} else {
-						logger.info("Skipping pre-key upload, sufficient keys exist", { sessionId, preKeyCount });
+						logger.info('Skipping pre-key upload, sufficient keys exist', {
+							sessionId,
+							preKeyCount,
+						});
 					}
 				} catch (e) {
-					logger.error("Failed to manage pre-keys", { sessionId, error: e });
+					logger.error('Failed to manage pre-keys', { sessionId, error: e });
 				}
 
 				// ============================================================
@@ -741,8 +757,8 @@ export async function createSession(options: createSessionOptions) {
 				if (me?.id) {
 					// 1. Obtener AccountType de las credenciales (si Baileys lo detectó en el payload inicial)
 					// 0 = Personal, 1 = Business (según especificación de WA)
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					const creds = (socket.authState.creds as any);
+
+					const creds = socket.authState.creds as any;
 					const credsAccountType = creds.account?.accountType;
 
 					try {
@@ -753,24 +769,37 @@ export async function createSession(options: createSessionOptions) {
 						if (profile && (profile.category || profile.description || profile.address)) {
 							isBusiness = true;
 							accountType = AccountType.business;
-							logger.info("Business account confirmed via profile content", { sessionId, category: profile.category });
+							logger.info('Business account confirmed via profile content', {
+								sessionId,
+								category: profile.category,
+							});
 						} else if (credsAccountType !== undefined) {
 							// 3. Fallback al AccountType si el perfil falló o no tiene datos
 							isBusiness = credsAccountType === 1; // 1 es Business
 							if (isBusiness) accountType = AccountType.business;
-							logger.info("Business status confirmed via creds accountType", { sessionId, isBusiness, credsAccountType });
+							logger.info('Business status confirmed via creds accountType', {
+								sessionId,
+								isBusiness,
+								credsAccountType,
+							});
 						}
-					} catch (e) {
+					} catch {
 						// 4. Si falla la consulta IQ, confiamos únicamente en el AccountType de las credenciales
 						if (credsAccountType !== undefined) {
 							isBusiness = credsAccountType === 1;
 							if (isBusiness) accountType = AccountType.business;
-							logger.debug("Profile query failed, using creds accountType", { sessionId, isBusiness, credsAccountType });
+							logger.debug('Profile query failed, using creds accountType', {
+								sessionId,
+								isBusiness,
+								credsAccountType,
+							});
 						} else {
 							// Sin indicadores claros, por defecto es personal para evitar falsos positivos
 							isBusiness = false;
 							accountType = AccountType.personal;
-							logger.debug("Business detection inconclusive, defaulting to personal", { sessionId });
+							logger.debug('Business detection inconclusive, defaulting to personal', {
+								sessionId,
+							});
 						}
 					}
 				}
@@ -779,7 +808,7 @@ export async function createSession(options: createSessionOptions) {
 					await prisma.userSession.upsert({
 						where: { sessionId },
 						update: {
-							status: "active",
+							status: 'active',
 							lastActive: now,
 							updatedAt: now,
 							deviceName: userName,
@@ -792,7 +821,7 @@ export async function createSession(options: createSessionOptions) {
 							id: sessionId,
 							sessionId,
 							userId,
-							status: "active",
+							status: 'active',
 							deviceName: userName,
 							phoneNumber,
 							accountType,
@@ -803,16 +832,19 @@ export async function createSession(options: createSessionOptions) {
 							data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
 						},
 					});
-					logger.info("UserSession synced to database on connection open", { sessionId, phoneNumber, userName });
+					logger.info('UserSession synced to database on connection open', {
+						sessionId,
+						phoneNumber,
+						userName,
+					});
 
 					// ============================================================
 					// 🧹 LIMPIEZA DE LLAVES (Cleanup)
 					// Según recomendación del creador para evitar bloat en DB
 					// ============================================================
 					performSessionCleanup(sessionId, socket);
-
 				} catch (e) {
-					logger.error("Failed to sync UserSession on connection open", { sessionId, error: e });
+					logger.error('Failed to sync UserSession on connection open', { sessionId, error: e });
 				}
 
 				const session = sessionsMap.get(sessionId);
@@ -821,10 +853,12 @@ export async function createSession(options: createSessionOptions) {
 				if (currentRes && !currentRes.writableEnded) {
 					if (SSE) {
 						try {
-							currentRes.write(`data: ${JSON.stringify({ connection: "open", sessionId, phoneNumber, deviceName: userName, accountType, isBusiness })}\n\n`);
+							currentRes.write(
+								`data: ${JSON.stringify({ connection: 'open', sessionId, phoneNumber, deviceName: userName, accountType, isBusiness })}\n\n`,
+							);
 							currentRes.end();
 						} catch (e) {
-							logger.error("Failed to send SSE open event", { sessionId, error: e });
+							logger.error('Failed to send SSE open event', { sessionId, error: e });
 						}
 					} else {
 						currentRes.end();
@@ -835,7 +869,7 @@ export async function createSession(options: createSessionOptions) {
 				clearRestartingLock(sessionId); // Carga exitosa, liberamos lock
 			}
 
-			if (connection === "close") {
+			if (connection === 'close') {
 				handleConnectionClose();
 			}
 
@@ -843,29 +877,31 @@ export async function createSession(options: createSessionOptions) {
 		});
 
 		// Webhook: enviar mensajes entrantes a los webhooks configurados
-		socket.ev.on("messages.upsert", (m: { messages: any[]; type: "notify" | "append" }) => {
+		socket.ev.on('messages.upsert', (m: { messages: any[]; type: 'notify' | 'append' }) => {
 			handleMessagesUpsert(socket, m, sessionId, readIncomingMessages);
 		});
 
 		// Sesión inicializada correctamente en memoria
-		logger.info("createSession: session initialized in memory", { sessionId });
-
+		logger.info('createSession: session initialized in memory', { sessionId });
 	} catch (error) {
-		logger.error("createSession: Critical error during initialization", { sessionId, error });
+		logger.error('createSession: Critical error during initialization', { sessionId, error });
 		clearRestartingLock(sessionId);
 
 		// 🛡️ Fail-safe: Si falla críticamente, asegurar que no quede como "active" o "authenticating"
 		try {
 			await prisma.userSession.update({
 				where: { sessionId },
-				data: { status: "inactive" },
+				data: { status: 'inactive' },
 			});
 		} catch (dbErr) {
-			logger.error("Failed to mark session as inactive after critical error", { sessionId, error: dbErr });
+			logger.error('Failed to mark session as inactive after critical error', {
+				sessionId,
+				error: dbErr,
+			});
 		}
 
 		if (res && !res.headersSent && !SSE) {
-			res.status(500).json({ error: "Failed to initialize session", sessionId });
+			res.status(500).json({ error: 'Failed to initialize session', sessionId });
 		}
 	}
 }
@@ -885,17 +921,16 @@ async function performSessionCleanup(sessionId: string, socket: any) {
 			const maxToDelete = cutoff - BUFFER;
 			const keysToDelete = Array.from({ length: maxToDelete }, (_, i) => (i + 1).toString());
 
-			logger.info({ sessionId, count: keysToDelete.length }, "Starting pre-key cleanup");
+			logger.info({ sessionId, count: keysToDelete.length }, 'Starting pre-key cleanup');
 
 			// Establecemos las llaves a null para que el store las borre de la DB
 			await socket.authState.keys.set({
-				"pre-key": Object.fromEntries(keysToDelete.map((id) => [id, null])),
+				'pre-key': Object.fromEntries(keysToDelete.map((id) => [id, null])),
 			});
 
-			logger.info({ sessionId, count: keysToDelete.length }, "Pre-key cleanup completed");
+			logger.info({ sessionId, count: keysToDelete.length }, 'Pre-key cleanup completed');
 		}
 	} catch (e) {
-		logger.error("Failed to perform session cleanup", { sessionId, error: e });
+		logger.error('Failed to perform session cleanup', { sessionId, error: e });
 	}
 }
-

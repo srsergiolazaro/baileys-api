@@ -1,8 +1,8 @@
-import { Router } from "express";
-import { message } from "@/controllers";
-import requestValidator from "@/middlewares/request-validator";
-import { query, body } from "express-validator";
-import multer from "multer";
+import { Router } from 'express';
+import { message } from '@/controllers';
+import requestValidator from '@/middlewares/request-validator';
+import { query, body } from 'express-validator';
+import multer from 'multer';
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
@@ -35,13 +35,12 @@ const router = Router({ mergeParams: true });
  *         description: Lista de mensajes obtenida exitosamente
  */
 router.get(
-	"/",
-	query("cursor").isNumeric().optional(),
-	query("limit").isNumeric().optional(),
+	'/',
+	query('cursor').isNumeric().optional(),
+	query('limit').isNumeric().optional(),
 	requestValidator,
 	message.list,
 );
-
 
 /**
  * @swagger
@@ -84,7 +83,7 @@ router.get(
  *       200:
  *         description: Mensaje enviado exitosamente
  */
-router.post("/send", upload.single("file"), requestValidator, message.send);
+router.post('/send', upload.single('file'), requestValidator, message.send);
 
 /**
  * @swagger
@@ -126,7 +125,7 @@ router.post("/send", upload.single("file"), requestValidator, message.send);
  *       200:
  *         description: Mensajes enviados exitosamente
  */
-router.post("/send/bulk", body().isArray().notEmpty(), requestValidator, message.sendBulk);
+router.post('/send/bulk', body().isArray().notEmpty(), requestValidator, message.sendBulk);
 
 /**
  * @swagger
@@ -154,6 +153,6 @@ router.post("/send/bulk", body().isArray().notEmpty(), requestValidator, message
  *       200:
  *         description: Archivo descargado exitosamente
  */
-router.post("/download", body().isObject().notEmpty(), requestValidator, message.download);
+router.post('/download', body().isObject().notEmpty(), requestValidator, message.download);
 
 export default router;

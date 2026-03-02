@@ -1,33 +1,33 @@
-import type { ParticipantAction, WAMessage, WASocket } from "baileys";
-import { downloadMediaMessage } from "baileys";
-import { webhookCache } from "@/webhook-cache";
-import { logger } from "@/shared";
-import { callWebHook, callWebHookFile } from "@/fetch";
+import type { ParticipantAction, WAMessage, WASocket } from 'baileys';
+import { downloadMediaMessage } from 'baileys';
+import { webhookCache } from '@/webhook-cache';
+import { logger } from '@/shared';
+import { callWebHook, callWebHookFile } from '@/fetch';
 
 export async function handleMessagesUpsert(
 	socket: WASocket,
-	m: { messages: WAMessage[]; type: "notify" | "append" },
+	m: { messages: WAMessage[]; type: 'notify' | 'append' },
 	sessionId: string,
 	readIncomingMessages?: boolean,
 ) {
 	const message = m.messages[0];
 
 	if (readIncomingMessages) {
-		if (message.key.fromMe || m.type !== "notify") return;
+		if (message.key.fromMe || m.type !== 'notify') return;
 	}
 
 	if (!m.messages || !message.message) return;
 
 	const textMessageTypes = [
-		"conversation",
-		"extendedTextMessage",
-		"buttonsResponseMessage",
-		"listResponseMessage",
-		"contactMessage",
-		"locationMessage",
-		"liveLocationMessage",
+		'conversation',
+		'extendedTextMessage',
+		'buttonsResponseMessage',
+		'listResponseMessage',
+		'contactMessage',
+		'locationMessage',
+		'liveLocationMessage',
 	];
-	const documentMessageTypes = ["imageMessage", "documentMessage", "audioMessage"];
+	const documentMessageTypes = ['imageMessage', 'documentMessage', 'audioMessage'];
 
 	const messageType = Object.keys(message.message).find(
 		(value) =>
@@ -38,17 +38,17 @@ export async function handleMessagesUpsert(
 	if (!messageType) return;
 
 	const messageContent = message.message[messageType];
-	let text = "";
+	let text = '';
 
-	if (typeof messageContent === "string") {
+	if (typeof messageContent === 'string') {
 		text = messageContent;
-	} else if (messageContent && "text" in messageContent) {
-		text = messageContent.text ?? "";
+	} else if (messageContent && 'text' in messageContent) {
+		text = messageContent.text ?? '';
 	}
 
 	try {
 		// Usar el caché en lugar de consultar la DB siempre
-		const webhooks = await webhookCache.getWebhooks(sessionId, "messages.upsert");
+		const webhooks = await webhookCache.getWebhooks(sessionId, 'messages.upsert');
 		if (webhooks.length === 0) return;
 
 		// Si hay media, descargarla UNA SOLA VEZ fuera del bucle de webhooks
@@ -56,7 +56,7 @@ export async function handleMessagesUpsert(
 		if (documentMessageTypes.includes(messageType)) {
 			mediaBuffer = await downloadMediaMessage(
 				message,
-				"buffer",
+				'buffer',
 				{},
 				{
 					logger,
@@ -72,7 +72,7 @@ export async function handleMessagesUpsert(
 					messageContent,
 					messageType,
 					session: sessionId,
-					type: "text",
+					type: 'text',
 					text,
 				});
 			} else if (mediaBuffer) {
@@ -83,7 +83,7 @@ export async function handleMessagesUpsert(
 						messageContent,
 						messageType,
 						session: sessionId,
-						type: "file",
+						type: 'file',
 						text,
 					},
 					mediaBuffer,
@@ -93,7 +93,7 @@ export async function handleMessagesUpsert(
 
 		await Promise.allSettled(webhookPromises);
 	} catch (error) {
-		logger.error(error, "Failed to process webhooks for message");
+		logger.error(error, 'Failed to process webhooks for message');
 	}
 }
 
@@ -103,7 +103,7 @@ export async function handleGroupParticipantsUpdate(
 	sessionId: string,
 ) {
 	try {
-		const webhooks = await webhookCache.getWebhooks(sessionId, "group-participants.update");
+		const webhooks = await webhookCache.getWebhooks(sessionId, 'group-participants.update');
 		if (webhooks.length === 0) return;
 
 		const webhookPromises = webhooks.map((webhook) =>
@@ -115,6 +115,6 @@ export async function handleGroupParticipantsUpdate(
 
 		await Promise.allSettled(webhookPromises);
 	} catch (error) {
-		logger.error(error, "Failed to send group participants update to webhooks");
+		logger.error(error, 'Failed to send group participants update to webhooks');
 	}
 }

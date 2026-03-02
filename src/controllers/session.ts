@@ -1,6 +1,6 @@
-import type { RequestHandler } from "express";
-import { prisma } from "@/db";
-import { logger } from "@/shared";
+import type { RequestHandler } from 'express';
+import { prisma } from '@/db';
+import { logger } from '@/shared';
 import {
 	deleteSession,
 	getSession,
@@ -11,8 +11,8 @@ import {
 	isRestarting,
 	setRestartingLock,
 	clearRestartingLock,
-} from "@/whatsapp";
-import { createSession } from "@/services/baileys";
+} from '@/whatsapp';
+import { createSession } from '@/services/baileys';
 
 export const list: RequestHandler = (req, res) => {
 	res.status(200).json(listSessions());
@@ -22,12 +22,12 @@ export const getUserSessions: RequestHandler = async (req, res) => {
 	try {
 		const userId = req.appData.userId;
 		if (!userId) {
-			return res.status(401).json({ error: "No se pudo identificar al usuario" });
+			return res.status(401).json({ error: 'No se pudo identificar al usuario' });
 		}
 
 		const userSessions = await prisma.userSession.findMany({
 			where: { userId },
-			orderBy: { lastActive: "desc" },
+			orderBy: { lastActive: 'desc' },
 			select: {
 				id: true,
 				sessionId: true,
@@ -46,45 +46,45 @@ export const getUserSessions: RequestHandler = async (req, res) => {
 		const result = userSessions.map((session) => ({
 			...session,
 			isConnected: activeSessionMap.has(session.sessionId),
-			connectionStatus: activeSessionMap.get(session.sessionId)?.status || "DISCONNECTED",
+			connectionStatus: activeSessionMap.get(session.sessionId)?.status || 'DISCONNECTED',
 		}));
 
 		res.status(200).json(result);
 	} catch (error) {
-		logger.error("Error getting user sessions:", error);
-		res.status(500).json({ error: "Error al obtener las sesiones" });
+		logger.error('Error getting user sessions:', error);
+		res.status(500).json({ error: 'Error al obtener las sesiones' });
 	}
 };
 
 export const find: RequestHandler = (req, res) =>
-	res.status(200).json({ message: "Session found" });
+	res.status(200).json({ message: 'Session found' });
 
 export const status: RequestHandler = (req, res) => {
 	try {
 		const sessionId =
 			req.appData?.sessionId ||
-			(req.headers["x-session-id"] as string) ||
+			(req.headers['x-session-id'] as string) ||
 			(req.query.sessionId as string);
 
 		if (!sessionId) {
-			return res.status(400).json({ error: "Session ID es requerido" });
+			return res.status(400).json({ error: 'Session ID es requerido' });
 		}
 
 		const session = getSession(sessionId);
 		if (!session) {
-			return res.status(404).json({ error: "Sesión no encontrada" });
+			return res.status(404).json({ error: 'Sesión no encontrada' });
 		}
 		const currentStatus = getSessionStatus(session);
 		res.status(200).json({
 			status: currentStatus,
 			sessionId: sessionId,
-			isConnected: currentStatus === "CONNECTED" || currentStatus === "CONNECTING",
+			isConnected: currentStatus === 'CONNECTED' || currentStatus === 'CONNECTING',
 		});
 	} catch (error) {
-		logger.error("Error al obtener el estado de la sesión:", error);
+		logger.error('Error al obtener el estado de la sesión:', error);
 		res.status(500).json({
-			error: "Error al obtener el estado de la sesión",
-			details: error instanceof Error ? error.message : "Error desconocido",
+			error: 'Error al obtener el estado de la sesión',
+			details: error instanceof Error ? error.message : 'Error desconocido',
 		});
 	}
 };
@@ -93,13 +93,13 @@ export const add: RequestHandler = async (req, res) => {
 	// First get the userId from the authenticated user
 	const userId = req.appData.userId;
 	if (!userId) {
-		return res.status(401).json({ error: "User not authenticated" });
+		return res.status(401).json({ error: 'User not authenticated' });
 	}
 
 	const { sessionId, readIncomingMessages, deviceName, ...socketConfig } = req.body;
 
 	if (sessionExists(sessionId)) {
-		return res.status(400).json({ error: "Session already exists" });
+		return res.status(400).json({ error: 'Session already exists' });
 	}
 
 	try {
@@ -114,10 +114,10 @@ export const add: RequestHandler = async (req, res) => {
 			deviceName,
 		});
 	} catch (error) {
-		logger.error("Error creating session:", error);
+		logger.error('Error creating session:', error);
 		res.status(500).json({
-			error: "Failed to create session",
-			details: error instanceof Error ? error.message : "Unknown error",
+			error: 'Failed to create session',
+			details: error instanceof Error ? error.message : 'Unknown error',
 		});
 	}
 };
@@ -131,9 +131,9 @@ export const addSSE: RequestHandler = async (req, res) => {
 		return;
 	}
 	res.writeHead(200, {
-		"Content-Type": "text/event-stream",
-		"Cache-Control": "no-cache",
-		Connection: "keep-alive",
+		'Content-Type': 'text/event-stream',
+		'Cache-Control': 'no-cache',
+		Connection: 'keep-alive',
 	});
 	const sessionId = (req.query.sessionId as string) || undefined;
 	createSession({ userId, res, SSE: true, sessionId });
@@ -143,7 +143,7 @@ export const del: RequestHandler = async (req, res) => {
 	try {
 		const { sessionId } = req.body;
 		if (!sessionId) {
-			return res.status(400).json({ error: "Se requiere el ID de la sesión" });
+			return res.status(400).json({ error: 'Se requiere el ID de la sesión' });
 		}
 
 		const appData = req.appData;
@@ -157,7 +157,7 @@ export const del: RequestHandler = async (req, res) => {
 					sessionId,
 				},
 				data: {
-					status: "inactive",
+					status: 'inactive',
 					updatedAt: new Date(),
 				},
 			});
@@ -166,13 +166,13 @@ export const del: RequestHandler = async (req, res) => {
 		await deleteSession(sessionId);
 		res.status(200).json({
 			success: true,
-			message: "Sesión eliminada correctamente",
+			message: 'Sesión eliminada correctamente',
 		});
 	} catch (error) {
-		logger.error("Error al eliminar la sesión:", error);
+		logger.error('Error al eliminar la sesión:', error);
 		res.status(500).json({
-			error: "Error al eliminar la sesión",
-			details: error instanceof Error ? error.message : "Error desconocido",
+			error: 'Error al eliminar la sesión',
+			details: error instanceof Error ? error.message : 'Error desconocido',
 		});
 	}
 };
@@ -191,11 +191,11 @@ export const restart: RequestHandler = async (req, res) => {
 	const userId = req.appData?.userId;
 
 	if (!sessionId) {
-		return res.status(400).json({ error: "Se requiere el ID de la sesión" });
+		return res.status(400).json({ error: 'Se requiere el ID de la sesión' });
 	}
 
 	if (!userId) {
-		return res.status(401).json({ error: "Usuario no autenticado" });
+		return res.status(401).json({ error: 'Usuario no autenticado' });
 	}
 
 	// Verificar que la sesión pertenece al usuario
@@ -204,29 +204,29 @@ export const restart: RequestHandler = async (req, res) => {
 	});
 
 	if (!userSession) {
-		return res.status(404).json({ error: "Sesión no encontrada para este usuario" });
+		return res.status(404).json({ error: 'Sesión no encontrada para este usuario' });
 	}
 
 	// ============================================================
 	// 🔒 LOCK: Prevenir reinicios simultáneos
 	// ============================================================
 	if (isRestarting(sessionId)) {
-		logger.warn({ sessionId }, "restart: sesión ya está reiniciando");
+		logger.warn({ sessionId }, 'restart: sesión ya está reiniciando');
 		return res.status(409).json({
-			error: "La sesión ya está en proceso de reinicio",
-			code: "RESTART_IN_PROGRESS"
+			error: 'La sesión ya está en proceso de reinicio',
+			code: 'RESTART_IN_PROGRESS',
 		});
 	}
 
 	if (!setRestartingLock(sessionId)) {
-		logger.warn({ sessionId }, "restart: no se pudo obtener lock");
+		logger.warn({ sessionId }, 'restart: no se pudo obtener lock');
 		return res.status(409).json({
-			error: "La sesión ya está en proceso de reinicio",
-			code: "RESTART_IN_PROGRESS"
+			error: 'La sesión ya está en proceso de reinicio',
+			code: 'RESTART_IN_PROGRESS',
 		});
 	}
 
-	logger.info({ sessionId, userId }, "restart: iniciando reinicio de sesión");
+	logger.info({ sessionId, userId }, 'restart: iniciando reinicio de sesión');
 
 	try {
 		// ============================================================
@@ -235,51 +235,52 @@ export const restart: RequestHandler = async (req, res) => {
 		const wasActive = sessionExists(sessionId);
 
 		if (wasActive) {
-			logger.info({ sessionId }, "restart: deteniendo sesión activa");
+			logger.info({ sessionId }, 'restart: deteniendo sesión activa');
 			await stopSession(sessionId);
 
 			// Esperar a que se cierre completamente
 			// Baileys necesita tiempo para limpiar recursos
-			await new Promise(resolve => setTimeout(resolve, 2000));
+			await new Promise((resolve) => setTimeout(resolve, 2000));
 
 			// Verificación de seguridad: asegurarse de que ya no existe
 			if (sessionExists(sessionId)) {
-				logger.error({ sessionId }, "restart: sesión aún existe después de stopSession");
+				logger.error({ sessionId }, 'restart: sesión aún existe después de stopSession');
 				clearRestartingLock(sessionId);
 				return res.status(500).json({
-					error: "No se pudo detener la sesión correctamente",
-					code: "STOP_FAILED"
+					error: 'No se pudo detener la sesión correctamente',
+					code: 'STOP_FAILED',
 				});
 			}
 		} else {
-			logger.info({ sessionId }, "restart: sesión no estaba activa en memoria");
+			logger.info({ sessionId }, 'restart: sesión no estaba activa en memoria');
 		}
 
 		// ============================================================
 		// 🔄 PASO 2: Obtener configuración guardada
 		// ============================================================
 		let readIncomingMessages = false;
-		let deviceName = userSession.deviceName || "WhatsApp User";
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const deviceName = userSession.deviceName || 'WhatsApp User';
+
 		let socketConfig: any = undefined;
 
 		if (userSession.data) {
 			try {
 				const parsedData = JSON.parse(userSession.data);
 				readIncomingMessages = parsedData.readIncomingMessages || false;
-				const { readIncomingMessages: _, ...rest } = parsedData;
+				const { readIncomingMessages: _readIncomingMessages, ...rest } = parsedData;
+				void _readIncomingMessages;
 				if (Object.keys(rest).length > 0) {
 					socketConfig = rest;
 				}
-			} catch (e) {
-				logger.warn({ sessionId }, "restart: no se pudo parsear data de sesión");
+			} catch {
+				logger.warn({ sessionId }, 'restart: no se pudo parsear data de sesión');
 			}
 		}
 
 		// ============================================================
 		// 🚀 PASO 3: Crear nueva sesión
 		// ============================================================
-		logger.info({ sessionId }, "restart: creando nueva conexión");
+		logger.info({ sessionId }, 'restart: creando nueva conexión');
 
 		await createSession({
 			sessionId,
@@ -290,27 +291,26 @@ export const restart: RequestHandler = async (req, res) => {
 		});
 
 		// Esperar un momento para que la conexión se establezca
-		await new Promise(resolve => setTimeout(resolve, 1000));
+		await new Promise((resolve) => setTimeout(resolve, 1000));
 
-		logger.info({ sessionId }, "restart: reinicio completado exitosamente");
+		logger.info({ sessionId }, 'restart: reinicio completado exitosamente');
 
 		res.status(200).json({
 			success: true,
-			message: "Sesión reiniciada correctamente",
+			message: 'Sesión reiniciada correctamente',
 			sessionId,
 		});
-
 	} catch (error) {
-		logger.error({ sessionId, error }, "restart: error durante el reinicio");
+		logger.error({ sessionId, error }, 'restart: error durante el reinicio');
 		res.status(500).json({
-			error: "Error al reiniciar la sesión",
-			details: error instanceof Error ? error.message : "Error desconocido",
+			error: 'Error al reiniciar la sesión',
+			details: error instanceof Error ? error.message : 'Error desconocido',
 		});
 	} finally {
 		// ============================================================
 		// 🔓 SIEMPRE liberar el lock
 		// ============================================================
 		clearRestartingLock(sessionId);
-		logger.info({ sessionId }, "restart: lock liberado");
+		logger.info({ sessionId }, 'restart: lock liberado');
 	}
 };

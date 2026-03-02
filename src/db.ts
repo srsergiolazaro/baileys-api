@@ -1,8 +1,8 @@
-import { neonConfig } from "@neondatabase/serverless";
-import { PrismaNeon } from "@prisma/adapter-neon";
-import { PrismaClient } from "@prisma/client";
-import ws from "ws";
-import dotenv from "dotenv";
+import { neonConfig } from '@neondatabase/serverless';
+import { PrismaNeon } from '@prisma/adapter-neon';
+import { PrismaClient } from '@prisma/client';
+import ws from 'ws';
+import dotenv from 'dotenv';
 
 dotenv.config();
 
@@ -18,9 +18,9 @@ function createPrismaClient() {
 	const adapter = new PrismaNeon({ connectionString });
 
 	return new PrismaClient({
-		// @ts-ignore driverAdapters es un previewFeature
+		// driverAdapters es un previewFeature
 		adapter,
-		log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+		log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
 	});
 }
 
@@ -31,16 +31,16 @@ const gracefulShutdown = async (signal: string) => {
 	console.log(`${signal} received, shutting down gracefully...`);
 	try {
 		// Dynamic import to avoid circular dependency
-		const { flushAllSessions } = await import("./store/session");
+		const { flushAllSessions } = await import('./store/session');
 		await flushAllSessions();
 	} catch (e) {
-		console.error("Error flushing sessions:", e);
+		console.error('Error flushing sessions:', e);
 	}
 	await prisma.$disconnect();
 	process.exit(0);
 };
 
-process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
-process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;

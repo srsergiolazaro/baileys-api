@@ -1,6 +1,6 @@
-import { prisma } from "../db";
-import { logger } from "../shared";
-import type { Session } from "../types";
+import { prisma } from '../db';
+import { logger } from '../shared';
+import type { Session } from '../types';
 
 const sessions = new Map<string, Session>();
 
@@ -24,9 +24,9 @@ export function clearRestartingLock(sessionId: string): void {
 }
 
 export function getSessionStatus(session: Session) {
-	const state = ["CONNECTING", "CONNECTED", "DISCONNECTING", "DISCONNECTED"];
-	let status = (session as any).ws ? state[(session as any).ws.readyState] : "DISCONNECTED";
-	status = session.user ? "AUTHENTICATED" : status;
+	const state = ['CONNECTING', 'CONNECTED', 'DISCONNECTING', 'DISCONNECTED'];
+	let status = (session as any).ws ? state[(session as any).ws.readyState] : 'DISCONNECTED';
+	status = session.user ? 'AUTHENTICATED' : status;
 	return status;
 }
 
@@ -56,9 +56,9 @@ export async function deleteSession(sessionId: string): Promise<void> {
 				prisma.userSession.delete({ where: { sessionId } }),
 				prisma.webhook.deleteMany({ where: { sessionId } }),
 			]);
-			logger.info({ sessionId }, "Session data deleted from database");
+			logger.info({ sessionId }, 'Session data deleted from database');
 		} catch (e) {
-			logger.error(e, "An error occurred during session data cleanup");
+			logger.error(e, 'An error occurred during session data cleanup');
 		}
 	}
 }
@@ -71,31 +71,31 @@ export async function deleteSession(sessionId: string): Promise<void> {
 export async function stopSession(sessionId: string): Promise<boolean> {
 	const session = sessions.get(sessionId);
 	if (!session) {
-		logger.info({ sessionId }, "stopSession: session not found in memory");
+		logger.info({ sessionId }, 'stopSession: session not found in memory');
 		return false;
 	}
 
 	try {
 		// Cerrar el websocket sin hacer logout
 		session.ws.close();
-		logger.info({ sessionId }, "stopSession: websocket closed");
+		logger.info({ sessionId }, 'stopSession: websocket closed');
 	} catch (e) {
-		logger.error({ sessionId, error: e }, "stopSession: error closing websocket");
+		logger.error({ sessionId, error: e }, 'stopSession: error closing websocket');
 	}
 
 	// Marcar como inactiva en BD
 	try {
 		await prisma.userSession.update({
 			where: { sessionId },
-			data: { status: "inactive" },
+			data: { status: 'inactive' },
 		});
 	} catch (e) {
-		logger.warn({ sessionId, error: e }, "stopSession: error updating status in DB");
+		logger.warn({ sessionId, error: e }, 'stopSession: error updating status in DB');
 	}
 
 	// Remover de memoria
 	sessions.delete(sessionId);
-	logger.info({ sessionId }, "stopSession: session removed from memory");
+	logger.info({ sessionId }, 'stopSession: session removed from memory');
 
 	return true;
 }
@@ -110,13 +110,16 @@ export async function syncSessionStatusOnStartup(): Promise<void> {
 	try {
 		const result = await prisma.userSession.updateMany({
 			where: {
-				status: { in: ["active", "authenticating"] }
+				status: { in: ['active', 'authenticating'] },
 			},
-			data: { status: "inactive" }
+			data: { status: 'inactive' },
 		});
-		logger.info({ count: result.count }, "🔄 Startup Sync: Sesiones reseteadas a 'inactive' al arrancar.");
+		logger.info(
+			{ count: result.count },
+			'🔄 Startup Sync: Sesiones reseteadas a \'inactive\' al arrancar.',
+		);
 	} catch (e) {
-		logger.error("❌ Error sincronizando estados de sesión al inicio", e);
+		logger.error('❌ Error sincronizando estados de sesión al inicio', e);
 	}
 }
 
