@@ -27,13 +27,26 @@ export {
 	clearRestartingLock,
 };
 
-export async function init() {
+export async function init(retries = 3) {
 	console.log('🚀 init: iniciando carga de sesiones');
 
-	const userSessions = await prisma.userSession.findMany({
-		select: { sessionId: true, data: true, userId: true },
-		where: { status: { in: ['active', 'authenticating'] } },
-	});
+	let userSessions: any[] = [];
+	for (let i = 0; i < retries; i++) {
+		try {
+			userSessions = await prisma.userSession.findMany({
+				select: { sessionId: true, data: true, userId: true },
+				where: { status: { in: ['active', 'authenticating'] } },
+			});
+			break; // Success
+		} catch (e) {
+			console.error(`❌ init: Error obteniendo sesiones (intento ${i + 1}/${retries})`, e);
+			if (i < retries - 1) {
+				await new Promise((resolve) => setTimeout(resolve, 2000));
+			} else {
+				throw e; // Final failure
+			}
+		}
+	}
 
 	// Sincronizar estados en BD (Limpiar zombies de procesos anteriores)
 	// Importante: Hacerlo después de obtener la lista para poder reiniciar las legítimas.

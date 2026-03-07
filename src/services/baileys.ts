@@ -279,6 +279,10 @@ export async function createSession(options: createSessionOptions) {
 				{ sessionId },
 				'🐕 Watchdog: Sesión zombie detectada (5 min sin eventos). Reiniciando...',
 			);
+			
+			// 🛡️ IMPORTANTE: Limpiar el lock antes de reiniciar para evitar el error "is already initializing"
+			clearRestartingLock(sessionId);
+			
 			if (socket) {
 				try {
 					socket.end(
@@ -467,9 +471,12 @@ export async function createSession(options: createSessionOptions) {
 			generateHighQualityLinkPreview: false,
 			syncFullHistory: false,
 			// ============================================================
-			// 🚀 OPTIMIZACIÓN 100X: Skip History Sync
-			// No descargar chats pasados. Ahorra 100x en red, CPU y RAM.
+			// 🚀 OPTIMIZACIÓN DE CONEXIÓN (Basado en análisis de root-cause)
+			// = : Reducir para detectar fallos de handshake rápido.
+			// = : Ping/Pong activo cada 30s.
 			// ============================================================
+			connectTimeoutMs: 10_000,
+			keepAliveIntervalMs: 30_000,
 			shouldSyncHistoryMessage: () => false,
 			markOnlineOnConnect: false, // No marcar como online automáticamente al conectar
 			...socketConfig,

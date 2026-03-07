@@ -4,18 +4,28 @@ import type { Session } from '../types';
 
 const sessions = new Map<string, Session>();
 
-// Lock para prevenir reinicios simultáneos de la misma sesión
-const restartingLocks = new Set<string>();
+// Lock para prevenir reinicios simultáneos de la misma sesión con expiración (2 min)
+const RESTART_LOCK_TTL = 2 * 60 * 1000;
+const restartingLocks = new Map<string, number>();
 
 export function isRestarting(sessionId: string): boolean {
-	return restartingLocks.has(sessionId);
+	const timestamp = restartingLocks.get(sessionId);
+	if (!timestamp) return false;
+
+	// Si el lock ha expirado, lo limpiamos y retornamos false
+	if (Date.now() - timestamp > RESTART_LOCK_TTL) {
+		logger.warn({ sessionId }, 'Restart lock expired, clearing automatically');
+		restartingLocks.delete(sessionId);
+		return false;
+	}
+	return true;
 }
 
 export function setRestartingLock(sessionId: string): boolean {
-	if (restartingLocks.has(sessionId)) {
-		return false; // Ya está reiniciando
+	if (isRestarting(sessionId)) {
+		return false; // Ya está reiniciando y no ha expirado
 	}
-	restartingLocks.add(sessionId);
+	restartingLocks.set(sessionId, Date.now());
 	return true;
 }
 
@@ -108,20 +118,26 @@ export async function stopSession(sessionId: string): Promise<boolean> {
  * ya que al ser un nuevo proceso, ninguna sesión está realmente activa aún.
  * Esto previene estados "zombie" tras un crash o reinicio.
  */
-export async function syncSessionStatusOnStartup(): Promise<void> {
-	try {
-		const result = await prisma.userSession.updateMany({
-			where: {
-				status: { in: ['active', 'authenticating'] },
-			},
-			data: { status: 'inactive' },
-		});
-		logger.info(
-			{ count: result.count },
-			'🔄 Startup Sync: Sesiones reseteadas a \'inactive\' al arrancar.',
-		);
-	} catch (e) {
-		logger.error('❌ Error sincronizando estados de sesión al inicio', e);
+export async function syncSessionStatusOnStartup(retries = 3): Promise<void> {
+	for (let i = 0; i < retries; i++) {
+		try {
+			const result = await prisma.userSession.updateMany({
+				where: {
+					status: { in: ['active', 'authenticating'] },
+				},
+				data: { status: 'inactive' },
+			});
+			logger.info(
+				{ count: result.count },
+				'🔄 Startup Sync: Sesiones reseteadas a \'inactive\' al arrancar.',
+			);
+			return; // Success
+		} catch (e) {
+			logger.error(`❌ Error sincronizando estados de sesión al inicio (intento ${i + 1}/${retries})`, e);
+			if (i < retries - 1) {
+				await new Promise((resolve) => setTimeout(resolve, 2000));
+			}
+		}
 	}
 }
 
