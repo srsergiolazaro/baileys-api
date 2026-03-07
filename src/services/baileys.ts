@@ -13,7 +13,7 @@ import type {
 	SocketConfig,
 	WAMessageContent,
 } from 'baileys';
-import { Store, useSession, clearSessionCache } from '../store';
+import { Store, useSession } from '../store';
 import { prisma } from '../db';
 import { AccountType } from '@prisma/client';
 import { logger } from '../shared';
@@ -217,8 +217,6 @@ export async function createSession(options: createSessionOptions) {
 	const destroy = async (logout = true) => {
 		try {
 			if (logout && socket) {
-				// Limpiar caché de sesión al hacer logout completo
-				clearSessionCache(sessionId);
 				await Promise.allSettled([
 					socket.logout(),
 					prisma.chat.deleteMany({ where: { sessionId } }),

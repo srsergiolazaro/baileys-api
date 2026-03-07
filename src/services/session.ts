@@ -46,17 +46,19 @@ export async function deleteSession(sessionId: string): Promise<void> {
 	if (session) {
 		await session.destroy();
 	} else {
-		// Si la sesión no está activa en memoria, eliminar datos de la base de datos
+		// Si la sesión no está activa en memoria, eliminar datos de la base de datos de raíz
 		try {
 			await Promise.allSettled([
 				prisma.chat.deleteMany({ where: { sessionId } }),
 				prisma.contact.deleteMany({ where: { sessionId } }),
 				prisma.message.deleteMany({ where: { sessionId } }),
 				prisma.groupMetadata.deleteMany({ where: { sessionId } }),
-				prisma.userSession.delete({ where: { sessionId } }),
+				prisma.userSession.deleteMany({ where: { sessionId } }),
 				prisma.webhook.deleteMany({ where: { sessionId } }),
+				prisma.session.deleteMany({ where: { sessionId } }),
+				prisma.product.deleteMany({ where: { sessionId } }),
 			]);
-			logger.info({ sessionId }, 'Session data deleted from database');
+			logger.info({ sessionId }, 'Session and all associated data (including auth keys) deleted from database');
 		} catch (e) {
 			logger.error(e, 'An error occurred during session data cleanup');
 		}

@@ -144,11 +144,6 @@ init()
 			});
 
 			try {
-				// 2. Importar y ejecutar el flush de todas las sesiones
-				const { flushAllSessions } = await import('./store');
-				await flushAllSessions();
-				console.log('💾 Caché de sesiones persistida correctamente.');
-
 				console.log('👋 Apagado completado. Saliendo...');
 				process.exit(0);
 			} catch (error) {
