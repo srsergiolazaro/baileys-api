@@ -203,4 +203,65 @@ router.delete('/', session.del);
  */
 router.post('/restart', session.restart);
 
+/**
+ * @swagger
+ * /sessions/reactivate:
+ *   post:
+ *     tags:
+ *       - Sesiones
+ *     summary: Reactivar sesión inactiva
+ *     description: |
+ *       Reactiva una sesión de WhatsApp que se encuentra en estado inactivo.
+ *       Utiliza los parámetros de conexión guardados previamente (ej. socketConfig, readIncomingMessages)
+ *       para volver a levantar la sesión. No se debe usar en sesiones activas.
+ *     security:
+ *       - ApiKeyAuth: []
+ *       - SessionId: []
+ *     parameters:
+ *       - in: header
+ *         name: x-session-id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de la sesión a reactivar
+ *     responses:
+ *       200:
+ *         description: Proceso de reactivación iniciado correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Proceso de reactivación iniciado correctamente"
+ *                 sessionId:
+ *                   type: string
+ *       400:
+ *         description: Se requiere el ID de la sesión
+ *       401:
+ *         description: Usuario no autenticado
+ *       404:
+ *         description: Sesión no encontrada para este usuario
+ *       409:
+ *         description: La sesión ya está activa o en proceso de reactivación
+ *       500:
+ *         description: Error al reactivar la sesión
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Error al reactivar la sesión"
+ *                 details:
+ *                   type: string
+ *                   example: "Detalle del error"
+ */
+router.post('/reactivate', session.reactivate);
+
 export default router;

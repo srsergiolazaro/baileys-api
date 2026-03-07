@@ -314,3 +314,113 @@ export const restart: RequestHandler = async (req, res) => {
 		logger.info({ sessionId }, 'restart: lock liberado');
 	}
 };
+
+/**
+ * Reactiva una sesión que está inactiva.
+ * Usa los datos guardados en la tabla UserSession para volver a conectarla.
+ */
+export const reactivate: RequestHandler = async (req, res) => {
+	const sessionId = req.appData?.sessionId || req.body?.sessionId || (req.headers['x-session-id'] as string);
+
+	if (!sessionId) {
+		return res.status(400).json({ error: 'Se requiere el ID de la sesión' });
+	}
+
+	// Verificar que la sesión exista
+	const userSession = await prisma.userSession.findFirst({
+		where: { sessionId },
+	});
+
+	if (!userSession) {
+		return res.status(404).json({ error: 'Sesión no encontrada' });
+	}
+	
+	const userId = userSession.userId;
+
+	// ============================================================
+	// 🔒 LOCK: Evitar reconexiones/reinicios simultáneos
+	// ============================================================
+	if (isRestarting(sessionId)) {
+		logger.warn({ sessionId }, 'reactivate: sesión ya está reiniciando/conectando');
+		return res.status(409).json({
+			error: 'La sesión ya está en proceso de conexión/reinicio',
+			code: 'RESTART_IN_PROGRESS',
+		});
+	}
+
+	if (sessionExists(sessionId)) {
+		logger.warn({ sessionId }, 'reactivate: sesión ya está activa en memoria');
+		return res.status(409).json({
+			error: 'La sesión ya se encuentra activa',
+			code: 'SESSION_ALREADY_ACTIVE',
+		});
+	}
+
+	if (!setRestartingLock(sessionId)) {
+		logger.warn({ sessionId }, 'reactivate: no se pudo obtener lock');
+		return res.status(409).json({
+			error: 'La sesión ya está en proceso de conexión',
+			code: 'RESTART_IN_PROGRESS',
+		});
+	}
+
+	logger.info({ sessionId, userId }, 'reactivate: iniciando reactivación de sesión inactiva');
+
+	try {
+		// ============================================================
+		// 🔄 PASO 1: Obtener configuración guardada de UserSession
+		// ============================================================
+		let readIncomingMessages = false;
+		const deviceName = userSession.deviceName || 'WhatsApp User';
+		let socketConfig: any = undefined;
+
+		if (userSession.data) {
+			try {
+				const parsedData = JSON.parse(userSession.data);
+				readIncomingMessages = parsedData.readIncomingMessages || false;
+				const { readIncomingMessages: _readIncomingMessages, ...rest } = parsedData;
+				if (Object.keys(rest).length > 0) {
+					socketConfig = rest;
+				}
+			} catch {
+				logger.warn({ sessionId }, 'reactivate: no se pudo parsear data de sesión, usando valores por defecto');
+			}
+		}
+
+		// ============================================================
+		// 🚀 PASO 2: Crear la sesión con la configuración recuperada
+		// ============================================================
+		logger.info({ sessionId }, 'reactivate: creando conexión');
+
+		await createSession({
+			sessionId,
+			userId,
+			readIncomingMessages,
+			deviceName,
+			...(socketConfig && { socketConfig }),
+		});
+
+		// Ligera espera para que actúe la asincronía de la creación
+		await new Promise((resolve) => setTimeout(resolve, 500));
+
+		logger.info({ sessionId }, 'reactivate: proceso de reactivación lanzado exitosamente');
+
+		res.status(200).json({
+			success: true,
+			message: 'Proceso de reactivación iniciado correctamente',
+			sessionId,
+		});
+	} catch (error) {
+		logger.error({ sessionId, error }, 'reactivate: error durante la reactivación');
+		res.status(500).json({
+			error: 'Error al reactivar la sesión',
+			details: error instanceof Error ? error.message : 'Error desconocido',
+		});
+	} finally {
+		// ============================================================
+		// 🔓 SIEMPRE liberar el lock
+		// ============================================================
+		clearRestartingLock(sessionId);
+		logger.info({ sessionId }, 'reactivate: lock liberado');
+	}
+};
