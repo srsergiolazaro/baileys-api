@@ -342,25 +342,28 @@ export const reactivate: RequestHandler = async (req, res) => {
 	// ============================================================
 	if (isRestarting(sessionId)) {
 		logger.warn({ sessionId }, 'reactivate: sesión ya está reiniciando/conectando');
-		return res.status(409).json({
-			error: 'La sesión ya está en proceso de conexión/reinicio',
-			code: 'RESTART_IN_PROGRESS',
+		return res.status(200).json({
+			success: true,
+			message: 'La sesión ya está en proceso de conexión/reinicio',
+			sessionId,
 		});
 	}
 
 	if (sessionExists(sessionId)) {
 		logger.warn({ sessionId }, 'reactivate: sesión ya está activa en memoria');
-		return res.status(409).json({
-			error: 'La sesión ya se encuentra activa',
-			code: 'SESSION_ALREADY_ACTIVE',
+		return res.status(200).json({
+			success: true,
+			message: 'La sesión ya se encuentra activa',
+			sessionId,
 		});
 	}
 
 	if (!setRestartingLock(sessionId)) {
 		logger.warn({ sessionId }, 'reactivate: no se pudo obtener lock');
-		return res.status(409).json({
-			error: 'La sesión ya está en proceso de conexión',
-			code: 'RESTART_IN_PROGRESS',
+		return res.status(200).json({
+			success: true,
+			message: 'La sesión ya está en proceso de conexión',
+			sessionId,
 		});
 	}
 

@@ -246,8 +246,6 @@ router.post('/restart', session.restart);
  *         description: Usuario no autenticado
  *       404:
  *         description: Sesión no encontrada para este usuario
- *       409:
- *         description: La sesión ya está activa o en proceso de reactivación
  *       500:
  *         description: Error al reactivar la sesión
  *         content:
