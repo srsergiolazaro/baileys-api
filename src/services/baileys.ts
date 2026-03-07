@@ -171,13 +171,10 @@ export async function createSession(options: createSessionOptions) {
 		}
 	}
 
-	logger.info('createSession: start', {
-		sessionId,
-		userId,
-		SSE,
-		readIncomingMessages,
-		hasSocketConfig: !!socketConfig,
-	});
+	logger.info(
+		{ sessionId, userId, SSE, readIncomingMessages, hasSocketConfig: !!socketConfig },
+		'createSession: start',
+	);
 
 	// ============================================================
 	// � REGISTRO INICIAL EN BASE DE DATOS
@@ -205,63 +202,69 @@ export async function createSession(options: createSessionOptions) {
 			},
 		});
 	} catch (e) {
-		logger.error('Failed to create initial UserSession', { sessionId, error: e });
+		logger.error({ sessionId, err: e }, 'Failed to create initial UserSession');
 	}
 
 	// ============================================================
 	// �🔥 DESTRUCCIÓN COMPLETA DE SESIÓN
-	// ============================================================
-	let connectionState: Partial<ConnectionState> = { connection: 'close' };
-	let socket: any;
-
-	const destroy = async (logout = true) => {
-		try {
-			if (logout && socket) {
-				await Promise.allSettled([
-					socket.logout(),
-					prisma.chat.deleteMany({ where: { sessionId } }),
-					prisma.contact.deleteMany({ where: { sessionId } }),
-					prisma.message.deleteMany({ where: { sessionId } }),
-					prisma.groupMetadata.deleteMany({ where: { sessionId } }),
-					prisma.userSession.deleteMany({ where: { sessionId } }),
-					prisma.webhook.deleteMany({ where: { sessionId } }),
-					prisma.session.deleteMany({ where: { sessionId } }),
-				]);
-				logger.info('Session and data destroyed (logged out)', { session: sessionId });
-			} else {
-				// NO limpiar caché - mantener para reconexión
-				await prisma.userSession.updateMany({
-					where: { sessionId },
-					data: { status: 'inactive' },
-				});
-				logger.info('Session marked as inactive (cache preserved for reconnection)', {
-					session: sessionId,
-				});
+		// ============================================================
+		// 🛡️ DESTRUCCION COMPLETA DE SESION
+		// ============================================================
+		let connectionState: Partial<ConnectionState> = { connection: 'close' };
+		let socket: any;
+		let connectionDeadline: NodeJS.Timeout | null = null; // 🛡️ Declarar con visibilidad para destroy
+	
+		const destroy = async (logout = true) => {
+			try {
+				if (logout && socket) {
+					await Promise.allSettled([
+						socket.logout(),
+						prisma.chat.deleteMany({ where: { sessionId } }),
+						prisma.contact.deleteMany({ where: { sessionId } }),
+						prisma.message.deleteMany({ where: { sessionId } }),
+						prisma.groupMetadata.deleteMany({ where: { sessionId } }),
+						prisma.userSession.deleteMany({ where: { sessionId } }),
+						prisma.webhook.deleteMany({ where: { sessionId } }),
+						prisma.session.deleteMany({ where: { sessionId } }),
+					]);
+					logger.info({ sessionId }, 'Session and data destroyed (logged out)');
+				} else {
+					// NO limpiar caché - mantener para reconexión
+					await prisma.userSession.updateMany({
+						where: { sessionId },
+						data: { status: 'inactive' },
+					});
+					logger.info({ sessionId }, 'Session marked as inactive (cache preserved for reconnection)');
+				}
+			} catch (e) {
+				logger.error({ sessionId, err: e }, 'Error during session destroy');
+			} finally {
+				if (watchdogTimer) {
+					clearTimeout(watchdogTimer);
+					watchdogTimer = null;
+				}
+	
+				if (connectionDeadline) {
+					clearTimeout(connectionDeadline);
+					connectionDeadline = null;
+				}
+	
+				const engine = telemetryEngines.get(sessionId);
+				if (engine) {
+					engine.stop();
+					telemetryEngines.delete(sessionId);
+				}
+	
+				if (socket) {
+					logger.info({ sessionId }, 'Cleaning up socket listeners for GC');
+					socket.ev.removeAllListeners();
+					socket.ws.close();
+				}
+				sessionsMap.delete(sessionId);
+				retries.delete(sessionId);
+				SSEQRGenerations.delete(sessionId);
 			}
-		} catch (e) {
-			logger.error('Error during session destroy', e);
-		} finally {
-			if (watchdogTimer) {
-				clearTimeout(watchdogTimer);
-				watchdogTimer = null;
-			}
-
-			const engine = telemetryEngines.get(sessionId);
-			if (engine) {
-				engine.stop();
-				telemetryEngines.delete(sessionId);
-			}
-
-			if (socket) {
-				logger.info({ sessionId }, 'Cleaning up socket listeners for GC');
-				socket.ev.removeAllListeners();
-				socket.ws.close();
-			}
-			sessionsMap.delete(sessionId);
-			retries.delete(sessionId);
-			SSEQRGenerations.delete(sessionId);
-		}
-	};
+		};
 
 	// ============================================================
 	// 🐕 WATCHDOG - REINICIO DE SESIÓN ZOMBIE
@@ -520,57 +523,86 @@ export async function createSession(options: createSessionOptions) {
 			if (isProcessingQueue || messageQueue.length === 0) return;
 			isProcessingQueue = true;
 
+			// Solo enviamos 'available' una vez al iniciar el ciclo de la cola
+			try {
+				await socket.sendPresenceUpdate('available');
+			} catch (e) {
+				logger.debug({ sessionId, err: e }, 'Failed to set presence to available');
+			}
+
 			while (messageQueue.length > 0) {
 				const { jid, content, options, resolve, reject } = messageQueue.shift()!;
 				try {
-					// ============================================================
-					// 🎭 HUMAN STEALTH SIMULATION (Composing...) - Optimizada dinámicamente
-					// ============================================================
-					// 1. Notificar al motor de telemetría la actividad (Despertar modo FOREGROUND)
+					// 1. Notificar al motor de telemetría (Despertar modo FOREGROUND)
 					const telEngine = telemetryEngines.get(sessionId);
-					if (telEngine)
+					if (telEngine) {
 						telEngine
 							.activityUpdate()
-							.catch((e) => logger.debug('SOTA: Error waking up telemetry', e));
-
-					// 2. Marcar como "disponible" (si no lo está ya)
-					await socket.sendPresenceUpdate('available');
-
-					// 3. Ajuste dinámico de retraso según la cola
-					const isBurst = messageQueue.length > 0; // Si hay más mensajes esperando
-
-					if (!isBurst) {
-						// Si es un solo mensaje, parecemos humanos
-						await socket.sendPresenceUpdate('composing', jid);
-						const typingDelay = Math.floor(Math.random() * (400 - 150 + 1)) + 150; // 0.15s - 0.4s
-						await new Promise((res) => setTimeout(res, typingDelay));
-						await socket.sendPresenceUpdate('paused', jid);
+							.catch((e) => logger.debug({ sessionId, err: e }, 'SOTA: Error waking up telemetry'));
 					}
 
-					// Usamos setImmediate para asegurar que el envío no bloquee el event loop
-					await new Promise((res) => setImmediate(res));
+					// 2. Extraer el texto para calcular el tiempo de escritura
+					// Si es texto normal, está en content.text. Si es imagen con leyenda, en content.caption.
+					const textContent = content?.text || content?.caption || '';
+
+					// 3. Cálculo dinámico de escritura (~40-60ms por carácter, promedio humano rápido)
+					let typingDuration = 0;
+					if (textContent) {
+						// Mínimo 1 segundo, máximo 8 segundos (para no bloquear la cola eternamente)
+						typingDuration = Math.min(Math.max(textContent.length * 50, 1000), 8000);
+					} else {
+						// Si es un audio o imagen sin texto, simulamos el tiempo de "adjuntar" un archivo (1.5s - 3s)
+						typingDuration = Math.floor(Math.random() * 1500) + 1500;
+					}
+
+					// 4. Simular comportamiento humano: "Escribiendo..."
+					await socket.sendPresenceUpdate('composing', jid);
+
+					// Esperar el tiempo calculado
+					await new Promise((res) => setTimeout(res, typingDuration));
+
+					// Pausar escritura un breve instante antes de enviar (como cuando dejas de teclear y das a Enviar)
+					await socket.sendPresenceUpdate('paused', jid);
+					await new Promise((res) => setTimeout(res, 300));
+
+					// 5. Enviar el mensaje
 					const result = await originalSendMessage(jid, content, options);
 					resolve(result);
 				} catch (err) {
+					// Loguear el error correctamente sin perder el stack trace
+					logger.error({ sessionId, jid, err }, 'Error procesando mensaje en la cola anti-ban');
 					reject(err);
 				}
 
-				// Retraso post-envío dinámico
-				if (messageQueue.length === 0) {
-					// Sin prisa, toma 0.2s - 0.5s de respiro
-					const delay = Math.floor(Math.random() * (500 - 200 + 1)) + 200;
-					await new Promise((res) => setTimeout(res, delay));
-				} else {
-					// Ráfaga / Múltiples mensajes: sin retraso o casi nulo
-					await new Promise((res) => setImmediate(res));
+				// ============================================================
+				// 6. DELAY POST-ENVÍO (CRÍTICO PARA RÁFAGAS)
+				// ============================================================
+				// Incluso si hay 100 mensajes esperando, un humano NO puede enviar el siguiente
+				// en 0 milisegundos. Siempre debe haber un respiro entre 1 y 2.5 segundos.
+				if (messageQueue.length > 0) {
+					const humanCooldown = Math.floor(Math.random() * 1500) + 1000; // 1s - 2.5s
+					await new Promise((res) => setTimeout(res, humanCooldown));
 				}
 			}
 
 			isProcessingQueue = false;
 		};
 
+		const MAX_QUEUE_SIZE = 200; // Máximo de mensajes en espera por sesión (Enterprise Ready)
+
 		socket.sendMessage = (jid: string, content: any, options: any) => {
 			return new Promise((resolve, reject) => {
+				if (messageQueue.length >= MAX_QUEUE_SIZE) {
+					const err = new Boom(
+						'Message queue full, anti-ban protection triggered (Too Many Requests)',
+						{
+							statusCode: 429,
+						},
+					);
+					logger.warn({ sessionId, jid }, 'Message rejected: Queue full');
+					return reject(err);
+				}
+
 				messageQueue.push({ jid, content, options, resolve, reject });
 				processQueue();
 			});
@@ -586,7 +618,31 @@ export async function createSession(options: createSessionOptions) {
 			}
 		};
 
-		socket.ev.on('creds.update', saveCreds);
+		// ============================================================
+		// 🛡️ DEADLINE DE CONEXIÓN GLOBAL (Sugerencia del Creador)
+		// Si en 60 segundos no hemos llegado a 'open', forzamos cierre.
+		// ============================================================
+		connectionDeadline = setTimeout(() => {
+			const currentSession = sessionsMap.get(sessionId);
+			// Verificamos 'open' en el estado actual de la sesión
+			if (currentSession && connectionState.connection !== 'open') {
+				logger.error({ sessionId }, '🔥 Connection Deadline Exceeded: Killing silent hang');
+				destroy(false); // Desconexión suave para reintentar
+			}
+		}, 60000);
+
+		socket.ev.on('creds.update', async () => {
+			// ============================================================
+			// 🔒 PERSISTENCIA SECUENCIAL (Sugerencia del Creador)
+			// Asegurar que las credenciales se guarden ANTES de cualquier reconexión.
+			// ============================================================
+			try {
+				await saveCreds();
+				logger.debug({ sessionId }, 'Creds persisted successfully');
+			} catch (err) {
+				logger.error({ sessionId, error: err }, 'Failed to persist creds');
+			}
+		});
 
 		// Iniciar watchdog y escuchar CUALQUIER evento
 		resetWatchdog();
@@ -651,27 +707,33 @@ export async function createSession(options: createSessionOptions) {
 
 				logger.info({ sessionId, count: validContacts.length }, 'Bulk syncing contacts');
 
-				await prisma.$transaction(
-					validContacts.map((contact) =>
-						prisma.contact.upsert({
-							where: { sessionId_id: { sessionId, id: contact.id } },
-							update: {
-								name: contact.name || contact.notify || contact.verifiedName,
-								phoneNumber: contact.phoneNumber,
-								lid: contact.lid,
-							},
-							create: {
-								sessionId,
-								id: contact.id,
-								name: contact.name || contact.notify || contact.verifiedName,
-								phoneNumber: contact.phoneNumber,
-								lid: contact.lid,
-							},
-						}),
-					),
-				);
+				// Procesar en lotes de 200 para no ahogar Prisma ni la BD (Enterprise Ready)
+				const CHUNK_SIZE = 200;
+				for (let i = 0; i < validContacts.length; i += CHUNK_SIZE) {
+					const chunk = validContacts.slice(i, i + CHUNK_SIZE);
+
+					await prisma.$transaction(
+						chunk.map((contact) =>
+							prisma.contact.upsert({
+								where: { sessionId_id: { sessionId, id: contact.id } },
+								update: {
+									name: contact.name || contact.notify || contact.verifiedName,
+									phoneNumber: contact.phoneNumber,
+									lid: contact.lid,
+								},
+								create: {
+									sessionId,
+									id: contact.id,
+									name: contact.name || contact.notify || contact.verifiedName,
+									phoneNumber: contact.phoneNumber,
+									lid: contact.lid,
+								},
+							}),
+						),
+					);
+				}
 			} catch (e) {
-				logger.error('Failed to bulk sync contacts', { sessionId, error: e });
+				logger.error({ sessionId, err: e }, 'Failed to bulk sync contacts');
 			}
 		});
 
@@ -684,7 +746,11 @@ export async function createSession(options: createSessionOptions) {
 			// Solo logueamos como INFO si la conexión está abierta o el estado es importante
 			// Si es un error y estamos en los primeros reintentos, lo bajamos a DEBUG para reducir ruido
 			if (connection === 'open') {
-				logger.info('connection.update: open', { sessionId, statusCode });
+				if (connectionDeadline) {
+					clearTimeout(connectionDeadline);
+					connectionDeadline = null;
+				}
+				logger.info({ sessionId }, 'connection.update: open');
 
 				// ============================================================
 				// 🚀 SOTA: Iniciar Motor de Telemetría al conectar
@@ -697,7 +763,7 @@ export async function createSession(options: createSessionOptions) {
 			} else if (connection === 'close') {
 				// El manejo detallado se hace en handleConnectionClose
 			} else if (update.qr) {
-				logger.debug('connection.update: qr received', { sessionId });
+				logger.debug({ sessionId }, 'connection.update: qr received');
 				// Actualizar estado a "authenticating" en BD si realmente se está emitiendo un QR
 				try {
 					await prisma.userSession.update({
@@ -705,18 +771,14 @@ export async function createSession(options: createSessionOptions) {
 						data: { status: 'authenticating', updatedAt: new Date() },
 					});
 				} catch (e) {
-					logger.error('Failed to update status to authenticating on QR', { sessionId, error: e });
+					logger.error({ sessionId, err: e }, 'Failed to update status to authenticating on QR');
 				}
 			} else if (lastDisconnect?.error) {
 				// Solo alertamos si ya llevamos un par de intentos fallidos
 				if (attemptCount > 2) {
-					logger.warn('connection.update: connection errored', {
-						sessionId,
-						statusCode,
-						attempts: attemptCount,
-					});
+					logger.warn({ sessionId, statusCode, attempts: attemptCount }, 'connection.update: connection errored');
 				} else {
-					logger.debug('connection.update: transient connection error', { sessionId, statusCode });
+					logger.debug({ sessionId, statusCode }, 'connection.update: transient connection error');
 				}
 			}
 
@@ -727,19 +789,19 @@ export async function createSession(options: createSessionOptions) {
 				// Verificar y subir pre-keys solo si realmente es necesario
 				try {
 					const preKeyCount = await countPreKeys(sessionId);
-					logger.info('Current pre-key count', { sessionId, preKeyCount });
+					logger.info({ sessionId, preKeyCount }, 'Current pre-key count');
 
 					if (preKeyCount < PRE_KEY_SUFFICIENT_THRESHOLD) {
 						await socket.uploadPreKeysToServerIfRequired();
-						logger.info('Pre-keys uploaded', { sessionId, previousCount: preKeyCount });
+						logger.info({ sessionId, previousCount: preKeyCount }, 'Pre-keys uploaded');
 					} else {
-						logger.info('Skipping pre-key upload, sufficient keys exist', {
-							sessionId,
-							preKeyCount,
-						});
+						logger.info(
+							{ sessionId, preKeyCount },
+							'Skipping pre-key upload, sufficient keys exist',
+						);
 					}
 				} catch (e) {
-					logger.error('Failed to manage pre-keys', { sessionId, error: e });
+					logger.error({ sessionId, err: e }, 'Failed to manage pre-keys');
 				}
 
 				// ============================================================
@@ -837,11 +899,7 @@ export async function createSession(options: createSessionOptions) {
 							data: JSON.stringify({ readIncomingMessages, ...socketConfig }),
 						},
 					});
-					logger.info('UserSession synced to database on connection open', {
-						sessionId,
-						phoneNumber,
-						userName,
-					});
+					logger.info({ sessionId, phoneNumber, userName }, 'UserSession synced to database on connection open');
 
 					// ============================================================
 					// 🧹 LIMPIEZA DE LLAVES (Cleanup)
@@ -849,7 +907,7 @@ export async function createSession(options: createSessionOptions) {
 					// ============================================================
 					performSessionCleanup(sessionId, socket);
 				} catch (e) {
-					logger.error('Failed to sync UserSession on connection open', { sessionId, error: e });
+					logger.error({ sessionId, err: e }, 'Failed to sync UserSession on connection open');
 				}
 
 				const session = sessionsMap.get(sessionId);
@@ -863,7 +921,7 @@ export async function createSession(options: createSessionOptions) {
 							);
 							currentRes.end();
 						} catch (e) {
-							logger.error('Failed to send SSE open event', { sessionId, error: e });
+							logger.error({ sessionId, err: e }, 'Failed to send SSE open event');
 						}
 					} else {
 						currentRes.end();
@@ -878,18 +936,24 @@ export async function createSession(options: createSessionOptions) {
 				handleConnectionClose();
 			}
 
-			handleConnectionUpdate();
+			handleConnectionUpdate().catch((err) => {
+				logger.error({ sessionId, err }, 'Failed to handle connection update');
+			});
 		});
 
 		// Webhook: enviar mensajes entrantes a los webhooks configurados
-		socket.ev.on('messages.upsert', (m: { messages: any[]; type: 'notify' | 'append' }) => {
-			handleMessagesUpsert(socket, m, sessionId, readIncomingMessages);
+		socket.ev.on('messages.upsert', async (m: { messages: any[]; type: 'notify' | 'append' }) => {
+			try {
+				await handleMessagesUpsert(socket, m, sessionId, readIncomingMessages);
+			} catch (err) {
+				logger.error({ sessionId, err }, 'Critical error processing incoming messages');
+			}
 		});
 
 		// Sesión inicializada correctamente en memoria
 		logger.info('createSession: session initialized in memory', { sessionId });
 	} catch (error) {
-		logger.error('createSession: Critical error during initialization', { sessionId, error });
+		logger.error({ sessionId, err: error }, 'createSession: Critical error during initialization');
 		clearRestartingLock(sessionId);
 
 		// 🛡️ Fail-safe: Si falla críticamente, asegurar que no quede como "active" o "authenticating"
