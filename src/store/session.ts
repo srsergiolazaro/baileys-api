@@ -1,7 +1,7 @@
 import type { AuthenticationCreds, AuthenticationState, SignalDataTypeMap } from 'baileys';
 import { proto } from 'baileys';
 import { BufferJSON, initAuthCreds } from 'baileys';
-import { prisma } from '@/db';
+import { prisma, withPrismaRetry } from '@/db';
 import { logger } from '@/shared';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
@@ -14,33 +14,39 @@ export async function useSession(sessionId: string): Promise<{
 	const model = prisma.session;
 
 	const write = async (data: any, id: string) => {
-		try {
-			data = JSON.stringify(data, BufferJSON.replacer);
-			id = fixId(id);
-			await model.upsert({
-				select: { pkId: true },
-				create: { data, id, sessionId },
-				update: { data },
-				where: { sessionId_id: { id, sessionId } },
-			});
-		} catch (e) {
-			logger.error(e, 'An error occured during session write');
-			throw e;
-		}
+		return withPrismaRetry(
+			async () => {
+				const encodedData = JSON.stringify(data, BufferJSON.replacer);
+				const fixedId = fixId(id);
+				await model.upsert({
+					select: { pkId: true },
+					create: { data: encodedData, id: fixedId, sessionId },
+					update: { data: encodedData },
+					where: { sessionId_id: { id: fixedId, sessionId } },
+				});
+			},
+			3,
+			500,
+			`session write (${id})`,
+		);
 	};
 
 	const read = async (id: string) => {
 		try {
-			const result = await model.findUnique({
-				select: { data: true },
-				where: { sessionId_id: { id: fixId(id), sessionId } },
-			});
+			return await withPrismaRetry(
+				async () => {
+					const result = await model.findUnique({
+						select: { data: true },
+						where: { sessionId_id: { id: fixId(id), sessionId } },
+					});
 
-			if (!result) {
-				return null;
-			}
-
-			return JSON.parse(result.data, BufferJSON.reviver);
+					if (!result) return null;
+					return JSON.parse(result.data, BufferJSON.reviver);
+				},
+				3,
+				500,
+				`session read (${id})`,
+			);
 		} catch (e) {
 			if (e instanceof PrismaClientKnownRequestError && e.code === 'P2025') {
 				// Silent - key doesn't exist
@@ -53,9 +59,16 @@ export async function useSession(sessionId: string): Promise<{
 
 	const del = async (id: string) => {
 		try {
-			await model.deleteMany({
-				where: { id: fixId(id), sessionId },
-			});
+			await withPrismaRetry(
+				async () => {
+					await model.deleteMany({
+						where: { id: fixId(id), sessionId },
+					});
+				},
+				3,
+				500,
+				`session delete (${id})`,
+			);
 		} catch (e) {
 			logger.error(e, 'An error occured during session delete');
 			throw e;
@@ -85,20 +98,42 @@ export async function useSession(sessionId: string): Promise<{
 					[id: string]: SignalDataTypeMap[T];
 				}> => {
 					const data: { [key: string]: SignalDataTypeMap[typeof type] } = {};
+					const fixedIds = ids.map((id) => fixId(`${type}-${id}`));
 
-					for (const id of ids) {
-						const cacheKey = `${type}-${id}`;
-						try {
-							let value = await read(cacheKey);
-							if (type === 'app-state-sync-key' && value) {
-								value = proto.Message.AppStateSyncKeyData.fromObject(value);
+					try {
+						const results = await withPrismaRetry(
+							async () => {
+								return await model.findMany({
+									where: {
+										sessionId,
+										id: { in: fixedIds },
+									},
+									select: { id: true, data: true },
+								});
+							},
+							3,
+							500,
+							`session bulk read (${type})`,
+						);
+
+						// Mapear resultados de vuelta a los IDs originales de Baileys
+						for (const id of ids) {
+							const fId = fixId(`${type}-${id}`);
+							const result = results.find((r) => r.id === fId);
+
+							if (result) {
+								let value = JSON.parse(result.data, BufferJSON.reviver);
+								if (type === 'app-state-sync-key' && value) {
+									value = proto.Message.AppStateSyncKeyData.fromObject(value);
+								}
+								data[id] = value;
+							} else {
+								data[id] = undefined as any;
 							}
-
-							data[id] = value !== null ? value : (undefined as any);
-						} catch (e) {
-							logger.error({ sessionId, cacheKey, error: e }, 'Error reading key from DB');
-							data[id] = undefined as any;
 						}
+					} catch (e) {
+						logger.error({ sessionId, type, ids, error: e }, 'Error in bulk reading keys from DB');
+						for (const id of ids) data[id] = undefined as any;
 					}
 
 					return data;
@@ -119,7 +154,11 @@ export async function useSession(sessionId: string): Promise<{
 						}
 					}
 
-					await Promise.all(tasks);
+					// Ejecutar en paralelo con retries individuales (vía write/del)
+					await Promise.all(tasks).catch((e) => {
+						logger.error({ sessionId, error: e }, 'Error in keys.set');
+						// No arrojamos para no romper el flujo de Baileys, pero lo logueamos
+					});
 				},
 			},
 		},
