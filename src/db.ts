@@ -41,3 +41,35 @@ async function connectWithRetry(retries = 5, delay = 2000) {
 }
 
 connectWithRetry();
+
+export async function withPrismaRetry<T>(
+	operation: () => Promise<T>,
+	retries = 3,
+	delay = 1000,
+	operationName = 'operation',
+): Promise<T> {
+	let lastError: any;
+	for (let i = 0; i < retries; i++) {
+		try {
+			return await operation();
+		} catch (err: any) {
+			lastError = err;
+			const isTransient =
+				err.code === 'P1017' || // Server has closed the connection
+				err.code === 'P2021' || // Table does not exist (sometimes transient on startup)
+				err.message?.includes('closed') ||
+				err.message?.includes('timeout');
+
+			if (isTransient && i < retries - 1) {
+				console.warn(
+					`⚠️ DB: Transient error in ${operationName} (attempt ${i + 1}/${retries}), retrying...`,
+					{ code: err.code, message: err.message },
+				);
+				await new Promise((resolve) => setTimeout(resolve, delay * (i + 1))); // Exponential-ish backoff
+				continue;
+			}
+			throw err;
+		}
+	}
+	throw lastError;
+}

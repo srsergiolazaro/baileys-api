@@ -151,24 +151,7 @@ init()
 				process.exit(1);
 			}
 		};
-
-		// ============================================================
-		// 📊 MONITOR DE RENDIMIENTO (Memory Monitor)
-		// Vital para detectar fugas de memoria en alta densidad (100+ sesiones)
-		// ============================================================
-		setInterval(
-			() => {
-				const used = process.memoryUsage();
-				const sessionsCount = (global as any).sessionsMap?.size || 0;
-				console.log(`\n📈 [System Monitor] - Sessions: ${sessionsCount}`);
-				console.log(`   RSS: ${(used.rss / 1024 / 1024).toFixed(2)} MB`);
-				console.log(`   Heap Total: ${(used.heapTotal / 1024 / 1024).toFixed(2)} MB`);
-				console.log(`   Heap Used: ${(used.heapUsed / 1024 / 1024).toFixed(2)} MB`);
-				console.log(`   External: ${(used.external / 1024 / 1024).toFixed(2)} MB\n`);
-			},
-			5 * 60 * 1000,
-		); // Cada 5 minutos
-
+		
 		process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 		process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 	})

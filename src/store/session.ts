@@ -25,6 +25,7 @@ export async function useSession(sessionId: string): Promise<{
 			});
 		} catch (e) {
 			logger.error(e, 'An error occured during session write');
+			throw e;
 		}
 	};
 
@@ -57,6 +58,7 @@ export async function useSession(sessionId: string): Promise<{
 			});
 		} catch (e) {
 			logger.error(e, 'An error occured during session delete');
+			throw e;
 		}
 	};
 

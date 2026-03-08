@@ -56,8 +56,15 @@ export async function init(retries = 3) {
 		count: userSessions.length,
 	});
 
-	for (const { sessionId, data, userId } of userSessions) {
-		console.log('🔍 init: procesando sesión', { sessionId, userId });
+	// ============================================================
+	// 🚀 SEQUENTIAL INITIALIZATION
+	// Procesar sesiones una por una para garantizar estabilidad total (Max Security)
+	// ============================================================
+	const SESSION_DELAY = 5000; // 5 segundos entre cada sesión
+
+	for (let i = 0; i < userSessions.length; i++) {
+		const { sessionId, data, userId } = userSessions[i];
+		console.log(`📦 init: procesando sesión ${i + 1}/${userSessions.length}`, { sessionId, userId });
 
 		if (!data) {
 			console.log('⚠️ init: saltando sesión por falta de data', { sessionId, userId });
@@ -74,22 +81,17 @@ export async function init(retries = 3) {
 
 			const { readIncomingMessages, ...socketConfig } = JSON.parse(data);
 
-			// ============================================================
-			// 🎲 STAGGERED START (Jitter)
-			// Recomendación del creador: Evita que todas las sesiones conecten
-			// al mismo tiempo desde la misma IP.
-			// ============================================================
-			const staggerDelay = Math.floor(Math.random() * 1000) + 500; // Entre 0.5s y 1.5s
-			await new Promise((resolve) => setTimeout(resolve, staggerDelay));
-
-			console.log(`🟢 init: creando sesión (${staggerDelay}ms delay)`, {
-				sessionId,
-				userId,
-			});
-
-			createSession({ sessionId, userId: userId ?? '', readIncomingMessages, socketConfig });
+			console.log(`🟢 init: iniciando sesión ${sessionId}...`);
+			// Iniciamos la sesión (createSession es async pero internamente maneja el proceso)
+			await createSession({ sessionId, userId: userId ?? '', readIncomingMessages, socketConfig });
+			
+			// Esperamos un tiempo prudencial antes de pasar a la siguiente
+			if (i < userSessions.length - 1) {
+				console.log(`⏳ init: esperando ${SESSION_DELAY}ms para la siguiente sesión...`);
+				await new Promise((resolve) => setTimeout(resolve, SESSION_DELAY));
+			}
 		} catch (e) {
-			console.error(`❌ Error parsing session data for ${sessionId}:`, e);
+			console.error(`❌ Error iniciando sesión ${sessionId}:`, e);
 		}
 	}
 
