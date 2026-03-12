@@ -37,19 +37,25 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 			await prisma.$transaction(async (tx) => {
 				if (isLatest) await tx.message.deleteMany({ where: { sessionId } });
 
-				await tx.message.createMany({
-					data: filteredMessages.map((message) => {
-						const transformed = transformPrisma(message) as MakeTransformedPrisma<Message>;
-						const data = {
-							...transformed,
-							remoteJid: message.key.remoteJid!,
-							id: message.key.id!,
-							sessionId,
-						};
-						return filterPrisma(data, MESSAGE_KEYS) as any;
-					}),
-					skipDuplicates: true,
+				// 🚀 SOTA: Batching createMany to avoid Prisma P2035
+				const BATCH_SIZE = 100;
+				const data = filteredMessages.map((message) => {
+					const transformed = transformPrisma(message) as MakeTransformedPrisma<Message>;
+					const data = {
+						...transformed,
+						remoteJid: message.key.remoteJid!,
+						id: message.key.id!,
+						sessionId,
+					};
+					return filterPrisma(data, MESSAGE_KEYS) as any;
 				});
+
+				for (let i = 0; i < data.length; i += BATCH_SIZE) {
+					await tx.message.createMany({
+						data: data.slice(i, i + BATCH_SIZE),
+						skipDuplicates: true,
+					});
+				}
 			});
 			logger.info({ sessionId, count: filteredMessages.length }, 'Synced message history');
 		} catch (e) {

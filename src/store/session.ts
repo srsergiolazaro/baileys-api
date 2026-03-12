@@ -101,20 +101,28 @@ export async function useSession(sessionId: string): Promise<{
 					const fixedIds = ids.map((id) => fixId(`${type}-${id}`));
 
 					try {
-						const results = await withPrismaRetry(
-							async () => {
-								return await model.findMany({
-									where: {
-										sessionId,
-										id: { in: fixedIds },
-									},
-									select: { id: true, data: true },
-								});
-							},
-							3,
-							500,
-							`session bulk read (${type})`,
-						);
+						// 🚀 SOTA: Batching queries to avoid Prisma P2035 (too many bind variables)
+						const CHUNK_SIZE = 5000;
+						const results: { id: string; data: string }[] = [];
+
+						for (let i = 0; i < fixedIds.length; i += CHUNK_SIZE) {
+							const chunk = fixedIds.slice(i, i + CHUNK_SIZE);
+							const chunkResults = await withPrismaRetry(
+								async () => {
+									return await model.findMany({
+										where: {
+											sessionId,
+											id: { in: chunk },
+										},
+										select: { id: true, data: true },
+									});
+								},
+								3,
+								500,
+								`session bulk read chunk (${type})`,
+							);
+							results.push(...chunkResults);
+						}
 
 						// Mapear resultados de vuelta a los IDs originales de Baileys
 						for (const id of ids) {
