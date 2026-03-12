@@ -175,10 +175,8 @@ export async function useSession(sessionId: string): Promise<{
 					}
 
 					// Ejecutar en paralelo con retries individuales (vía write/del)
-					await Promise.all(tasks).catch((e) => {
-						logger.error({ sessionId, error: e }, 'Error in keys.set');
-						// No arrojamos para no romper el flujo de Baileys, pero lo logueamos
-					});
+					// 🚀 SOTA: Throwing error if any task fails to prevent Baileys state de-sync
+					await Promise.all(tasks);
 				},
 			},
 		},

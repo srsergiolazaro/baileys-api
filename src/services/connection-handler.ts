@@ -75,6 +75,7 @@ export async function countPreKeys(sessionId: string): Promise<number> {
  * Borrar llaves < firstUnuploadedPreKeyId, manteniendo un buffer de seguridad.
  */
 export async function performSessionCleanup(sessionId: string, socket: any) {
+	/*
 	try {
 		const creds = socket.authState.creds;
 		const cutoff = creds.firstUnuploadedPreKeyId || 0;
@@ -96,6 +97,7 @@ export async function performSessionCleanup(sessionId: string, socket: any) {
 	} catch (e) {
 		logger.error('Failed to perform session cleanup', { sessionId, error: e });
 	}
+	*/
 }
 
 export function createConnectionHandlers(
