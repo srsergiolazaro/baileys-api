@@ -169,9 +169,6 @@ export async function createSession(options: createSessionOptions) {
 	};
 	let socket: ReturnType<typeof makeWASocket>;
 	const connectionDeadlineWrapper: { current: NodeJS.Timeout | null } = { current: null };
-	const watchdogTimerWrapper: { current: NodeJS.Timeout | null } = { current: null };
-
-	const WATCHDOG_TIMEOUT = 5 * 60 * 1000; // 5 minutos
 
 	// ============================================================
 	// 🔥 DESTRUCCIÓN COMPLETA DE SESIÓN
@@ -201,11 +198,6 @@ export async function createSession(options: createSessionOptions) {
 		} catch (e) {
 			logger.error({ sessionId, err: e }, 'Error during session destroy');
 		} finally {
-			if (watchdogTimerWrapper.current) {
-				clearTimeout(watchdogTimerWrapper.current);
-				watchdogTimerWrapper.current = null;
-			}
-
 			if (connectionDeadlineWrapper.current) {
 				clearTimeout(connectionDeadlineWrapper.current);
 				connectionDeadlineWrapper.current = null;
@@ -228,33 +220,6 @@ export async function createSession(options: createSessionOptions) {
 		}
 	};
 
-	const resetWatchdog = () => {
-		if (watchdogTimerWrapper.current) clearTimeout(watchdogTimerWrapper.current);
-		watchdogTimerWrapper.current = setTimeout(async () => {
-			if (!sessionsMap.has(sessionId)) return; // Sesión ya destruida
-
-			logger.warn(
-				{ sessionId },
-				'🐕 Watchdog: Sesión zombie detectada (5 min sin eventos). Reiniciando...',
-			);
-			
-			// 🛡️ IMPORTANTE: Limpiar el lock antes de reiniciar para evitar el error "is already initializing"
-			clearRestartingLock(sessionId);
-			
-			if (socket) {
-				try {
-					socket.end(
-						new Boom('Watchdog: No events for 5 minutes', {
-							statusCode: DisconnectReason.connectionLost,
-						}),
-					);
-				} catch (e) {
-					logger.error({ sessionId, error: e }, 'Failed to end socket via watchdog');
-				}
-			}
-		}, WATCHDOG_TIMEOUT);
-	};
-
 	// Cargar Service Handlers de conexión
 	const { handleConnectionClose, handleConnectionUpdate } = createConnectionHandlers(
 		sessionId,
@@ -264,7 +229,6 @@ export async function createSession(options: createSessionOptions) {
 		SSE,
 		() => createSession,
 		destroy,
-		watchdogTimerWrapper,
 		connectionDeadlineWrapper,
 	);
 
@@ -355,10 +319,6 @@ export async function createSession(options: createSessionOptions) {
 		});
 
 		// Iniciar watchdog y escuchar CUALQUIER evento
-		resetWatchdog();
-		socket.ev.process(() => {
-			resetWatchdog();
-		});
 
 		// Modulo: BD Identity & Contact Sync
 		setupDbSyncHandlers(socket, sessionId);

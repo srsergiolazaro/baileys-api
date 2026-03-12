@@ -75,11 +75,12 @@ export async function countPreKeys(sessionId: string): Promise<number> {
  * Borrar llaves < firstUnuploadedPreKeyId, manteniendo un buffer de seguridad.
  */
 export async function performSessionCleanup(sessionId: string, socket: any) {
+	// 🛡️ DESACTIVADO TEMPORALMENTE: Investigando si esta limpieza causa los errores 'Invalid PreKey ID'
 	/*
 	try {
 		const creds = socket.authState.creds;
 		const cutoff = creds.firstUnuploadedPreKeyId || 0;
-		const BUFFER = 50; // Mantener las últimas 50 llaves subidas para evitar fallos de descifrado
+		const BUFFER = 200; // Mantener las últimas 200 llaves subidas para evitar fallos de descifrado (Aumentado de 50)
 
 		if (cutoff > BUFFER) {
 			const maxToDelete = cutoff - BUFFER;
@@ -108,7 +109,6 @@ export function createConnectionHandlers(
 	SSE: boolean,
 	createSessionGetter: () => Function,
 	destroySession: (logout: boolean) => Promise<void>,
-	watchdogTimerWrapper: { current: NodeJS.Timeout | null },
 	connectionDeadlineWrapper: { current: NodeJS.Timeout | null }
 ) {
 	const handleConnectionClose = () => {
@@ -174,9 +174,6 @@ export function createConnectionHandlers(
 		sessionsMap.delete(sessionId);
 
 		// 🛡️ Limpiar timers obsoletos antes de la reconexión para evitar leaks de cierres silenciosos cruzados
-		if (watchdogTimerWrapper.current) {
-			clearTimeout(watchdogTimerWrapper.current);
-		}
 		if (connectionDeadlineWrapper.current) {
 			clearTimeout(connectionDeadlineWrapper.current);
 		}

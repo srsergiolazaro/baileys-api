@@ -139,7 +139,7 @@ export async function useSession(sessionId: string): Promise<{
 								try {
 									value = JSON.parse(result.data, BufferJSON.reviver);
 								} catch (parseError) {
-									logger.error({ sessionId, type, id, data: result.data, error: parseError }, '❌ JSON Parse Error in session bulk read');
+									logger.error({ sessionId, type, id, length: result.data.length, data: result.data, error: parseError }, '❌ JSON Parse Error in session bulk read');
 									data[id] = undefined as any;
 									continue;
 								}
