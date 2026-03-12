@@ -1,4 +1,4 @@
-import { prisma } from './db';
+import { prisma, withPrismaRetry } from './db';
 import { createSession } from './services/baileys';
 import { syncSessionStatusOnStartup } from './services/session';
 
@@ -33,10 +33,16 @@ export async function init(retries = 3) {
 	let userSessions: any[] = [];
 	for (let i = 0; i < retries; i++) {
 		try {
-			userSessions = await prisma.userSession.findMany({
-				select: { sessionId: true, data: true, userId: true },
-				where: { status: { in: ['active', 'authenticating'] } },
-			});
+			userSessions = await withPrismaRetry(
+				() =>
+					prisma.userSession.findMany({
+						select: { sessionId: true, data: true, userId: true },
+						where: { status: { in: ['active', 'authenticating'] } },
+					}),
+				3,
+				2000,
+				'init session load',
+			);
 			break; // Success
 		} catch (e) {
 			console.error(`❌ init: Error obteniendo sesiones (intento ${i + 1}/${retries})`, e);

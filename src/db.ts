@@ -55,9 +55,13 @@ export async function withPrismaRetry<T>(
 		} catch (err: any) {
 			lastError = err;
 			const isTransient =
+				err.code === 'P1001' || // Can't reach database server
+				err.code === 'P1008' || // Operations timeout
+				err.code === 'P1000' || // Authentication failed (transient if DB is booting)
 				err.code === 'P1017' || // Server has closed the connection
 				err.code === 'P2021' || // Table does not exist (sometimes transient on startup)
 				err.message?.includes('closed') ||
+				err.message?.includes('reach database') ||
 				err.message?.includes('timeout');
 
 			if (isTransient && i < retries - 1) {
