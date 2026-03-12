@@ -41,7 +41,12 @@ export async function useSession(sessionId: string): Promise<{
 					});
 
 					if (!result) return null;
-					return JSON.parse(result.data, BufferJSON.reviver);
+					try {
+						return JSON.parse(result.data, BufferJSON.reviver);
+					} catch (parseError) {
+						logger.error({ sessionId, id, data: result.data, error: parseError }, '❌ JSON Parse Error in session read');
+						return null;
+					}
 				},
 				3,
 				500,
@@ -130,7 +135,14 @@ export async function useSession(sessionId: string): Promise<{
 							const result = results.find((r) => r.id === fId);
 
 							if (result) {
-								let value = JSON.parse(result.data, BufferJSON.reviver);
+								let value: any;
+								try {
+									value = JSON.parse(result.data, BufferJSON.reviver);
+								} catch (parseError) {
+									logger.error({ sessionId, type, id, data: result.data, error: parseError }, '❌ JSON Parse Error in session bulk read');
+									data[id] = undefined as any;
+									continue;
+								}
 								if (type === 'app-state-sync-key' && value) {
 									value = proto.Message.AppStateSyncKeyData.fromObject(value);
 								}
