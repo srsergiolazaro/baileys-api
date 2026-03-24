@@ -1,5 +1,6 @@
 import type { Session } from './types';
 import { logger } from './shared';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 
 export const serializePrisma = (obj: any) => {
 	return JSON.parse(
@@ -42,18 +43,9 @@ const detectJidType = (jid: string): 'group' | 'number' | 'lid' => {
 };
 
 function normalizePhoneNumber(input: string): string {
-	// 1. Quitar espacios y símbolos comunes
-	const cleaned = input.replace(/[\s()-]/g, '');
-
-	// 2. Si empieza con '+', eliminarlo
-	const withoutPlus = cleaned.startsWith('+') ? cleaned.slice(1) : cleaned;
-
-	// 3. Dejar solo dígitos
-	const digits = withoutPlus.replace(/\D+/g, '');
-
-	// 4. Validar que tenga al menos un código país + número (7-15 dígitos según E.164)
-	if (digits.length >= 7 && digits.length <= 15) {
-		return digits;
+	const parsed = parsePhoneNumberFromString(input, 'PE');
+	if (parsed?.number) {
+		return parsed.number.replace('+', '');
 	}
 
 	throw new Error('Invalid phone number format');
