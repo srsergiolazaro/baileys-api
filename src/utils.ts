@@ -43,10 +43,27 @@ const detectJidType = (jid: string): 'group' | 'number' | 'lid' => {
 };
 
 function normalizePhoneNumber(input: string): string {
-	const parsed = parsePhoneNumberFromString(input, 'PE');
-	if (parsed?.number) {
-		return parsed.number.replace('+', '');
+	// 1. Si ya tiene +, confiar plenamente en libphonenumber-js
+	if (input.startsWith('+')) {
+		const parsed = parsePhoneNumberFromString(input);
+		if (parsed?.number) return parsed.number.replace('+', '');
 	}
+
+	// 2. Si tiene exactamente 9 dígitos, es altamente probable que sea Perú local (987654321)
+	if (input.length === 9) {
+		const pLocal = parsePhoneNumberFromString(input, 'PE');
+		if (pLocal?.number) return pLocal.number.replace('+', '');
+	}
+
+	// 3. Intentar como internacional prefijando + (Ej: 521234... -> +521234...)
+	const withPlus = parsePhoneNumberFromString('+' + input);
+	if (withPlus && (withPlus.isValid() || withPlus.isPossible())) {
+		return withPlus.number.replace('+', '');
+	}
+
+	// 4. Fallback final: usar PE como default
+	const pFallback = parsePhoneNumberFromString(input, 'PE');
+	if (pFallback?.number) return pFallback.number.replace('+', '');
 
 	throw new Error('Invalid phone number format');
 }
