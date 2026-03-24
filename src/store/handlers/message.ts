@@ -6,7 +6,20 @@ import { prisma } from '@/db';
 import { logger } from '@/shared';
 import { Prisma, type Message } from '@prisma/client';
 
-const MESSAGE_KEYS = Object.keys(Prisma.MessageScalarFieldEnum);
+const MESSAGE_KEYS = [
+	'sessionId',
+	'remoteJid',
+	'id',
+	'key',
+	'message',
+	'messageTimestamp',
+	'status',
+	'participant',
+	'pushName',
+	'reactions',
+	'userReceipt',
+];
+
 
 function toBigIntTimestamp(ts: any): bigint | null {
 	if (!ts) return null;
@@ -26,28 +39,31 @@ const getKeyAuthor = (key: WAMessageKey | undefined | null) =>
 export default function messageHandler(sessionId: string, event: BaileysEventEmitter) {
 	let listening = false;
 
-	const set: BaileysEventHandler<'messaging-history.set'> = async ({ messages, isLatest }) => {
+	// 🚀 SOTA: Helper reutilizable para evitar procesar mensajes basura/pesados
+	const shouldProcess = (jid?: string | null, msg?: any) => {
+		if (!jid || jid.endsWith('@status')) return false;
+		if (msg?.protocolMessage) return false;
+		return true;
+	};
+
+	const set: BaileysEventHandler<'messaging-history.set'> = async ({ messages }) => {
 		try {
-			const filteredMessages = messages.filter((msg) => {
-				const jid = msg.key.remoteJid || '';
-				if (jid.endsWith('@status') || msg.message?.protocolMessage) return false;
-				return true;
-			});
+			const filteredMessages = messages.filter((msg) => shouldProcess(msg.key.remoteJid, msg.message));
 
 			await prisma.$transaction(async (tx) => {
-				if (isLatest) await tx.message.deleteMany({ where: { sessionId } });
+
 
 				// 🚀 SOTA: Batching createMany to avoid Prisma P2035
 				const BATCH_SIZE = 100;
-				const data = filteredMessages.map((message) => {
-					const transformed = transformPrisma(message) as MakeTransformedPrisma<Message>;
-					const data = {
-						...transformed,
-						remoteJid: message.key.remoteJid!,
-						id: message.key.id!,
+				const data = filteredMessages.map((msg) => {
+					const rawData = filterPrisma({
+						...msg,
+						remoteJid: msg.key.remoteJid!,
+						id: msg.key.id!,
 						sessionId,
-					};
-					return filterPrisma(data, MESSAGE_KEYS) as any;
+					}, MESSAGE_KEYS);
+					
+					return transformPrisma(rawData) as any;
 				});
 
 				for (let i = 0; i < data.length; i += BATCH_SIZE) {
@@ -93,28 +109,19 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 		for (const message of messages) {
 			try {
 				const jid = jidNormalizedUser(message.key.remoteJid!);
-				if (jid.endsWith('@status') || message.message?.protocolMessage) continue;
+				if (!shouldProcess(jid, message.message)) continue;
 
-				const data = transformPrisma(message) as MakeTransformedPrisma<Message>;
 				const messageTimestamp = toBigIntTimestamp(message.messageTimestamp);
 
-				const prismaData = {
-					...data,
+				const rawData = filterPrisma({
+					...message,
 					remoteJid: jid,
 					id: message.key.id!,
 					sessionId,
 					messageTimestamp,
-					messageStubParameters: [],
-					labels: [],
-					userReceipt: [],
-					reactions: [],
-					pollUpdates: [],
-					eventResponses: [],
-					statusMentionSources: [],
-					supportAiCitations: [],
-				};
+				}, MESSAGE_KEYS);
 
-				upsertBuffer.push(filterPrisma(prismaData, MESSAGE_KEYS));
+				upsertBuffer.push(transformPrisma(rawData));
 			} catch (e) {
 				logger.error(e, 'Error adding message to upsert buffer');
 			}
@@ -132,10 +139,11 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 	};
 
 	const update: BaileysEventHandler<'messages.update'> = async (updates) => {
-		for (const { update: msgUpdate, key } of updates) {
+		await Promise.all(updates.map(async ({ update: msgUpdate, key }) => {
 			try {
 				const jid = key.remoteJid!;
 				const id = key.id!;
+				if (!shouldProcess(jid)) return;
 
 				// 🚀 Lógica de Edición y Actualización
 				await prisma.$transaction(async (tx) => {
@@ -147,21 +155,21 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 
 					// Merge de datos (Pattern: Baileys handles the protocol logic, we just merge)
 					const merged = { ...prevData, ...msgUpdate };
-					const transformed = transformPrisma(merged) as MakeTransformedPrisma<Message>;
-
-					// Remover metadatos internos de Prisma para el update
-					const { pkId: _pkId, sessionId: _sessionId, ...updateData } = transformed;
-					void _pkId; void _sessionId;
+					
+					// Filtrar antes de transformar
+					const filteredUpdateData = filterPrisma(merged, MESSAGE_KEYS);
+					const transformed = transformPrisma(filteredUpdateData) as any;
 
 					await tx.message.update({
 						where: { pkId: prevData.pkId },
-						data: updateData,
+						data: transformed,
 					});
+
 				});
 			} catch (e) {
 				logger.error(e, 'Error during message.update');
 			}
-		}
+		}));
 	};
 
 	const del: BaileysEventHandler<'messages.delete'> = async (item) => {
@@ -171,6 +179,8 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 				return;
 			}
 			const jid = item.keys[0].remoteJid!;
+			if (!shouldProcess(jid)) return;
+
 			await prisma.message.deleteMany({
 				where: { id: { in: item.keys.map((k) => k.id!) }, remoteJid: jid, sessionId },
 			});
@@ -180,11 +190,13 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 	};
 
 	const updateReceipt: BaileysEventHandler<'message-receipt.update'> = async (updates) => {
-		for (const { key, receipt } of updates) {
+		await Promise.all(updates.map(async ({ key, receipt }) => {
 			try {
+				if (!shouldProcess(key.remoteJid)) return;
+
 				await prisma.$transaction(async (tx) => {
-					const message = await tx.message.findFirst({
-						where: { id: key.id!, remoteJid: key.remoteJid!, sessionId },
+					const message = await tx.message.findUnique({
+						where: { sessionId_remoteJid_id: { id: key.id!, remoteJid: key.remoteJid!, sessionId } },
 						select: { pkId: true, userReceipt: true },
 					});
 					if (!message) return;
@@ -207,15 +219,17 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 			} catch (e) {
 				logger.error(e, 'Error during receipt.update');
 			}
-		}
+		}));
 	};
 
 	const updateReaction: BaileysEventHandler<'messages.reaction'> = async (reactions) => {
-		for (const { key, reaction } of reactions) {
+		await Promise.all(reactions.map(async ({ key, reaction }) => {
 			try {
+				if (!shouldProcess(key.remoteJid)) return;
+
 				await prisma.$transaction(async (tx) => {
-					const message = await tx.message.findFirst({
-						where: { id: key.id!, remoteJid: key.remoteJid!, sessionId },
+					const message = await tx.message.findUnique({
+						where: { sessionId_remoteJid_id: { id: key.id!, remoteJid: key.remoteJid!, sessionId } },
 						select: { pkId: true, reactions: true },
 					});
 					if (!message) return;
@@ -236,7 +250,7 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 			} catch (e) {
 				logger.error(e, 'Error during reaction.update');
 			}
-		}
+		}));
 	};
 
 	const listen = () => {

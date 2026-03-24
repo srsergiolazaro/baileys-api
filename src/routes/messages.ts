@@ -9,38 +9,7 @@ const upload = multer({ storage });
 
 const router = Router({ mergeParams: true });
 
-/**
- * @swagger
- * /messages:
- *   get:
- *     tags:
- *       - Mensajes
- *     summary: Listar mensajes
- *     description: Obtiene la lista de mensajes de un chat
- *     security:
- *       - ApiKeyAuth: []
- *     parameters:
- *       - in: query
- *         name: cursor
- *         schema:
- *           type: number
- *         description: Cursor para paginación
- *       - in: query
- *         name: limit
- *         schema:
- *           type: number
- *         description: Límite de resultados
- *     responses:
- *       200:
- *         description: Lista de mensajes obtenida exitosamente
- */
-router.get(
-	'/',
-	query('cursor').isNumeric().optional(),
-	query('limit').isNumeric().optional(),
-	requestValidator,
-	message.list,
-);
+
 
 /**
  * @swagger

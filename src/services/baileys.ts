@@ -35,6 +35,8 @@ import {
 	managePreKeys
 } from './connection-handler';
 
+import { globalMessageCache } from '../store/message-cache';
+
 // Map para rastrear motores de telemetría por sesión
 const telemetryEngines = new Map<string, TelemetryEngine>();
 
@@ -267,13 +269,31 @@ export async function createSession(options: createSessionOptions) {
 			},
 			logger,
 			shouldIgnoreJid: (jid) => isJidBroadcast(jid),
+
 			getMessage: async (key): Promise<WAMessageContent | undefined> => {
 				try {
-					const msg = await prisma.message.findFirst({
-						where: { id: key.id!, remoteJid: key.remoteJid!, sessionId },
+					if (!key?.id || !key?.remoteJid) return undefined;
+					
+					// 🚀 SOTA: Búsqueda rapidísima en memoria segregada
+					const memMsg = globalMessageCache.get(sessionId, key.remoteJid, key.id);
+					if (memMsg) return memMsg;
+
+					const msg = await prisma.message.findUnique({
+						where: {
+							sessionId_remoteJid_id: {
+								id: key.id,
+								remoteJid: key.remoteJid,
+								sessionId,
+							},
+						},
 						select: { message: true },
 					});
-					return (msg?.message as any) || undefined;
+					
+					if (msg?.message) {
+						globalMessageCache.set(sessionId, key.remoteJid, key.id, msg.message as WAMessageContent);
+						return msg.message as WAMessageContent;
+					}
+					return undefined;
 				} catch {
 					return undefined;
 				}

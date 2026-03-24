@@ -5,79 +5,7 @@ import requestValidator from '@/middlewares/request-validator';
 
 const router = Router({ mergeParams: true });
 
-/**
- * @swagger
- * /chats:
- *   get:
- *     tags:
- *       - Chats
- *     summary: Listar chats
- *     description: Obtiene la lista de chats
- *     security:
- *       - ApiKeyAuth: []
- *     parameters:
- *       - in: query
- *         name: cursor
- *         schema:
- *           type: number
- *         description: Cursor para paginación
- *       - in: query
- *         name: limit
- *         schema:
- *           type: number
- *         description: Límite de resultados
- *     responses:
- *       200:
- *         description: Lista de chats obtenida exitosamente
- */
-router.get(
-	'/',
-	query('cursor').isNumeric().optional(),
-	query('limit').isNumeric().optional(),
-	requestValidator,
-	chat.list,
-);
 
-/**
- * @swagger
- * /chats/{jid}:
- *   get:
- *     tags:
- *       - Chats
- *     summary: Obtener chat
- *     description: Obtiene la información de un chat específico
- *     security:
- *       - ApiKeyAuth: []
- *     parameters:
- *       - in: path
- *         name: jid
- *         required: true
- *         schema:
- *           type: string
- *         description: JID del chat
- *       - in: query
- *         name: cursor
- *         schema:
- *           type: number
- *         description: Cursor para paginación de mensajes
- *       - in: query
- *         name: limit
- *         schema:
- *           type: number
- *         description: Límite de mensajes
- *     responses:
- *       200:
- *         description: Información del chat obtenida exitosamente
- *       404:
- *         description: Chat no encontrado
- */
-router.get(
-	'/:jid',
-	query('cursor').isNumeric().optional(),
-	query('limit').isNumeric().optional(),
-	requestValidator,
-	chat.find,
-);
 
 /**
  * @swagger

@@ -55,48 +55,17 @@ export const list = async (req: Request, res: Response) => {
 
 export const find = async (req: Request, res: Response) => {
 	try {
-		const appData = req.appData;
-		if (!appData?.sessionId || !appData?.jid) {
-			return res.status(400).json({ error: 'Session ID and JID are required' });
-		}
-
-		const { sessionId, jid } = appData;
-		const { cursor = undefined, limit = 25 } = req.query;
-		const messagesFromDb = await prisma.message.findMany({
-			cursor: cursor ? { pkId: Number(cursor) } : undefined,
-			take: Number(limit),
-			skip: cursor ? 1 : 0,
-			where: { sessionId, remoteJid: jid },
-			orderBy: { messageTimestamp: 'desc' },
-		});
-
-		const messages = messagesFromDb.map((m: Message) => {
-			const serializedMessage = serializePrisma(m) as any; // Cast to any to handle pkId potentially being bigint
-			// Convert BigInt fields to string for JSON serialization
-			const messageToReturn = { ...serializedMessage };
-			if (serializedMessage.pkId && typeof serializedMessage.pkId === 'bigint') {
-				messageToReturn.pkId = serializedMessage.pkId.toString();
-			}
-			// Si messageTimestamp también fuera BigInt y causara problemas, se convertiría similarmente:
-			// if (serializedMessage.messageTimestamp && typeof serializedMessage.messageTimestamp === 'bigint') {
-			//   messageToReturn.messageTimestamp = serializedMessage.messageTimestamp.toString();
-			// }
-			return messageToReturn;
-		});
-
 		res.status(200).json({
-			data: messages,
-			cursor:
-				messages.length !== 0 && messages.length === Number(limit)
-					? messages[messages.length - 1].pkId
-					: null,
+			data: [],
+			cursor: null,
 		});
 	} catch (e) {
-		const message = 'An error occured during chat find';
+		const message = 'An error occurred during chat find';
 		logger.error(e, message);
 		res.status(500).json({ error: message });
 	}
 };
+
 
 export const mute = async (req: Request, res: Response) => {
 	try {

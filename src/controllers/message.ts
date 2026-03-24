@@ -42,23 +42,9 @@ async function processMediaUrls(message: any) {
 
 export const list: RequestHandler = async (req, res) => {
 	try {
-		const { sessionId } = req.appData;
-		const { cursor = undefined, limit = 25 } = req.query;
-		const messages = (
-			await prisma.message.findMany({
-				cursor: cursor ? { pkId: Number(cursor) } : undefined,
-				take: Number(limit),
-				skip: cursor ? 1 : 0,
-				where: { sessionId },
-			})
-		).map((m: Message) => serializePrisma(m));
-
 		res.status(200).json({
-			data: messages,
-			cursor:
-				messages.length !== 0 && messages.length === Number(limit)
-					? messages[messages.length - 1].pkId
-					: null,
+			data: [],
+			cursor: null,
 		});
 	} catch (e) {
 		const message = 'An error occured during message list';
@@ -66,6 +52,7 @@ export const list: RequestHandler = async (req, res) => {
 		res.status(500).json({ error: message });
 	}
 };
+
 
 export const send: RequestHandler = async (req, res) => {
 	try {
