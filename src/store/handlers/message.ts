@@ -139,11 +139,11 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 	};
 
 	const update: BaileysEventHandler<'messages.update'> = async (updates) => {
-		await Promise.all(updates.map(async ({ update: msgUpdate, key }) => {
+		for (const { update: msgUpdate, key } of updates) {
 			try {
 				const jid = key.remoteJid!;
 				const id = key.id!;
-				if (!shouldProcess(jid)) return;
+				if (!shouldProcess(jid)) continue;
 
 				// 🚀 Lógica de Edición y Actualización
 				await prisma.$transaction(async (tx) => {
@@ -153,10 +153,7 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 
 					if (!prevData) return;
 
-					// Merge de datos (Pattern: Baileys handles the protocol logic, we just merge)
 					const merged = { ...prevData, ...msgUpdate };
-					
-					// Filtrar antes de transformar
 					const filteredUpdateData = filterPrisma(merged, MESSAGE_KEYS);
 					const transformed = transformPrisma(filteredUpdateData) as any;
 
@@ -169,7 +166,7 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 			} catch (e) {
 				logger.error(e, 'Error during message.update');
 			}
-		}));
+		}
 	};
 
 	const del: BaileysEventHandler<'messages.delete'> = async (item) => {
@@ -190,9 +187,9 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 	};
 
 	const updateReceipt: BaileysEventHandler<'message-receipt.update'> = async (updates) => {
-		await Promise.all(updates.map(async ({ key, receipt }) => {
+		for (const { key, receipt } of updates) {
 			try {
-				if (!shouldProcess(key.remoteJid)) return;
+				if (!shouldProcess(key.remoteJid)) continue;
 
 				await prisma.$transaction(async (tx) => {
 					const message = await tx.message.findUnique({
@@ -219,13 +216,13 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 			} catch (e) {
 				logger.error(e, 'Error during receipt.update');
 			}
-		}));
+		}
 	};
 
 	const updateReaction: BaileysEventHandler<'messages.reaction'> = async (reactions) => {
-		await Promise.all(reactions.map(async ({ key, reaction }) => {
+		for (const { key, reaction } of reactions) {
 			try {
-				if (!shouldProcess(key.remoteJid)) return;
+				if (!shouldProcess(key.remoteJid)) continue;
 
 				await prisma.$transaction(async (tx) => {
 					const message = await tx.message.findUnique({
@@ -250,7 +247,7 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 			} catch (e) {
 				logger.error(e, 'Error during reaction.update');
 			}
-		}));
+		}
 	};
 
 	const listen = () => {
